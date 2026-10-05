@@ -14,6 +14,22 @@ describe("Auth Flows & Security Requirements (Task 027)", () => {
   });
 
   describe("LoginForm Flow", () => {
+    it("shows a challenge-bound code only in the explicit local demo", async () => {
+      vi.spyOn(apiClient, "post").mockResolvedValue({
+        challenge_id: "local-challenge",
+        expires_at: new Date(Date.now() + 300000).toISOString(),
+      });
+      const getSpy = vi.spyOn(apiClient, "get").mockResolvedValue({ code: "765432" });
+      render(<LoginForm portal="teacher" localDemo onSuccess={vi.fn()} />);
+      fireEvent.change(screen.getByLabelText(/Foydalanuvchi nomi/i), { target: { value: "teacher" } });
+      fireEvent.change(screen.getByLabelText(/Parol/i), { target: { value: "1234" } });
+      fireEvent.click(screen.getByRole("button", { name: /Kirish/i }));
+      expect(await screen.findByText("765432")).not.toBeNull();
+      expect(getSpy).toHaveBeenCalledWith("/api/v1/local-demo/teacher/otp/local-challenge");
+      expect(screen.getByText(/Quyida ko‘rsatilgan local sinov kodini/i)).not.toBeNull();
+      expect(localStorage.length).toBe(0);
+    });
+
     it("completes full username/password -> Telegram OTP login cycle", async () => {
       const onSuccess = vi.fn();
 
@@ -229,4 +245,3 @@ describe("Auth Flows & Security Requirements (Task 027)", () => {
     });
   });
 });
-

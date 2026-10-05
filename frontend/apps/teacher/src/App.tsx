@@ -116,6 +116,7 @@ const TeacherAuthView: React.FC = () => {
       <div className="px-4">
         <LoginForm
           portal="teacher"
+          localDemo={import.meta.env.DEV && import.meta.env.VITE_LOCAL_DEMO === "1"}
           onSuccess={(loggedInUser) => setUser(loggedInUser)}
           onForgotPassword={() => setIsRecoveryOpen(true)}
         />

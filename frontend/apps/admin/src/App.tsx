@@ -330,6 +330,7 @@ const AdminAuthView: React.FC = () => {
       <div className="px-4">
         <LoginForm
           portal="admin"
+          localDemo={import.meta.env.DEV && import.meta.env.VITE_LOCAL_DEMO === "1"}
           onSuccess={(loggedInUser) => setUser(loggedInUser)}
           onForgotPassword={() => setIsRecoveryOpen(true)}
         />

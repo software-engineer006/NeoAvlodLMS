@@ -13,6 +13,7 @@ export interface LoginFormProps {
   onSuccess: (user: CurrentUser) => void;
   onForgotPassword?: () => void;
   className?: string;
+  localDemo?: boolean;
 }
 
 interface LoginChallenge {
@@ -25,6 +26,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   onSuccess,
   onForgotPassword,
   className = "",
+  localDemo = false,
 }) => {
   // Step 1: Credentials, Step 2: Telegram OTP
   const [step, setStep] = useState<"credentials" | "otp">("credentials");
@@ -36,6 +38,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   // Step 2 fields
   const [challenge, setChallenge] = useState<LoginChallenge | null>(null);
   const [otpCode, setOtpCode] = useState<string>("");
+  const [localCode, setLocalCode] = useState<string>("");
   const [secondsRemaining, setSecondsRemaining] = useState<number>(300);
 
   // States
@@ -77,6 +80,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       setChallenge(res);
       setStep("otp");
       setOtpCode("");
+      setLocalCode("");
+      if (localDemo) {
+        const demo = await apiClient.get<{ code: string }>(`/api/v1/local-demo/${portal}/otp/${res.challenge_id}`);
+        setLocalCode(demo.code);
+      }
       const initialSeconds = Math.max(0, Math.floor((new Date(res.expires_at).getTime() - Date.now()) / 1000));
       setSecondsRemaining(initialSeconds > 0 ? initialSeconds : 300);
     } catch (err) {
@@ -127,6 +135,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     setStep("credentials");
     setChallenge(null);
     setOtpCode("");
+    setLocalCode("");
     setError(null);
   };
 
@@ -148,11 +157,19 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         <CardDescription>
           {step === "credentials"
             ? "Hisobingizga kirish uchun ma’lumotlarni kiriting"
-            : "Telegram botingizga yuborilgan 6 xonali tasdiqlash kodini kiriting"}
+            : localDemo
+              ? "Quyida ko‘rsatilgan local sinov kodini kiriting"
+              : "Telegram botingizga yuborilgan 6 xonali tasdiqlash kodini kiriting"}
         </CardDescription>
       </CardHeader>
 
       <CardContent>
+        {localDemo && (
+          <Alert variant="info" className="mb-4">
+            Local sinov: login <strong>{portal === "admin" ? "superadmin" : "teacher"}</strong>.
+            {localCode && <> Tasdiqlash kodi: <strong>{localCode}</strong></>}
+          </Alert>
+        )}
         {error && (
           <Alert variant="danger" className="mb-4" onDismiss={() => setError(null)}>
             {error}
