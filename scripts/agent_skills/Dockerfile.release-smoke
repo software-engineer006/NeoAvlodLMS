@@ -1,0 +1,2 @@
+FROM docker:29-cli
+RUN apk add --no-cache bash curl openssl util-linux

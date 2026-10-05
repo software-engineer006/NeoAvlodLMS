@@ -18,7 +18,7 @@ services:
       start_period: 10s
 
   migrations:
-    image: neoavlod-backend:production
+    image: neoavlod-backend:${NEOAVLOD_RELEASE_ID:-production}
     build:
       context: .
       dockerfile: backend/Dockerfile
@@ -40,7 +40,7 @@ services:
         condition: service_healthy
 
   api:
-    image: neoavlod-backend:production
+    image: neoavlod-backend:${NEOAVLOD_RELEASE_ID:-production}
     build:
       context: .
       dockerfile: backend/Dockerfile
@@ -69,7 +69,7 @@ services:
         condition: service_completed_successfully
 
   worker:
-    image: neoavlod-backend:production
+    image: neoavlod-backend:${NEOAVLOD_RELEASE_ID:-production}
     build:
       context: .
       dockerfile: backend/Dockerfile

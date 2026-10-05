@@ -21,7 +21,7 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
   -out "$SMOKE_DIR/fullchain.pem" \
   -subj "/CN=*.eduneo.uz" >/dev/null 2>&1
 
-for sub in admin.eduneo.uz teacher.eduneo.uz api.eduneo.uz; do
+for sub in eduneo.uz; do
   mkdir -p "$SMOKE_DIR/live/$sub"
   cp "$SMOKE_DIR/privkey.pem" "$SMOKE_DIR/live/$sub/privkey.pem"
   cp "$SMOKE_DIR/fullchain.pem" "$SMOKE_DIR/live/$sub/fullchain.pem"
@@ -52,7 +52,7 @@ docker run --rm \
   -v "$SMOKE_DIR/www/admin:/var/www/neoavlod/admin:ro" \
   -v "$SMOKE_DIR/www/teacher:/var/www/neoavlod/teacher:ro" \
   -v "$SMOKE_DIR/certbot:/var/www/certbot:ro" \
-  nginx:alpine nginx -t
+  nginx:1.24-alpine nginx -t
 
 # 4. Docker tarmog‘idagi backend bilan sinov uchun conf moslash
 mkdir -p "$SMOKE_DIR/conf.d"
@@ -71,7 +71,7 @@ docker run -d --name "$CONTAINER_NAME" \
   -v "$SMOKE_DIR/www/admin:/var/www/neoavlod/admin:ro" \
   -v "$SMOKE_DIR/www/teacher:/var/www/neoavlod/teacher:ro" \
   -v "$SMOKE_DIR/certbot:/var/www/certbot:ro" \
-  nginx:alpine
+  nginx:1.24-alpine
 
 sleep 2
 

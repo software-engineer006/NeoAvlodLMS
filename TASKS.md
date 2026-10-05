@@ -106,13 +106,25 @@ invariantlari tekshiruvdan o‘tdi.
 
 ## Davom ettirish checkpoint
 
-Faol ish: yo‘q (Task 014 boshlanmagan). Task 012 (98 test) va Task 013
-(106 test) Dockerda yakunlandi. RBAC: `security/rbac.py` (katalog, ownership),
-`api/deps.py` (`AdminDependency`, `TeacherDependency`, `SuperadminDependency`,
-`require_permission`); yangi routerlar shularni ishlatadi.
-Keyingi buyruq: `scripts/agent_skills/task.sh resume` (014 ni boshlaydi).
-Tashqi Telegram tokeni va production server credentials hozir mavjud emas;
-ular talab qilinmaguncha fake Telegram bilan testlar davom etadi.
+Faol registry task yo‘q; 001–043 repository vazifalari tekshirilib yakunlangan.
+Task 043: Ubuntu SSH clone va alohida CI kaliti, local committed frontend build,
+exact main SHA deploy, versioned backend image, ikki portal, backup/migration,
+avtomatik/qo‘lda rollback va Nginx 1.24 webroot TLS mosligi Dockerda tekshirildi.
+169 backend / 85 frontend / 8 deploy / 13 agent test, lint/typecheck/build,
+actionlint va real disposable production deploy/rollback muvaffaqiyatli.
+Haqiqiy VPS/Actions/Telegram hali tasdiqlanmagan: server host identity,
+CI SSH kaliti va GitHub production environment/secrets sozlanishi kerak.
+Foydalanuvchi yuborgan qiymat VPS paroli ekanini tasdiqladi; secret saqlanmadi.
+GitHubga yuborish: local demo/CSRF va deployment/CI/CD alohida commitlarga ajratiladi;
+frontend release checksumlari qayta tasdiqlandi, secretlar va local UI rasmlari chiqarildi.
+Pushdan keyingi amaliy qadam: GitHub Actions test/deploy holatini tekshirish,
+`DEPLOYMENT.md` bo‘yicha root@189.74.99.79 serverini sozlash va live acceptance.
+Local demo manzillari:
+admin `http://localhost:3000`, teacher `http://127.0.0.1:3001`, API `http://localhost:8000`.
+Hisoblar va 3 talabalik demo guruh alohida `neoavlod_demo` bazasida; local OTP ekranda ko‘rinadi.
+169 backend / 85 frontend / 13 agent test, lint/typecheck/build, live portal smoke va
+brauzerda teacher davomat qoralamasini saqlash tekshirildi. CSRF cookie nomi moslashtirildi.
+Qo‘llanma: `LOCAL_DEMO.md`; Docker socketi uchun sandbox escalation kerak bo‘lishi mumkin.
 
 ## Agent skriptlari bilan ishlash
 
@@ -308,3 +320,11 @@ ular talab qilinmaguncha fake Telegram bilan testlar davom etadi.
     backup/restore/rollback, toza muhit smoke va to‘liq biznes flow checklist;
     haqiqiy serverga chiqarish faqat mavjud credentials/foydalanuvchi doirasida.
   - Dalil: DEPLOYMENT.md qo‘llanmasi (DNS/TLS/env/DB/migrate/bootstrap/bot/CI secrets/deploy/backup/restore/rollback va to‘liq 10 bandli biznes flow checklist) yaratildi; smoke_clean_environment.sh orqali toza muhitda PostgreSQL 18.6, Alembic migratsiyalari, superadmin bootstrap CLI (--password-stdin), bot token CLI (--token-stdin), background worker singleton (--once), API /health va /ready (200 OK) hamda pg_dump zaxirasi to‘liq tasdiqlandi; check_backend (166 test), check_frontend va check_agent_skills to‘liq o‘tdi.
+
+- [x] 042 — Local frontend va demo hisoblarini ishga tushirish.
+  - Qabul: Dockerda API/admin/teacher ishlaydi; alohida demo DBda superadmin va teacher hisoblari foydalanuvchi so‘ragan local parol bilan yaratiladi; OTP local ekranda ko‘rinadi; ikkala portal login va teacher guruh oqimi tekshiriladi; production factory demo endpoint bermaydi.
+  - Dalil: 2026-10-05: local_demo.sh up/smoke — isolated demo DB migrations/head check, idempotent seed, API/admin/teacher Docker services active; both portal OTP login, role data and CSRF logout passed. Browser: superadmin login and teacher 3-student attendance draft save passed. Docker check_backend: Ruff/mypy and 169 tests; frontend typecheck/lint, 85 tests and both builds passed; check_agent_skills: 13 tests and 42-task invariants passed. Production/default factory demo endpoint absent, production/test/non-demo DB rejected.
+
+- [x] 043 — Ubuntu deployment va CI/CDni to‘g‘rilash.
+  - Qabul: /root/NeoAvlodLMS SSH clone va ikki yo‘nalish SSH sozlash; local Docker frontend build Gitga kiritiladi va CI stale/tampered buildni rad etadi; main push exact SHA backend/frontend deploy qiladi; /var/www/neoavlod statik fayllar, versioned backend image, DB backup/migration, failure/manual rollback, webroot TLS va yagona sertifikat yo‘llari; Docker regressiya va real disposable deploy smoke. VPS/Actions tekshiruvi credentials mavjud bo‘lganda bajariladi, local dalildan farqlanadi.
+  - Dalil: 2026-10-05: Docker check_backend Ruff/mypy + 169 pytest; frontend release Docker install/typecheck/lint/85 tests/both production builds and prepare-release --check passed; run_migrations head/model match; actionlint + 8 deployment regressions and deployment-script Ruff/bash syntax passed; Nginx 1.24 portal smoke passed; real disposable PostgreSQL/API/worker/TLS deployment A->B, failed Nginx C auto rollback B, manual rollback A, exact image+both portal SHA and pg_restore backup list passed. check_agent_skills 13 tests/43-task invariants passed. Ubuntu SSH clone/CI key/DNS/webroot TLS/bootstrap/update/backup guide updated for root@189.74.99.79. Actual VPS/Actions/Telegram validation not run: pinned host identity and CI/environment setup still required; supplied VPS password was not stored.

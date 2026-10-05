@@ -1,336 +1,502 @@
-# NeoAvlod LMS — Ubuntu Production Deployment Guide
+# NeoAvlodLMS — Ubuntu serverga deployment
 
-Ushbu qo‘llanma **NeoAvlod LMS** tizimini Ubuntu 22.04/24.04 LTS serverida to‘liq xavfsiz, yuqori unumdorlikka ega va barqaror ishlab chiqarish (production) muhitiga joylashtirish bo‘yicha to‘liq yo‘riqnomani taqdim etadi.
+Ushbu tartib Ubuntu 22.04/24.04, `root` SSH sessiyasi va
+`git@github.com:software-engineer006/NeoAvlodLMS.git` uchun yozilgan.
+Buyruq bloklari qaysi kompyuterda bajarilishi alohida ko‘rsatilgan.
+VPS manzili: `189.74.99.79`, SSH foydalanuvchisi: `root`.
+SSH porti boshqacha bo‘lsa va telefon raqami kiritiladigan joylarda o‘zingiznikini yozing.
 
----
+Oqim: kompyuterda Docker frontend build → build va kodni Gitga commit/push →
+Actions Docker testlari → serverdagi aniq commit → yangi backend image +
+frontend fayllari → backup/migration → health va HTTPS tekshiruv → release faollashadi.
+CI buildni qayta yaratib, kompyuteringizda tayyorlangan build bilan solishtiradi;
+server tayyor statik fayllarni tarqatadi va backend image’ini o‘zi build qiladi.
 
-## 1. Arxitektura va server talablari
+| Nima | Joylashuvi |
+|---|---|
+| Server Git clone | `/root/NeoAvlodLMS` |
+| Maxfiy production env | `/opt/neoavlod/.env.production` |
+| O‘zgarmas kod releaselari | `/opt/neoavlod/releases/<40-belgili-SHA>` |
+| Joriy kodga havola | `/opt/neoavlod/current` |
+| Frontend releaselari | `/var/www/neoavlod/releases/<SHA>/admin`, `teacher` |
+| Nginx frontend ildizlari | `/var/www/neoavlod/admin`, `/var/www/neoavlod/teacher` |
+| Backend | `127.0.0.1:8000` → `api.eduneo.uz` va portal `/api/` proxy |
+| Doimiy PostgreSQL volume | `neoavlod-prod_postgres-data` |
+| Backup | `/var/backups/neoavlod/*.dump` |
 
-- **Operatsion tizim**: Ubuntu 22.04 LTS yoki 24.04 LTS (x86_64)
-- **Minimal resurslar**: 2 vCPU, 4 GB RAM, 40 GB NVMe SSD
-- **Dasturiy ta’minot**:
-  - Docker Engine 26+ va Docker Compose v2
-  - Nginx (Reverse proxy, TLS termination, statik fayllar)
-  - Certbot (Let's Encrypt SSL/TLS sertifikatlari)
-  - PostgreSQL 18.6 (Docker konteyneri orqali, persistent volume)
-  - Python 3.13 (Docker multi-stage runtime, nonroot `app` foydalanuvchisi)
+Serverdagi clone bilan production release alohida. Deploy `git pull/reset` bilan
+qo‘lda o‘zgartirilgan fayllarni o‘chirmaydi; `git fetch` va `git archive` ishlatadi.
+Production uchun local demo hisoblari/bazasi ishlatilmaydi.
 
----
+## 1. Kompyuteringizda yangi deployment fayllarini Gitga tayyorlash
 
-## 2. DNS va subdomenlar konfiguratsiyasi
-
-DNS provayderingizda (masalan, Cloudflare, Namecheap) quyidagi `A` yozuvlarini serveringizning tashqi IP manziliga yo‘naltiring:
-
-| Subdomen | Yozuv turi | Nishon (Target) | Vazifasi |
-|---|---|---|---|
-| `admin.eduneo.uz` | `A` | `<SERVER_IP>` | Admin va Rahbariyat SPA portali |
-| `teacher.eduneo.uz` | `A` | `<SERVER_IP>` | O‘qituvchilar SPA portali |
-| `api.eduneo.uz` | `A` | `<SERVER_IP>` | Backend REST API xizmati |
-
----
-
-## 3. Serverni tayyorlash va paketlarni o‘rnatish
-
-Serverga SSH orqali kiring va tizimni yangilang:
-
-```bash
-sudo apt update && sudo apt upgrade -y
-sudo apt install -y curl wget git nginx certbot python3-certbot-nginx ca-certificates ufw
-```
-
-### Docker Engine va Docker Compose o‘rnatish:
+Docker Desktop ishlayotgan bo‘lsin. Loyiha katalogida:
 
 ```bash
-sudo install -m 0755 -d /etc/apt/keyrings
-sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-sudo chmod a+r /etc/apt/keyrings/docker.asc
+cd /Users/dulmurod/NeoAvlodLMS
+scripts/deploy/build_frontend.sh
 
-echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
-  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-
-sudo apt update
-sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+git status --short
+git add backend frontend scripts nginx .github compose.prod.yaml DEPLOYMENT.md TASKS.md LOCAL_DEMO.md compose.local.yaml
+# Tahrirlangan boshqa kerakli fayllarni ham git add bilan kiriting.
+git diff --cached --stat
+git commit -m "Fix Ubuntu deployment and verify committed frontend releases"
+git push origin main
 ```
 
-### UFW Brandmauer (Firewall) sozlash:
+`frontend/release/` — Gitga kiritiladigan production build.
+`frontend/apps/*/dist` va `node_modules` Gitga kiritilmaydi.
+Build skripti Dockerda install, typecheck, lint, test va build bajaradi.
+Frontend `.env*` fayllari bo‘lsa build to‘xtaydi: production bundle lokal
+sozlamalarga bog‘lanmasligi kerak. Maxfiy kalitlar frontendga yozilmaydi.
+
+Birinchi push paytida VPS/Actions secrets hali tayyor bo‘lmasa deploy job xato
+berishi mumkin. Quyidagi server sozlashni tugatib, 9-qadamda workflow’ni qayta
+ishga tushiring. Test xatolarini esa avval tuzating.
+
+## 2. Server: paketlar va Docker
+
+Server konsolida yoki `ssh root@189.74.99.79` orqali:
 
 ```bash
-sudo ufw default deny incoming
-sudo ufw default allow outgoing
-sudo ufw allow 22/tcp
-sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
-sudo ufw enable
+apt update
+apt install -y git openssh-client curl ca-certificates nginx certbot openssl dnsutils ufw util-linux
+systemctl enable --now nginx
 ```
 
----
-
-## 4. Loyiha kataloglari va fayl ruxsatlari
-
-Serverda deployment uchun standart kataloglar strukturasini yarating:
+Docker mavjud bo‘lsa `docker version` va `docker compose version` ni tekshiring.
+Rasmiy Docker Engine/Compose hali o‘rnatilmagan bo‘lsa:
 
 ```bash
-# Veb statik fayllar uchun
-sudo mkdir -p /var/www/neoavlod/releases
-sudo mkdir -p /var/www/certbot
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+chmod a+r /etc/apt/keyrings/docker.asc
 
-# Ilova va docker konfiguratsiyasi uchun
-sudo mkdir -p /opt/neoavlod/releases
-sudo mkdir -p /opt/neoavlod/scripts
-sudo mkdir -p /var/backups/neoavlod
+cat > /etc/apt/sources.list.d/docker.sources <<EOF_DOCKER
+Types: deb
+URIs: https://download.docker.com/linux/ubuntu
+Suites: $(. /etc/os-release && printf '%s' "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
+Components: stable
+Architectures: $(dpkg --print-architecture)
+Signed-By: /etc/apt/keyrings/docker.asc
+EOF_DOCKER
 
-# Foydalanuvchi ruxsatlari
-sudo chown -R $USER:$USER /opt/neoavlod
-sudo chown -R $USER:$USER /var/www/neoavlod
+apt update
+apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+systemctl enable --now docker
+docker version
+docker compose version
 ```
 
----
+Mavjud eski `docker.io`/`containerd` paketlari bilan konflikt bo‘lsa, amaldagi
+containerlarni rejalashtirib, [rasmiy Ubuntu o‘rnatish yo‘riqnomasini](https://docs.docker.com/engine/install/ubuntu/) bajaring.
+Docker data katalogi va mavjud volumelarni o‘chirmang.
 
-## 5. SSL/TLS sertifikatlarini olish (Certbot)
-
-Nginx konfiguratsiyasidan oldin ACME challenge orqali sertifikat oling:
+Firewall: SSH porti 22 bo‘lmasa quyidagi 22 o‘rniga haqiqiy portni yozing:
 
 ```bash
-sudo certbot certonly --standalone \
-  -d admin.eduneo.uz \
-  -d teacher.eduneo.uz \
-  -d api.eduneo.uz \
-  --email admin@eduneo.uz \
-  --agree-tos \
-  --no-eff-email
+ufw allow 22/tcp
+ufw allow 80/tcp
+ufw allow 443/tcp
+ufw enable
+ufw status
 ```
 
-*Eslatma*: Agar har bir subdomen alohida sertifikat olgan bo‘lsa yoki wildcard bo‘lsa, Nginx konfiguratsiyasida mos yo‘llar ko‘rsatiladi.
+VPS provayder firewallida ham shu portlar ochiq bo‘lsin. DB porti internetga
+chiqarilmaydi; API hostning loopback manziliga bog‘lanadi.
 
-Avtomatik yangilanishni tekshirish:
-```bash
-sudo certbot renew --dry-run
-```
+## 3. Server → GitHub: repositoryni SSH orqali ulash
 
----
+Bu **clone/fetch** kaliti. U keyingi **Actions → server** kalitidan alohida.
+[GitHub deploy key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/managing-deploy-keys) bitta repositoryga ruxsat beradi.
 
-## 6. Nginx konfiguratsiyasi
-
-Loyiha repozitoriysidagi Nginx fayllarini serverga joylashtiring:
+Serverda (fayl avvaldan mavjud bo‘lsa uni qayta yaratmang):
 
 ```bash
-sudo cp -r nginx/snippets /etc/nginx/
-sudo cp nginx/conf.d/eduneo.conf /etc/nginx/conf.d/eduneo.conf
+install -d -m 700 /root/.ssh
+ssh-keygen -t ed25519 -f /root/.ssh/neoavlod_git -C "neoavlod-vps-github-readonly" -N ''
+cat /root/.ssh/neoavlod_git.pub
 ```
 
-Sintaksisni tekshirish va Nginx-ni qayta yuklash:
-```bash
-sudo nginx -t
-sudo systemctl reload nginx
-sudo systemctl enable nginx
-```
+Chiqqan **public** kalitni repositoryda **Settings → Deploy keys → Add deploy key**
+ga qo‘shing. Nomi: `VPS read-only`. **Allow write access** ni yoqmang.
+Private kalit (`neoavlod_git`, `.pub` emas) serverda qoladi.
 
----
-
-## 7. Production muhiti o‘zgaruvchilari (`.env.production`)
-
-`/opt/neoavlod/.env.production` faylini yarating va faqat `root` yoki ilova foydalanuvchisiga ruxsat bering (`chmod 600`):
+GitHub serverining tekshirilgan public host kalitini kiriting:
 
 ```bash
-sudo touch /opt/neoavlod/.env.production
-sudo chmod 600 /opt/neoavlod/.env.production
+printf '%s\n' 'github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl' >> /root/.ssh/known_hosts
+chmod 600 /root/.ssh/known_hosts
+
+ssh -i /root/.ssh/neoavlod_git -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -T git@github.com
 ```
 
-Fayl tarkibini quyidagicha to‘ldiring:
+`Hi ...! You've successfully authenticated, but GitHub does not provide shell access.`
+— muvaffaqiyat; GitHub shell bermagani uchun bu tekshiruv exit code 1 berishi mumkin.
+Host key o‘zgarsa, yangi kalitni [rasmiy fingerprint sahifasi](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/githubs-ssh-key-fingerprints) orqali tekshiring;
+`StrictHostKeyChecking=no` ishlatmang.
 
-```ini
-# PostgreSQL 18.6 ma'lumotlar bazasi
-POSTGRES_USER=neoavlod
-POSTGRES_DB=neoavlod
-POSTGRES_PASSWORD=BU_YERGA_KUCHLI_PAROL_YOZING
-
-# Backend porti (faqat localhost 127.0.0.1 ga bog'lanadi)
-API_PORT=8000
-
-# NeoAvlod ilovasi
-NEOAVLOD_ENVIRONMENT=production
-NEOAVLOD_DEBUG=false
-NEOAVLOD_DATABASE_URL=postgresql+asyncpg://neoavlod:BU_YERGA_KUCHLI_PAROL_YOZING@database:5432/neoavlod
-
-# Xavfsizlik kaliti (HMAC, CSRF va OTP uchun)
-# Yaratish: openssl rand -hex 32
-NEOAVLOD_SECURITY_SECRET=BU_YERGA_HEX_32_BELGILI_MAXFIY_KALIT
-
-# Telegram bot shifrlash kaliti (Fernet formati)
-# Yaratish: python3 -c "import secrets, base64; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())"
-NEOAVLOD_BOT_ENCRYPTION_KEY=BU_YERGA_FERNET_BASE64_KALIT
-
-# Portal domenlari (qat'iy HTTPS)
-NEOAVLOD_ADMIN_ORIGIN=https://admin.eduneo.uz
-NEOAVLOD_TEACHER_ORIGIN=https://teacher.eduneo.uz
-```
-
----
-
-## 8. Docker konteynerlarini ishga tushirish va migratsiyalar
-
-`/opt/neoavlod/` katalogida `compose.prod.yaml` mavjud bo‘lishini ta’minlang.
-
-1. **Ma’lumotlar bazasini ishga tushirish**:
-   ```bash
-   cd /opt/neoavlod
-   docker compose -f compose.prod.yaml --env-file .env.production up -d --wait database
-   ```
-
-2. **Alembic ma’lumotlar bazasi migratsiyalarini o‘tkazish**:
-   ```bash
-   docker compose -f compose.prod.yaml --env-file .env.production run --rm migrations
-   ```
-
-3. **API va Telegram Worker Singleton-ni ishga tushirish**:
-   ```bash
-   docker compose -f compose.prod.yaml --env-file .env.production up -d --wait api worker
-   ```
-
-4. **Holatni tekshirish**:
-   ```bash
-   docker compose -f compose.prod.yaml --env-file .env.production ps
-   curl -s http://127.0.0.1:8000/api/v1/health
-   curl -s http://127.0.0.1:8000/api/v1/ready
-   ```
-
----
-
-## 9. Superadminni bootstrap qilish (Boshlang‘ich hisob yaratish)
-
-Tizimda boshlang‘ich default parol mavjud emas. Superadmin hisobi buyruqlar satri orqali maxfiy kiritiladi:
+Endi **aynan `/root/` ichiga clone**:
 
 ```bash
-docker compose -f compose.prod.yaml --env-file .env.production run --rm api \
-  python -m neoavlod.cli bootstrap \
-    --username superadmin \
-    --phone "+998901234567" \
-    --first-name Asosiy \
-    --last-name Admin \
-    --password-stdin
+cd /root
+GIT_SSH_COMMAND='ssh -i /root/.ssh/neoavlod_git -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes' \
+  git clone git@github.com:software-engineer006/NeoAvlodLMS.git
+cd /root/NeoAvlodLMS
+
+git config core.sshCommand 'ssh -i /root/.ssh/neoavlod_git -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes'
+git fetch origin main
+git log -1 --oneline origin/main
 ```
 
-Terminalda superadmin parolini kiritib `Enter` bosing.
+`/root/NeoAvlodLMS` avvaldan mavjud bo‘lsa, clone’ni qayta bajarmang; shu katalogda
+`git config`, `git fetch` qadamlarini bajaring.
 
----
+## 4. DNS: uchala domen ham VPSga qarasin
 
-## 10. Telegram Bot tokenini kiritish va ishga tushirish
+DNS boshqaruv panelida:
 
-Telegram boti tokenni server CLI orqali xavfsiz o‘rnatish:
-
-```bash
-docker compose -f compose.prod.yaml --env-file .env.production run --rm api \
-  python -m neoavlod.cli set-bot-token --token-stdin
-```
-
-Yoki superadmin login qilib, `https://admin.eduneo.uz` boshqaruv paneli orqali **Bot sozlamalari** bo‘limiga kirib kiritishi mumkin.
-
----
-
-## 11. GitHub Actions CI/CD sirlarini sozlash
-
-GitHub repozitoriyasining `Settings -> Secrets and variables -> Actions` bo‘limida quyidagi maxfiy o‘zgaruvchilarni kiriting:
-
-| Secret nomi | Tavsifi | Namuna |
+| Type | Host/name | Value |
 |---|---|---|
-| `SSH_HOST` | Serverning IP manzili | `198.51.100.25` |
-| `SSH_USER` | Serverdagi foydalanuvchi nomi | `deploy` yoki `ubuntu` |
-| `SSH_PRIVATE_KEY` | SSH shaxsiy kaliti | `-----BEGIN OPENSSH PRIVATE KEY-----...` |
-| `SSH_PORT` | SSH porti | `22` |
-| `SSH_KNOWN_HOSTS` | Pinned host fingerprinti (`ssh-keyscan -H <IP>`) | `198.51.100.25 ssh-ed25519 AAAAC3Nza...` |
+| A | `admin` | `189.74.99.79` |
+| A | `teacher` | `189.74.99.79` |
+| A | `api` | `189.74.99.79` |
 
----
+IPv6 ishlatilmasa AAAA kerak emas. AAAA mavjud bo‘lsa VPSning ishlaydigan IPv6
+manziliga qarashi kerak. Cloudflare bo‘lsa dastlab **DNS only** rejimini tanlang.
 
-## 12. Ma’lumotlar bazasini zaxiralash (Backup) va tiklash (Restore)
-
-### Kunlik avtomatik zaxiralash skripti:
-
-`/opt/neoavlod/scripts/backup.sh`:
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-BACKUP_DIR="/var/backups/neoavlod"
-mkdir -p "$BACKUP_DIR"
-TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
-FILE="$BACKUP_DIR/db_$TIMESTAMP.dump"
-
-cd /opt/neoavlod
-docker compose -f compose.prod.yaml --env-file .env.production exec -T database \
-  pg_dump -U neoavlod -d neoavlod -Fc > "$FILE"
-
-# 14 kundan eski zaxiralarni tozalash
-find "$BACKUP_DIR" -type f -name "db_*.dump" -mtime +14 -delete
-printf 'Zaxira nusxa yaratildi: %s\n' "$FILE"
-```
-
-Cron vazifasini qo‘shish (`crontab -e`):
-```cron
-0 3 * * * /opt/neoavlod/scripts/backup.sh >> /var/log/neoavlod_backup.log 2>&1
-```
-
-### Zaxiradan tiklash (Restore):
+Serverda:
 
 ```bash
-cd /opt/neoavlod
-BACKUP_FILE="/var/backups/neoavlod/db_20261005_030000.dump"
-
-# Ma'lumotlar bazasini tozalab tiklash
-docker compose -f compose.prod.yaml --env-file .env.production exec -T database \
-  pg_restore -U neoavlod -d neoavlod --clean "$BACKUP_FILE"
+dig @1.1.1.1 admin.eduneo.uz A +short
+dig @1.1.1.1 teacher.eduneo.uz A +short
+dig @1.1.1.1 api.eduneo.uz A +short
+dig @8.8.8.8 api.eduneo.uz A +short
 ```
 
----
+Har birida kerakli public IP ko‘rinsin. `NXDOMAIN` bo‘lsa yozuvni tuzating va DNS
+javoblari yangilanishini kuting; Certbotni takrorlash hali yordam bermaydi.
 
-## 13. Release Rollback (Orqaga qaytarish) jarayoni
+## 5. Nginx orqali birinchi TLS sertifikatini olish
 
-### Avtomatik Rollback:
-Agar yangi release o‘rnatilganda post-deployment health check (`/api/v1/health` va `/api/v1/ready`) 20 soniya ichida javob bermasa, `deploy.sh` skripti avtomatik tarzda `rollback.sh` skriptini chaqiradi va tizim avvalgi ishchi release holatiga qaytariladi.
+Nginx 80-portni ishlatib turganida **webroot** ishlatiladi. Nginxni to‘xtatish
+kerak emas. HTTPS konfiguratsiyasini sertifikat olinmasidan oldin o‘rnatmang.
 
-### Qo‘lda Rollback qilish:
-Serverda istalgan paytda orqaga qaytish uchun:
 ```bash
-sudo /opt/neoavlod/scripts/rollback.sh
+cd /root/NeoAvlodLMS
+install -d -m 755 /var/www/certbot/.well-known/acme-challenge
+install -d -m 755 /var/www/neoavlod/releases
+install -d -m 755 /opt/neoavlod/releases /opt/neoavlod/bin
+install -d -m 700 /var/backups/neoavlod
+
+install -m 644 nginx/acme-http.conf /etc/nginx/conf.d/neoavlod-acme.conf
+nginx -t
+systemctl reload nginx
+printf 'neoavlod-acme-ok\n' > /var/www/certbot/.well-known/acme-challenge/check
+
+curl -fsS http://admin.eduneo.uz/.well-known/acme-challenge/check
+curl -fsS http://teacher.eduneo.uz/.well-known/acme-challenge/check
+curl -fsS http://api.eduneo.uz/.well-known/acme-challenge/check
 ```
 
-Yoki GitHub Actions interfeysida:
-`Actions -> CI/CD Pipeline & Rollback -> Run workflow` tugmasini bosib, `action: rollback` parametrini tanlang.
+Uchalasida `neoavlod-acme-ok` chiqsin. Agar eski NeoAvlod 80-port konfiguratsiyasi
+shu domenlar bilan o‘rnatilgan bo‘lsa, uning nusxasini saqlab olib, bootstrap
+`neoavlod-acme.conf` bilan dublikat server bloklarini bartaraf eting.
 
----
+Bitta nomlangan SAN sertifikat, uchala domen uchun:
 
-## 14. Yakuniy biznes-oqim qabul tekshiruvi (Checklist)
+```bash
+certbot certonly --webroot -w /var/www/certbot \
+  --cert-name eduneo.uz \
+  -d admin.eduneo.uz -d teacher.eduneo.uz -d api.eduneo.uz \
+  --email admin@eduneo.uz --agree-tos --no-eff-email
 
-Tizim to‘liq topshirilishidan oldin quyidagi tekshiruvlar ro‘yxati bajarilishi shart:
+ls -l /etc/letsencrypt/live/eduneo.uz/fullchain.pem /etc/letsencrypt/live/eduneo.uz/privkey.pem
+```
 
-- [ ] **1. DNS va SSL tekshiruvi**:
-  - `https://admin.eduneo.uz`, `https://teacher.eduneo.uz` va `https://api.eduneo.uz` yashil qulf belgisi bilan ochilishi.
-  - HTTP dan HTTPS ga 301 yo‘naltirilishi.
-- [ ] **2. Superadmin autentifikatsiyasi**:
-  - `superadmin` hisobi bilan login qilish.
-  - Telegram orqali 6 raqamli bir martalik OTP kodini qabul qilish va panelga kirish.
-- [ ] **3. Bot sozlamalari va Telegram ulanishi**:
-  - Bot tokeni kiritilishi va getMe orqali bot username tasdiqlanishi.
-  - Bot worker yangilangan tokenni avtomatik yuklashi (hot reload).
-- [ ] **4. O‘qituvchi yaratish va hisob bog‘lash**:
-  - Xodimlar bo‘limida yangi o‘qituvchi qo‘shish.
-  - Deep link orqali Telegram botga `/start staff_<UUID>` yuborib hisobni bog‘lash.
-- [ ] **5. Fan va Guruh yaratish**:
-  - Yangi fan yaratish.
-  - Dars kunlari, vaqti, narxi va sig‘imi (capacity) ko‘rsatilgan yangi guruh ochish va unga o‘qituvchini biriktirish.
-- [ ] **6. O‘quvchi va Ota-onani ro‘yxatga olish**:
-  - Yagona formadan o‘quvchi va ota-onani guruhga qo‘shish.
-  - Ota-ona telefoniga berilgan deep link orqali Telegram botga `/start parent_<UUID>` yuborish.
-- [ ] **7. O‘qituvchi portali (`teacher.eduneo.uz`)**:
-  - O‘qituvchi paroli va Telegram OTP orqali tizimga kirishi.
-  - Faqat o‘ziga biriktirilgan guruhlarni ko‘rishi.
-- [ ] **8. Davomat olish va bildirishnoma yuborish**:
-  - O‘qituvchi guruh davomatini (Bor, Yo‘q, Kechikdi va izoh) belgilashi.
-  - Davomatni yakunlashi (Finalize).
-  - Outbox worker orqali ota-onaning Telegramiga o‘zbek tilidagi rasmiy xabarnoma yetib borishi.
-- [ ] **9. Admin nazorati**:
-  - Admin panelida davomat tarixi, statistika va filtrlar to‘g‘ri aks etishi.
-- [ ] **10. Xavfsizlik va ruxsatlar izolyatsiyasi**:
-  - O‘qituvchi admin paneliga kirganda 403 Forbidden ko‘rinishi.
-  - Admin o‘qituvchi sahifalariga kirganda 403 Forbidden ko‘rinishi.
-  - Parol o‘zgartirilganda barcha eski sessiyalar bekor qilinishi.
+Barcha TLS server bloklari shu **bir xil** sertifikat yo‘lini ishlatadi.
+Oldingi `--standalone` sertifikati `live/admin.eduneo.uz` ostida bo‘lsa, yuqoridagi
+buyruq bilan `eduneo.uz` nomli sertifikatni yarating; eski fayllarni o‘chirish shart emas.
+
+Renewal va Nginx reload hook:
+
+```bash
+install -d -m 755 /etc/letsencrypt/renewal-hooks/deploy
+cat > /etc/letsencrypt/renewal-hooks/deploy/neoavlod-nginx.sh <<'EOF_HOOK'
+#!/bin/sh
+set -eu
+nginx -t
+systemctl reload nginx
+EOF_HOOK
+chmod 755 /etc/letsencrypt/renewal-hooks/deploy/neoavlod-nginx.sh
+systemctl enable --now certbot.timer
+certbot renew --cert-name eduneo.uz --dry-run
+```
+
+Webroot va deploy hook [Certbot qo‘llanmasi](https://eff-certbot.readthedocs.io/en/stable/using.html#webroot)ga mos.
+Mavjud boshqa standalone sertifikatlar renewal’i ham server to‘xtashini talab
+qilishi mumkin; `eduneo.uz` sertifikati webroot bilan yangilanadi.
+
+## 6. Production env va server operator skriptlari
+
+```bash
+cd /root/NeoAvlodLMS
+bash scripts/deploy/init_production_env.sh
+install -m 755 scripts/deploy/common.sh scripts/deploy/server_deploy.sh scripts/deploy/ci-entrypoint.sh /opt/neoavlod/bin/
+stat -c '%a %n' /opt/neoavlod/.env.production
+```
+
+Skript DB paroli, security secret va Fernet kalitini yaratib, `chmod 600` bilan
+saqlaydi; secretlar ekranga chiqarilmaydi. Mavjud faylni qayta yozmaydi.
+Kalitlarni keyingi deploylarda almashtirmang: saqlangan bot tokeni ularning
+barqaror bo‘lishiga bog‘liq. `API_PORT=8000` saqlansin — Nginx upstream shu portda.
+
+Agar eski production DB/env mavjud bo‘lsa, o‘sha env va Docker project/volume’ni
+saqlang; yangi init bilan ikkinchi bo‘sh bazani production deb qabul qilmang.
+Ushbu tartibning project nomi doim `neoavlod-prod`.
+
+## 7. Birinchi deployment va superadmin/Telegram bootstrap
+
+Server tayyor, main’da lokal build ham commit qilingan bo‘lishi kerak:
+
+```bash
+cd /root/NeoAvlodLMS
+RELEASE_SHA="$(git rev-parse origin/main)"
+bash /opt/neoavlod/bin/server_deploy.sh "$RELEASE_SHA"
+
+/opt/neoavlod/current/scripts/deploy/appctl.sh ps
+curl -fsS https://api.eduneo.uz/api/v1/health
+curl -fsS https://api.eduneo.uz/api/v1/ready
+curl -fsS https://admin.eduneo.uz/release.txt
+curl -fsS https://teacher.eduneo.uz/release.txt
+```
+
+Ikki `release.txt` main commit SHA’ni qaytaradi. Skript frontend checksumlarini
+Dockerda tekshiradi, backendni SHA tag bilan build qiladi, backup oladi,
+migratsiyani o‘tkazadi va bitta API/worker’ni almashtiradi. So‘ng Nginxni
+tekshiradi va HTTPS orqali uchala domenni tekshiradi. Migratsiya paytida qisqa
+uzilish mavjud; bu arxitektura zero-downtime deb hisoblanmaydi.
+
+Frontend kataloglari avvaldan oddiy katalog bo‘lsa deploy to‘xtaydi. Ularni
+zaxiralab boshqa nomga ko‘chiring; skript kerakli symlinklarni o‘zi yaratadi.
+Server repo yangilansa deploy skripti Gitdagi exact SHA’dan ishlaydi.
+
+Superadmin: haqiqiy telefoningizni kiriting; parol yashirin prompt orqali so‘raladi:
+
+```bash
+/opt/neoavlod/current/scripts/deploy/appctl.sh run --rm --no-deps api \
+  python -m neoavlod.cli bootstrap \
+  --username superadmin --phone '+998901234567' \
+  --first-name Asosiy --last-name Admin
+```
+
+Parol 12–128 belgi, kamida 4 xil belgi bo‘lsin. Productionda local `1234` demo
+hisoblari avtomatik yaratilmaydi. Natijadagi `onboarding_payload` ni saqlang.
+
+Bot tokenini dastlab CLI orqali kiriting (yashirin prompt):
+
+```bash
+/opt/neoavlod/current/scripts/deploy/appctl.sh run --rm --no-deps api \
+  python -m neoavlod.cli set-bot-token
+/opt/neoavlod/current/scripts/deploy/appctl.sh logs --tail 50 worker
+```
+
+CLI `bot_username` qaytaradi. Bootstrap natijasidagi payload bilan quyidagi
+havolani **o‘zingizning Telegram hisobingizda** oching va Start bosing:
+
+```text
+https://t.me/BOT_USERNAME?start=staff_BOOTSTRAP_AUTH_UUID
+```
+
+Masalan, CLI payload `staff_<uuid>` bo‘lsa, `start=` dan keyin aynan shu qiymat
+yoziladi. Telegram bog‘langach `https://admin.eduneo.uz` da login qiling;
+OTP haqiqiy Telegramga yuboriladi. Birinchi login oldidan UI orqali bot tokenini
+kiritish mumkin emas, chunki loginning o‘zi botni talab qiladi.
+
+## 8. Actions → server: cheklangan CI SSH kaliti
+
+Bu kalit **kompyuteringizda** yaratiladi, private qismi GitHub Actions secretga,
+public qismi serverga yoziladi. GitHub clone kalitini qayta ishlatmang:
+
+```bash
+ssh-keygen -t ed25519 -f ~/.ssh/neoavlod_ci -C 'neoavlod-github-actions-deploy' -N ''
+cat ~/.ssh/neoavlod_ci.pub
+```
+
+Public kalitning butun bir qatorini serverda quyidagi `PUBLIC_KEY` o‘rniga yozing:
+
+```bash
+install -d -m 700 /root/.ssh
+touch /root/.ssh/authorized_keys
+chmod 600 /root/.ssh/authorized_keys
+printf '%s\n' 'restrict,command="/opt/neoavlod/bin/ci-entrypoint.sh" PUBLIC_KEY' >> /root/.ssh/authorized_keys
+```
+
+`PUBLIC_KEY` o‘rnida `ssh-ed25519 AAAA... neoavlod-github-actions-deploy` bo‘ladi.
+Mavjud administrator kalitlarini o‘chirmang. CI kalitida faqat `deploy <SHA>` va
+`rollback` buyruqlari ruxsat etiladi; umumiy shell/port forwarding berilmaydi.
+Root public-key login VPSda yoqilgan bo‘lishi kerak; SSH sozlamalarini o‘zgartirish
+zarur bo‘lsa server konsolini va mavjud sessiyani ochiq saqlang.
+
+Server host public kaliti va fingerprintini serverning ishonchli konsolida oling:
+
+```bash
+cat /etc/ssh/ssh_host_ed25519_key.pub
+ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
+```
+
+`SSH_KNOWN_HOSTS` qiymati port 22 uchun:
+
+```text
+189.74.99.79 ssh-ed25519 AAAA...SERVER_HOST_PUBLIC_KEY...
+```
+
+Port 2222 bo‘lsa: `[189.74.99.79]:2222 ssh-ed25519 AAAA...`.
+Bu `/etc/ssh/ssh_host_ed25519_key.pub` dagi kalit; deploy public kaliti emas.
+Tekshirilmagan `ssh-keyscan` natijasini avtomatik ishonchli deb qabul qilmang.
+
+Repositoryda **Settings → Environments → New environment → production**
+yarating. Deployment branches: faqat `main`. Environment secrets:
+
+| Secret | Qiymati |
+|---|---|
+| `SSH_HOST` | `189.74.99.79` |
+| `SSH_USER` | `root` |
+| `SSH_PORT` | `22` yoki haqiqiy SSH port |
+| `SSH_PRIVATE_KEY` | Kompyuterdagi `~/.ssh/neoavlod_ci` private faylining to‘liq tarkibi |
+| `SSH_KNOWN_HOSTS` | Yuqoridagi tekshirilgan server host-key qatori |
+
+Secretni GitHub UIga to‘g‘ridan-to‘g‘ri kiriting; repository, commit yoki logga
+yozmang. Avtomatik deployment istasangiz environment uchun qo‘lda approval
+qoidasi qo‘ymang. PR testlari production secretsga kira olmaydi.
+
+VPSga SSH orqali kirish paroli `SSH_PRIVATE_KEY` emas. Bu secretga
+`-----BEGIN OPENSSH PRIVATE KEY-----` dan `-----END OPENSSH PRIVATE KEY-----`
+gacha bo‘lgan butun fayl tarkibi, qatorlari saqlangan holda kiritiladi.
+
+## 9. Keyingi o‘zgarishlar: build → commit → push → avtomatik deploy
+
+Kompyuteringizda har frontend o‘zgarishidan keyin:
+
+```bash
+cd /Users/dulmurod/NeoAvlodLMS
+scripts/deploy/build_frontend.sh
+
+git add -A
+git diff --cached --stat
+git commit -m "Describe the change"
+git push origin main
+```
+
+Faqat backend o‘zgarsa va frontend manbalari o‘zgarmasa, oldingi frontend release
+saqlanadi; backend yangi SHA image sifatida yangilanadi. Frontend manbasi yoki
+lock/config/testlari o‘zgarsa buildni qayta tayyorlang — CI mosligini tekshiradi.
+GitHub **Actions → NeoAvlod CI and Production Deploy** dagi test va deploy
+joblarining yashil tugashini kuting. Deploy eski queued commitni main’dagi yangi
+commit ustidan o‘rnatmaydi: joriy main SHAga mos bo‘lmasa to‘xtaydi.
+
+Birinchi secrets sozlangach yoki deployni qayta boshlash uchun:
+**Actions → NeoAvlod CI and Production Deploy → Run workflow → Branch main → action deploy**.
+Serverda qo‘lda `git pull` yoki frontend build qilish kerak emas.
+
+## 10. Rollback va nosozliklarni ko‘rish
+
+Serverda oldingi muvaffaqiyatli **backend image va ikkala frontend**ga qaytish:
+
+```bash
+/opt/neoavlod/current/scripts/deploy/rollback.sh
+```
+
+Yoki Actions **Run workflow → main → action rollback**.
+Aniq saqlangan muvaffaqiyatli releasega:
+
+```bash
+/opt/neoavlod/current/scripts/deploy/rollback.sh FULL_PREVIOUS_COMMIT_SHA
+```
+
+Deploy xatosi image, migration, API/worker, Nginx yoki HTTPS tekshiruv bosqichida
+chiqsa skript avvalgi release mavjud bo‘lganda uni tiklashga urinadi. Birinchi
+deploy xatosida oldingi release bo‘lmagani ochiq ko‘rsatiladi. Rollback health
+xatosi muvaffaqiyat deb belgilanmaydi; Actions job ham xato bilan tugaydi.
+
+DB schema avtomatik downgrade/restore qilinmaydi. Migratsiyalar oldingi backend
+bilan mos bo‘lishi kerak (avval qo‘shish, keyingi release’da eski maydonni olib
+tashlash). Mos bo‘lmagan migratsiya uchun alohida maintenance/restore rejasi kerak.
+
+```bash
+/opt/neoavlod/current/scripts/deploy/appctl.sh ps
+/opt/neoavlod/current/scripts/deploy/appctl.sh logs --tail 100 api worker
+nginx -t
+journalctl -u nginx -n 50 --no-pager
+```
+
+`/opt/neoavlod/releases/<SHA>/.successful` faqat tekshirilgan release’da yaratiladi.
+Failed release diagnostika uchun qoladi. Release/image/DB volumelar avtomatik
+prune qilinmaydi. Diskni kuzating; current va `.previous_release` dagi release/image
+juftliklarini saqlang, qolganlarini tekshirib qo‘lda tozalang. `docker system prune -a`
+rollback imagelarini yo‘qotishi mumkin; `docker compose down -v` production DBni o‘chiradi.
+
+## 11. Backup va tiklash
+
+Qo‘lda:
+
+```bash
+/opt/neoavlod/current/scripts/deploy/backup.sh
+```
+
+Kunlik 03:00 **server timezone** bo‘yicha (`timedatectl` bilan tekshiring):
+
+```bash
+cat > /etc/cron.d/neoavlod-backup <<'EOF_CRON'
+0 3 * * * root /opt/neoavlod/current/scripts/deploy/backup.sh >> /var/log/neoavlod-backup.log 2>&1
+EOF_CRON
+chmod 644 /etc/cron.d/neoavlod-backup
+```
+
+Backup tugamaguncha deploy boshlanmaydi; ikkisi bir xil lock ishlatadi.
+Kundalik va migration-oldi dump’larni serverdan tashqariga ham nusxalang.
+Avtomatik o‘chirish yo‘q; retentionni tekshirilgan backup rejangizga mos yuriting.
+
+Dump formatini yozmasdan tekshirish:
+
+```bash
+BACKUP_FILE=/var/backups/neoavlod/YOUR_BACKUP.dump
+/opt/neoavlod/current/scripts/deploy/appctl.sh exec -T database pg_restore --list < "$BACKUP_FILE"
+```
+
+**Tiklash mavjud DB ma’lumotlarini almashtiradi.** Ishlayotgan bazadan yangi backup
+oling, tanlangan dump va unga mos backend release’ni tekshiring. Maintenance
+sessiyasida, CI deploy yo‘q va boshqa operator yozmayotganida:
+
+```bash
+BACKUP_FILE=/var/backups/neoavlod/YOUR_BACKUP.dump
+/opt/neoavlod/current/scripts/deploy/backup.sh
+exec 9>/opt/neoavlod/.deploy.lock
+flock -w 600 9
+/opt/neoavlod/current/scripts/deploy/appctl.sh stop api worker
+/opt/neoavlod/current/scripts/deploy/appctl.sh exec -T database sh -c \
+  'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --exit-on-error --single-transaction' < "$BACKUP_FILE"
+# Shu dump schemaga mos joriy backend bo‘lsa:
+/opt/neoavlod/current/scripts/deploy/appctl.sh up -d --no-deps --no-build --wait api worker
+flock -u 9
+curl -fsS https://api.eduneo.uz/api/v1/ready
+```
+
+Restore xato chiqsa appni to‘xtagan holda qoldirib xatoni tekshiring. Dumpga eski
+backend kerak bo‘lsa lockni bo‘shatib tegishli saqlangan releasega rollback qiling;
+migrations service’ni tasodifan qayta ishlatmang.
+
+## 12. Serverga chiqarishdan keyingi qabul tekshiruvi
+
+- Uch domenning A/AAAA, HTTP ACME va haqiqiy TLS sertifikati to‘g‘ri.
+- API `/health` va `/ready` 200; ikkala portal `release.txt` kutilgan SHA.
+- Superadmin Telegram link bilan bog‘langan; haqiqiy OTP login ishlaydi.
+- Superadmin teacher/fan/guruh/talaba yaratadi; teacher faqat o‘z guruhlarini ko‘radi.
+- Teacher davomat qoralamasini saqlaydi/yakunlaydi; ulangan ota-onaga haqiqiy Telegram xabari boradi.
+- Admin davomat tarixini ko‘radi; portal/RBAC va CSRF cheklovlari ishlaydi.
+- Main push bilan frontend va backend bir SHAga yangilanadi; Actions deploy yashil.
+- Backup dump o‘qiladi; rollback oldingi image va ikkala frontendni tiklaydi.
+
+Repositorydagi Docker smoke’lar bu oqimning infra qismini disposable muhitda
+tekshiradi. Haqiqiy VPS SSH/DNS/TLS, GitHub secrets va Telegram yetkazilishini
+serverda yuqoridagi qadamlar bilan alohida tasdiqlash kerak.
