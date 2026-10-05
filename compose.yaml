@@ -1,0 +1,105 @@
+name: neoavlod-dev
+
+x-backend: &backend
+  image: neoavlod-backend:development
+  build:
+    context: .
+    dockerfile: backend/Dockerfile
+    target: development
+  init: true
+  user: '${NEOAVLOD_UID:-1000}:${NEOAVLOD_GID:-1000}'
+  volumes:
+    - .:/workspace
+  working_dir: /workspace
+
+services:
+  database:
+    image: postgres:18.6
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-neoavlod}
+      POSTGRES_DB: ${POSTGRES_DB:-neoavlod}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run docker_env.sh init}
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  test-database:
+    image: postgres:18.6
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-neoavlod}
+      POSTGRES_DB: neoavlod_test
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run docker_env.sh init}
+    tmpfs:
+      - /var/lib/postgresql
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  backend:
+    <<: *backend
+    working_dir: /workspace/backend
+    ports:
+      - '127.0.0.1:${API_PORT:-8000}:8000'
+    environment:
+      NEOAVLOD_ENVIRONMENT: development
+      NEOAVLOD_SECURITY_SECRET: ${NEOAVLOD_SECURITY_SECRET:?Run docker_env.sh init}
+      NEOAVLOD_BOT_ENCRYPTION_KEY: ${NEOAVLOD_BOT_ENCRYPTION_KEY:?Run docker_env.sh init}
+      NEOAVLOD_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-neoavlod}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB:-neoavlod}
+    depends_on:
+      database:
+        condition: service_healthy
+
+  tools:
+    <<: *backend
+    profiles: [tools]
+    command: [bash]
+    healthcheck:
+      disable: true
+    environment:
+      NEOAVLOD_ENVIRONMENT: test
+      NEOAVLOD_SECURITY_SECRET: ${NEOAVLOD_SECURITY_SECRET:?Run docker_env.sh init}
+      NEOAVLOD_BOT_ENCRYPTION_KEY: ${NEOAVLOD_BOT_ENCRYPTION_KEY:?Run docker_env.sh init}
+      NEOAVLOD_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-neoavlod}:${POSTGRES_PASSWORD}@test-database:5432/neoavlod_test
+      TEST_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-neoavlod}:${POSTGRES_PASSWORD}@test-database:5432/neoavlod_test
+      PYTEST_ADDOPTS: '-p no:cacheprovider'
+    depends_on:
+      test-database:
+        condition: service_healthy
+
+  migrations:
+    <<: *backend
+    profiles: [tools]
+    working_dir: /workspace/backend
+    healthcheck:
+      disable: true
+    environment:
+      NEOAVLOD_ENVIRONMENT: development
+      NEOAVLOD_SECURITY_SECRET: ${NEOAVLOD_SECURITY_SECRET:?Run docker_env.sh init}
+      NEOAVLOD_BOT_ENCRYPTION_KEY: ${NEOAVLOD_BOT_ENCRYPTION_KEY:?Run docker_env.sh init}
+      NEOAVLOD_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-neoavlod}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB:-neoavlod}
+    command: [bash, /workspace/scripts/agent_skills/run_migrations.sh]
+    depends_on:
+      database:
+        condition: service_healthy
+
+  node:
+    image: node:22-bookworm-slim
+    profiles: [tools]
+    user: '${NEOAVLOD_UID:-1000}:${NEOAVLOD_GID:-1000}'
+    init: true
+    working_dir: /workspace/frontend
+    environment:
+      npm_config_cache: /tmp/npm-cache
+    volumes:
+      - .:/workspace
+    command: [node, --version]
+
+volumes:
+  postgres-data:

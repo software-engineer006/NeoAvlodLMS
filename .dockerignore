@@ -1,0 +1,14 @@
+.git
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/*.egg-info
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+!**/.env.example
+.TASKS.md.lock
+
