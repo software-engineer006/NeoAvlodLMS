@@ -29,7 +29,7 @@ done
 
 # 2. Frontend dist statik fayllarini tayyorlash
 printf '2. Frontend statik fayllari tekshirilmoqda...\n'
-mkdir -p "$SMOKE_DIR/www/admin" "$SMOKE_DIR/www/teacher" "$SMOKE_DIR/certbot"
+mkdir -p "$SMOKE_DIR/www/admin" "$SMOKE_DIR/www/teacher" "$SMOKE_DIR/certbot/.well-known/acme-challenge"
 if [[ -d "$AGENT_ROOT/frontend/apps/admin/dist" ]]; then
   cp -r "$AGENT_ROOT/frontend/apps/admin/dist/"* "$SMOKE_DIR/www/admin/"
 else
@@ -41,6 +41,31 @@ if [[ -d "$AGENT_ROOT/frontend/apps/teacher/dist" ]]; then
 else
   fail "frontend/apps/teacher/dist topilmadi. Avval npm run build bajaring."
 fi
+
+# Bootstrap HTTP must serve the actual ACME file before any TLS config is loaded.
+mkdir -p "$SMOKE_DIR/bootstrap.conf.d"
+cp "$AGENT_ROOT/nginx/acme-http.conf" "$SMOKE_DIR/bootstrap.conf.d/neoavlod-acme.conf"
+printf 'server { listen 80 default_server; server_name _; return 404; }\n' > "$SMOKE_DIR/bootstrap.conf.d/default.conf"
+printf 'neoavlod-acme-ok\n' > "$SMOKE_DIR/certbot/.well-known/acme-challenge/check"
+check_acme() {
+  local host actual status
+  for host in admin.eduneo.uz teacher.eduneo.uz api.eduneo.uz; do
+    actual="$(curl --retry 5 --retry-delay 1 --retry-connrefused --max-time 5 -fsS \
+      -H "Host: $host" "http://127.0.0.1:$HTTP_PORT/.well-known/acme-challenge/check")"
+    [[ "$actual" == neoavlod-acme-ok ]] || fail "$host ACME content noto‘g‘ri."
+    status="$(curl -sS -o /dev/null -w '%{http_code}' -H "Host: $host" \
+      "http://127.0.0.1:$HTTP_PORT/.well-known/acme-challenge/missing")"
+    [[ "$status" == 404 ]] || fail "$host mavjud bo‘lmagan ACME fayli 404 emas."
+  done
+}
+docker run -d --name "$CONTAINER_NAME" -p "127.0.0.1:$HTTP_PORT:80" \
+  -v "$AGENT_ROOT/nginx/nginx.conf:/etc/nginx/nginx.conf:ro" \
+  -v "$SMOKE_DIR/bootstrap.conf.d:/etc/nginx/conf.d:ro" \
+  -v "$SMOKE_DIR/certbot:/var/www/certbot:ro" nginx:1.24-alpine >/dev/null
+docker exec "$CONTAINER_NAME" nginx -t
+check_acme
+docker rm -f "$CONTAINER_NAME" >/dev/null
+printf 'Bootstrap: hash bucket 64, uch domen ACME 200/404 tasdiqlandi.\n'
 
 # 3. Asl nginx konfiguratsiyasi tekshiruvi (nginx -t)
 printf '3. Asl Nginx konfiguratsiyasi tekshirilmoqda (nginx -t)...\n'
@@ -74,6 +99,8 @@ docker run -d --name "$CONTAINER_NAME" \
   nginx:1.24-alpine
 
 sleep 2
+check_acme
+printf 'Production HTTP ACME uch domen uchun 200/404 tasdiqlandi.\n'
 
 # 6. HTTP -> HTTPS 301 Redirect tekshiruvi
 printf '5. HTTP -> HTTPS 301 Redirect tekshirilmoqda...\n'

@@ -106,7 +106,11 @@ invariantlari tekshiruvdan o‘tdi.
 
 ## Davom ettirish checkpoint
 
-Faol registry task yo‘q; 001–043 repository vazifalari tekshirilib yakunlangan.
+Faol registry task yo‘q; 001–044 repository vazifalari tekshirilib yakunlangan.
+Task 044: explicit hash bucket 64, bootstrap/production uch domen ACME 200/404,
+Nginx portal/proxy regressiyasi va 13 agent testi Dockerda o‘tdi; local demo tiklandi.
+Serverda nginx.conf http sozlamasini 64 ga o‘zgartirish, nginx -t va muvaffaqiyatli
+reload, uch public ACME URLdan keyin Certbot — navbatdagi live qadam.
 Task 043: Ubuntu SSH clone va alohida CI kaliti, local committed frontend build,
 exact main SHA deploy, versioned backend image, ikki portal, backup/migration,
 avtomatik/qo‘lda rollback va Nginx 1.24 webroot TLS mosligi Dockerda tekshirildi.
@@ -115,7 +119,7 @@ actionlint va real disposable production deploy/rollback muvaffaqiyatli.
 Haqiqiy VPS/Actions/Telegram hali tasdiqlanmagan: server host identity,
 CI SSH kaliti va GitHub production environment/secrets sozlanishi kerak.
 Foydalanuvchi yuborgan qiymat VPS paroli ekanini tasdiqladi; secret saqlanmadi.
-GitHubga yuborish: local demo/CSRF va deployment/CI/CD alohida commitlarga ajratiladi;
+GitHubga local demo/CSRF va deployment/CI/CD alohida commitlar bilan yuborilgan;
 frontend release checksumlari qayta tasdiqlandi, secretlar va local UI rasmlari chiqarildi.
 Pushdan keyingi amaliy qadam: GitHub Actions test/deploy holatini tekshirish,
 `DEPLOYMENT.md` bo‘yicha root@189.74.99.79 serverini sozlash va live acceptance.
@@ -328,3 +332,7 @@ Qo‘llanma: `LOCAL_DEMO.md`; Docker socketi uchun sandbox escalation kerak bo�
 - [x] 043 — Ubuntu deployment va CI/CDni to‘g‘rilash.
   - Qabul: /root/NeoAvlodLMS SSH clone va ikki yo‘nalish SSH sozlash; local Docker frontend build Gitga kiritiladi va CI stale/tampered buildni rad etadi; main push exact SHA backend/frontend deploy qiladi; /var/www/neoavlod statik fayllar, versioned backend image, DB backup/migration, failure/manual rollback, webroot TLS va yagona sertifikat yo‘llari; Docker regressiya va real disposable deploy smoke. VPS/Actions tekshiruvi credentials mavjud bo‘lganda bajariladi, local dalildan farqlanadi.
   - Dalil: 2026-10-05: Docker check_backend Ruff/mypy + 169 pytest; frontend release Docker install/typecheck/lint/85 tests/both production builds and prepare-release --check passed; run_migrations head/model match; actionlint + 8 deployment regressions and deployment-script Ruff/bash syntax passed; Nginx 1.24 portal smoke passed; real disposable PostgreSQL/API/worker/TLS deployment A->B, failed Nginx C auto rollback B, manual rollback A, exact image+both portal SHA and pg_restore backup list passed. check_agent_skills 13 tests/43-task invariants passed. Ubuntu SSH clone/CI key/DNS/webroot TLS/bootstrap/update/backup guide updated for root@189.74.99.79. Actual VPS/Actions/Telegram validation not run: pinned host identity and CI/environment setup still required; supplied VPS password was not stored.
+
+- [x] 044 — Ubuntu Nginx server_names_hash va ACME bootstrap regressiyasi.
+  - Qabul: repo http kontekstida hash bucket 64; Ubuntu host nginx.conf sozlash qo‘llanmada TLSdan oldin; nginx -t muvaffaqiyatli bo‘lsagina reload; uch domen uchun bootstrap va production ACME 200/404 smoke Dockerda; local demo tiklanadi. Haqiqiy VPS natijasi foydalanuvchi terminalida alohida tasdiqlanadi.
+  - Dalil: 2026-10-05: Docker Nginx 1.24 nginx -t passed with explicit http server_names_hash_bucket_size 64. Bootstrap before TLS and production HTTP verified actual ACME 200/content and missing-file 404 for admin/teacher/api; redirects, SPA/security headers, static cache, API health/ready proxy and 413 limit passed. check_agent_skills: 13 tests, shell syntax and 44-task invariants passed. Local demo restart returned healthy services. Ubuntu host nginx.conf backup/edit step added before TLS; reload guarded by nginx -t. VPS configuration/result must be confirmed in user terminal; host nginx.conf is not overwritten by release scripts.

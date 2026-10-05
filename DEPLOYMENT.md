@@ -182,6 +182,21 @@ javoblari yangilanishini kuting; Certbotni takrorlash hali yordam bermaydi.
 Nginx 80-portni ishlatib turganida **webroot** ishlatiladi. Nginxni to‘xtatish
 kerak emas. HTTPS konfiguratsiyasini sertifikat olinmasidan oldin o‘rnatmang.
 
+Ubuntu hostning `/etc/nginx/nginx.conf` faylida `http { ... }` ichiga
+`server_names_hash_bucket_size 64;` yozing. Mavjud shu sozlama `32` bo‘lsa
+uni `64` ga almashtiring; `# server_names_hash_bucket_size 64;` bo‘lsa
+kommentariyni olib tashlang. Bir marta yozilsin; `server { ... }` ichiga yozmang.
+Repo `nginx/nginx.conf` fayli Docker smoke uchun ishlatiladi; hostning asosiy
+konfiguratsiyasi boshqa saytlarni saqlash uchun avtomatik almashtirilmaydi.
+
+```bash
+cp -a /etc/nginx/nginx.conf "/etc/nginx/nginx.conf.bak-$(date +%Y%m%d-%H%M%S)"
+nano /etc/nginx/nginx.conf
+```
+
+Bu sozlama `could not build server_names_hash ... size: 32` xatosini
+[Nginx rasmiy qo‘llanmasi](https://nginx.org/en/docs/http/server_names.html#optimization)ga mos tuzatadi.
+
 ```bash
 cd /root/NeoAvlodLMS
 install -d -m 755 /var/www/certbot/.well-known/acme-challenge
@@ -190,8 +205,7 @@ install -d -m 755 /opt/neoavlod/releases /opt/neoavlod/bin
 install -d -m 700 /var/backups/neoavlod
 
 install -m 644 nginx/acme-http.conf /etc/nginx/conf.d/neoavlod-acme.conf
-nginx -t
-systemctl reload nginx
+nginx -t && systemctl reload nginx
 printf 'neoavlod-acme-ok\n' > /var/www/certbot/.well-known/acme-challenge/check
 
 curl -fsS http://admin.eduneo.uz/.well-known/acme-challenge/check
@@ -202,6 +216,20 @@ curl -fsS http://api.eduneo.uz/.well-known/acme-challenge/check
 Uchalasida `neoavlod-acme-ok` chiqsin. Agar eski NeoAvlod 80-port konfiguratsiyasi
 shu domenlar bilan o‘rnatilgan bo‘lsa, uning nusxasini saqlab olib, bootstrap
 `neoavlod-acme.conf` bilan dublikat server bloklarini bartaraf eting.
+
+`nginx -t` xato bersa keyingi bosqichga o‘tmang. Reload qabul qilinmaganida
+oldingi konfiguratsiya ishlashda davom etadi va ACME URL 404 qaytarishi mumkin.
+DNSdan alohida local Nginx tekshiruvi:
+
+```bash
+for host in admin.eduneo.uz teacher.eduneo.uz api.eduneo.uz; do
+  curl -fsS -H "Host: $host" http://127.0.0.1/.well-known/acme-challenge/check
+done
+```
+
+Local so‘rov ishlasa, yuqoridagi uchta public URLni ham tekshiring.
+Terminalga `http://...` manzilni yozing; Markdown `[http://...](http://...)`
+ko‘rinishini nusxalamang. Uchala public URL 200 bo‘lganidan keyin sertifikat oling.
 
 Bitta nomlangan SAN sertifikat, uchala domen uchun:
 
