@@ -115,7 +115,7 @@ invariantlari tekshiruvdan o‘tdi.
 
 ## Davom ettirish checkpoint
 
-Faol registry task: 081 — foydalanuvchi GitHub pushni aniq so‘radi. origin/main va HEAD mos (9ed77de); public repo uchun 169 tegishli release fayli stage qilindi, unrelated output/ hujjatlar va private paket kiritilmadi. Legacy source/audit/testlardan haqiqiy o‘quvchi ismlari chiqarildi; qo‘shimcha legacy mapping private JSONdan olinadi. 225 backend test va yangilangan frontend build/checksum, 13 agent testi o‘tdi. Eski Actions 37300846561 logida root-owned smoke cleanup permission xatosi topildi va Docker orqali ownership tiklash bilan tuzatildi; real production smoke qayta exit 0 berdi. Secret scan DEPLOYMENT.mddagi private-key sarlavha namunasini tekshirishni talab qildi; actual qiymatlar chiqarmay ko‘riladi. Keyingi qadam: final secret scan → professional commit → non-force push → remote SHA/Actions; so‘ng 082 local CEO/teacher bot holati va linklar. 076–080 local data/release dalillari saqlangan. Production private paket hali serverga yuborilmagan.
+Faol registry task: Yo‘q; 001–082 yakunlangan. Public GitHub main uchun 169 faylli release 92b636bf871dbe84eff1ff7059074e11745965c0 non-force push bilan tasdiqlandi. Actual secret/password/student-name scan findings=0, unrelated output/ va private data chiqarildi. Docker 225 backend test, yangilangan frontend build/checksum, 13 agent testi, legacy synthetic fixture va real production import/rollback/cleanup exit 0. Eski GitHub Actions root-owned cleanup xatosi tuzatildi. Release Actions 37908343083 in_progress; yakuniy CI/deploy natijasi hali tasdiqlanmagan. Local CEO Mohira va Dilmurod allaqachon Telegramga ulangan; Jasurbekning amaldagi bir martalik havolasi .private/python-groups/TELEGRAM_LINKS.jsonda (0600), IDs/parollar Gitda yo‘q. Keyingi qadam: push qilingan eng oxirgi SHA Actions holatini tekshirish va foydalanuvchiga natija/linklarni berish. Production private paket hali serverga yuborilmagan; local havolalar hozirgi neoavlod_demo bazasiga tegishli. 076–080 local data dalillari saqlangan.
 2026-10-09 educenter_data/ CSV haqiqiy davomat integratsiyasi (072–075) yakunlandi:
 - 10 ta guruh bo‘yicha 29 ta dars sanasi (YYYY-MM-DD) xaritalandi.
 - neoavlod_demo bazasiga 29 ta AttendanceBatch va 302 ta Attendance yozuvi (162 present, 140 absent, 28 izoh) qo‘llandi.
@@ -756,9 +756,9 @@ Qo‘llanma: `LOCAL_DEMO.md`; Docker socketi uchun sandbox escalation kerak bo�
 
 ### GitHubga topshirish va Telegram havolalari (2026-10-09)
 
-- [/] 081 — Tekshirilgan release o‘zgarishlarini GitHub main branchiga push qilish.
+- [x] 081 — Tekshirilgan release o‘zgarishlarini GitHub main branchiga push qilish.
   - Qabul: remote/base mosligi tekshiriladi; unrelated output hujjatlar, raw CSV, audit, credential/token va local rasmlar commitga kiritilmaydi; stage diff/secret scan va Docker release checksum/task invariantlari o‘tadi; oddiy non-force push remote SHA bilan tasdiqlanadi. GitHub Actions runi aniqlanib holati va xato bo‘lsa aniq sababi checkpointga yoziladi.
-  - Dalil: Kutilmoqda.
-- [ ] 082 — CEO va teacher Telegram ulanish havolalarini aniq holat bilan berish.
+  - Dalil: Public release: 169 files reviewed/staged, git diff --cached --check passed, Docker actual secret/password/student-name scan findings=0; output/private data excluded. 225 backend tests, frontend rebuilt/checksum, 13 agent tests, synthetic legacy fixture and real production release/import/rollback/cleanup passed. Non-force main push 92b636bf871dbe84eff1ff7059074e11745965c0 confirmed by ls-remote. Actions 37908343083 started in_progress; monitoring continues, production success not yet claimed.
+- [x] 082 — CEO va teacher Telegram ulanish havolalarini aniq holat bilan berish.
   - Qabul: serving local DB bot username va hisobning ulanganlik/muddati tekshiriladi; ulangan hisob uzilmaydi, Telegram ID uydirilmaydi. Ulanmagan xodimning amaldagi yoki zarur bo‘lsa yangilangan bir martalik havolasi beriladi; CEO/Dilmurod allaqachon ulangan bo‘lsa bu aniq aytiladi. Secret/parol/ID Gitga chiqmaydi; local/prod DB doirasi tushuntiriladi.
-  - Dalil: Kutilmoqda.
+  - Dalil: Serving neoavlod_demo DB: ceo_mohira and teacher_dilmurod already linked (IDs not printed); teacher_jasurbek unlinked, active one-time staff deep link expires 2026-10-15, no rotation or unlink needed. Bot username eduneo_admin_bot; owner-only TELEGRAM_LINKS.json saved; no passwords, Telegram IDs or capability URLs added to Git. Links apply to the current local bot DB; production needs its own imported/configured data.
