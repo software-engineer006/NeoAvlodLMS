@@ -97,14 +97,17 @@ export const StaffManagementView: React.FC<StaffManagementViewProps> = ({ curren
   };
 
   const handleStaffSaved = (saved: StaffItem) => {
-    // Check if new or updated
     loadStaff();
-    // If it was created, optionally open telegram modal if telegram_link was provided
-    const detail = saved as StaffDetailItem;
-    if (detail.telegram_link) {
-      setSelectedStaffForTelegram(saved);
-      setTelegramLinkState(detail.telegram_link);
-      setIsTelegramModalOpen(true);
+    // For newly created staff, immediately open the Telegram onboarding link modal
+    if (!editingStaff) {
+      const detail = saved as StaffDetailItem;
+      if (detail.telegram_link) {
+        setSelectedStaffForTelegram(saved);
+        setTelegramLinkState(detail.telegram_link);
+        setIsTelegramModalOpen(true);
+      } else {
+        handleOpenTelegramModal(saved);
+      }
     }
   };
 

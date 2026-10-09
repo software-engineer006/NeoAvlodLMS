@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <defs>
+    <linearGradient id="teacher-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10B981" />
+      <stop offset="45%" stop-color="#059669" />
+      <stop offset="100%" stop-color="#047857" />
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="url(#teacher-bg)" />
+  <g transform="translate(42.3, 22) scale(0.271)">
+    <path
+      d="M8 302V102L80 8l72 94v200l-72-97L8 302ZM8 102l72 103V8"
+      stroke="#ffffff"
+      stroke-width="16"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  </g>
+</svg>

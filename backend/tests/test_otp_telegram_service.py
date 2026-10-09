@@ -1,22 +1,24 @@
 import logging
+import os
 import re
-from datetime import UTC, datetime, timedelta
+import uuid
 
 import httpx
 import pytest
 from factories import staff
-from sqlalchemy import select
 
 from neoavlod.database import Database
 from neoavlod.errors import DomainError
-from neoavlod.models import OTPChallenge, OTPPurpose, Portal, Role, Staff
+from neoavlod.models import OTPPurpose, Portal, Role, Staff
 from neoavlod.security.passwords import hash_password
 from neoavlod.services.login import (
     begin_login,
+    code_hash,
     confirm_login,
     deliver_challenge,
     verify_challenge,
 )
+from neoavlod.services.otp_store import InMemoryOTPStore, OTPVerdict, RedisOTPStore
 from neoavlod.services.telegram import TelegramClient
 from neoavlod.settings import Settings
 
@@ -58,55 +60,50 @@ async def test_otp_format_hash_storage_ttl_and_one_time_consume(
     settings = Settings()
     person = await create_user(model_database)
     sender = CapturingSender()
+    store = InMemoryOTPStore()
 
     async with model_database.session() as session:
         challenge = await begin_login(
-            session, settings, sender, person.username, PASSWORD, Portal.ADMIN, "127.0.0.1"
+            session, settings, sender, store, person.username, PASSWORD, Portal.ADMIN, "127.0.0.1"
         )
 
     code = sender.latest_code
     assert re.fullmatch(r"[0-9]{6}", code) is not None
 
-    async with model_database.session() as session:
-        record = await session.get(OTPChallenge, challenge.id)
-        assert record is not None
-        assert record.code_hash != code
-        assert len(record.code_hash) == 64
-        assert record.purpose == OTPPurpose.LOGIN
-        assert record.consumed_at is None
-        assert record.delivered_at is not None
-        assert record.expires_at > datetime.now(UTC)
-        assert record.expires_at <= datetime.now(UTC) + timedelta(minutes=6)
+    stored = store._challenges.get(challenge.id)
+    assert stored is not None
+    assert stored.code_hash != code
+    assert len(stored.code_hash) == 64
+    assert stored.purpose == OTPPurpose.LOGIN
+    assert stored.staff_id == person.id
 
     # First consumption succeeds
     async with model_database.session() as session:
         user, tokens = await confirm_login(
-            session, settings, challenge.id, code, Portal.ADMIN
+            session, settings, store, challenge.id, code, Portal.ADMIN
         )
         assert user.id == person.id
         assert tokens.access is not None
 
-    # Check consumed_at in DB
-    async with model_database.session() as session:
-        record = await session.get(OTPChallenge, challenge.id)
-        assert record is not None
-        assert record.consumed_at is not None
+    # Challenge is removed after consumption (one-time consume)
+    assert challenge.id not in store._challenges
 
     # Replay attack is rejected
     async with model_database.session() as session:
         with pytest.raises(DomainError, match="yaroqsiz yoki muddati tugagan"):
-            await confirm_login(session, settings, challenge.id, code, Portal.ADMIN)
+            await confirm_login(session, settings, store, challenge.id, code, Portal.ADMIN)
 
 
 async def test_purpose_binding_prevents_cross_use(model_database: Database) -> None:
     settings = Settings()
     person = await create_user(model_database)
     sender = CapturingSender()
+    store = InMemoryOTPStore()
 
     # Generate Login challenge
     async with model_database.session() as session:
         login_ch = await begin_login(
-            session, settings, sender, person.username, PASSWORD, Portal.ADMIN, "127.0.0.1"
+            session, settings, sender, store, person.username, PASSWORD, Portal.ADMIN, "127.0.0.1"
         )
     login_code = sender.latest_code
 
@@ -114,7 +111,7 @@ async def test_purpose_binding_prevents_cross_use(model_database: Database) -> N
     async with model_database.session() as session:
         with pytest.raises(DomainError, match="yaroqsiz yoki muddati tugagan"):
             await verify_challenge(
-                session, settings, login_ch.id, login_code, Portal.ADMIN, OTPPurpose.RESET
+                session, settings, store, login_ch.id, login_code, Portal.ADMIN, OTPPurpose.RESET
             )
 
     # Generate Reset challenge
@@ -122,7 +119,7 @@ async def test_purpose_binding_prevents_cross_use(model_database: Database) -> N
         staff_member = await session.get(Staff, person.id)
         assert staff_member is not None
         reset_ch = await deliver_challenge(
-            session, staff_member, Portal.ADMIN, OTPPurpose.RESET, settings, sender
+            session, staff_member, Portal.ADMIN, OTPPurpose.RESET, settings, sender, store
         )
     reset_code = sender.latest_code
 
@@ -130,7 +127,7 @@ async def test_purpose_binding_prevents_cross_use(model_database: Database) -> N
     async with model_database.session() as session:
         with pytest.raises(DomainError, match="yaroqsiz yoki muddati tugagan"):
             await verify_challenge(
-                session, settings, reset_ch.id, reset_code, Portal.ADMIN, OTPPurpose.LOGIN
+                session, settings, store, reset_ch.id, reset_code, Portal.ADMIN, OTPPurpose.LOGIN
             )
 
 
@@ -138,6 +135,7 @@ async def test_delivery_failure_prevents_session_creation(model_database: Databa
     settings = Settings()
     person = await create_user(model_database)
     failing_sender = CapturingSender(should_fail=True)
+    store = InMemoryOTPStore()
 
     # Delivery fails during begin_login
     with pytest.raises(DomainError, match="Telegram xizmati"):
@@ -146,25 +144,15 @@ async def test_delivery_failure_prevents_session_creation(model_database: Databa
                 session,
                 settings,
                 failing_sender,
+                store,
                 person.username,
                 PASSWORD,
                 Portal.ADMIN,
                 "127.0.0.1",
             )
 
-    # Any unconfirmed challenge without delivered_at cannot create session
-    async with model_database.session() as session:
-        undelivered = (
-            await session.scalars(
-                select(OTPChallenge).where(
-                    OTPChallenge.staff_id == person.id,
-                    OTPChallenge.delivered_at.is_(None),
-                )
-            )
-        ).all()
-        for ch in undelivered:
-            with pytest.raises(DomainError, match="yaroqsiz yoki muddati tugagan"):
-                await confirm_login(session, settings, ch.id, "123456", Portal.ADMIN)
+    # Discarded immediately on delivery failure
+    assert not store._challenges
 
 
 async def test_telegram_client_retry_on_429_and_transient_failure() -> None:
@@ -223,13 +211,68 @@ async def test_code_never_logged_during_delivery(
     person = await create_user(model_database)
     sender = CapturingSender()
 
+    store = InMemoryOTPStore()
     with caplog.at_level(logging.DEBUG):
         async with model_database.session() as session:
             await begin_login(
-                session, settings, sender, person.username, PASSWORD, Portal.ADMIN, "127.0.0.1"
+                session,
+                settings,
+                sender,
+                store,
+                person.username,
+                PASSWORD,
+                Portal.ADMIN,
+                "127.0.0.1",
             )
 
     code = sender.latest_code
     assert len(code) == 6
     for record in caplog.records:
         assert code not in record.getMessage()
+
+
+async def test_redis_otp_store_live_operations() -> None:
+    redis_url = os.environ.get("TEST_REDIS_URL")
+    if not redis_url:
+        pytest.skip("TEST_REDIS_URL not configured")
+    store = RedisOTPStore.from_url(redis_url)
+    try:
+        challenge_id = uuid.uuid4()
+        staff_id = uuid.uuid4()
+        portal = Portal.ADMIN
+        purpose = OTPPurpose.LOGIN
+        code = "123456"
+        settings = Settings()
+        c_hash = code_hash(settings, challenge_id, purpose, code)
+
+        # 1. Put challenge
+        await store.put(
+            challenge_id=challenge_id,
+            staff_id=staff_id,
+            portal=portal,
+            purpose=purpose,
+            code_hash=c_hash,
+            ttl_seconds=300,
+        )
+
+        # 2. Wrong code -> mismatch
+        wrong_hash = code_hash(settings, challenge_id, purpose, "999999")
+        v = await store.verify(
+            challenge_id=challenge_id, portal=portal, purpose=purpose, code_hash=wrong_hash
+        )
+        assert v.verdict is OTPVerdict.MISMATCH
+
+        # 3. Correct code -> OK and consumed atomically
+        v_ok = await store.verify(
+            challenge_id=challenge_id, portal=portal, purpose=purpose, code_hash=c_hash
+        )
+        assert v_ok.verdict is OTPVerdict.OK
+        assert v_ok.staff_id == staff_id
+
+        # 4. Second attempt -> missing
+        v_replay = await store.verify(
+            challenge_id=challenge_id, portal=portal, purpose=purpose, code_hash=c_hash
+        )
+        assert v_replay.verdict is OTPVerdict.MISSING
+    finally:
+        await store.close()

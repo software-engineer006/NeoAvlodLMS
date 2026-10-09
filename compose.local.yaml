@@ -18,16 +18,51 @@ services:
   backend:
     environment:
       NEOAVLOD_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-neoavlod}:${POSTGRES_PASSWORD}@demo-database:5432/neoavlod_demo
+      NEOAVLOD_REDIS_URL: redis://redis:6379/2
       NEOAVLOD_ADMIN_ORIGIN: http://localhost:3000
       NEOAVLOD_TEACHER_ORIGIN: http://127.0.0.1:3001
     depends_on: !override
       demo-database:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     command: [uvicorn, neoavlod.local_demo:create_demo_app, --factory, --host, '0.0.0.0', --port, '8000', --reload]
+
+  worker:
+    image: neoavlod-backend:development
+    init: true
+    user: '${NEOAVLOD_UID:-1000}:${NEOAVLOD_GID:-1000}'
+    volumes:
+      - .:/workspace
+    working_dir: /workspace/backend
+    environment:
+      NEOAVLOD_ENVIRONMENT: development
+      NEOAVLOD_SECURITY_SECRET: ${NEOAVLOD_SECURITY_SECRET:?Run docker_env.sh init}
+      NEOAVLOD_BOT_ENCRYPTION_KEY: ${NEOAVLOD_BOT_ENCRYPTION_KEY:?Run docker_env.sh init}
+      NEOAVLOD_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-neoavlod}:${POSTGRES_PASSWORD}@demo-database:5432/neoavlod_demo
+      NEOAVLOD_REDIS_URL: redis://redis:6379/2
+      NEOAVLOD_ADMIN_ORIGIN: http://localhost:3000
+      NEOAVLOD_TEACHER_ORIGIN: http://127.0.0.1:3001
+    command: [python, -m, neoavlod.cli, worker]
+    healthcheck:
+      test: [CMD, python, -m, neoavlod.worker_health]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    depends_on:
+      demo-database:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
 
   migrations:
     environment:
       NEOAVLOD_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-neoavlod}:${POSTGRES_PASSWORD}@demo-database:5432/neoavlod_demo
+      NEOAVLOD_ADMIN_ORIGIN: http://localhost:3000
+      NEOAVLOD_TEACHER_ORIGIN: http://127.0.0.1:3001
+      NEOAVLOD_REDIS_URL: redis://redis:6379/2
     depends_on: !override
       demo-database:
         condition: service_healthy

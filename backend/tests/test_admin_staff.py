@@ -2,6 +2,7 @@ import uuid
 from typing import Any
 
 import pytest
+from pydantic import SecretStr
 from sqlalchemy import select
 from test_rbac import Actor, actor, client_for
 
@@ -9,9 +10,11 @@ from neoavlod.database import Database
 from neoavlod.errors import DomainError
 from neoavlod.models import AuthSession, Role, Staff, SystemSettings
 from neoavlod.models.common import Status
-from neoavlod.security.passwords import verify_password
+from neoavlod.security.passwords import validate_password, verify_password
+from neoavlod.security.secrets import decrypt_token
 from neoavlod.security.sessions import Identity
 from neoavlod.services.staff import set_active
+from neoavlod.settings import Settings
 
 pytestmark = pytest.mark.anyio
 BASE = "/api/v1/admin/staff"
@@ -55,7 +58,8 @@ async def test_manager_creates_teacher_with_hidden_secrets_and_telegram_link(
         assert data["role"] == "teacher" and data["permissions"] == []
         assert data["telegram_connected"] is False
         assert data["telegram_link"] is None and "Telegram bot" in data["telegram_link_error"]
-        for secret in ("hashed_password", "password", "auth_uuid", STRONG):
+        assert "password" not in data
+        for secret in ("hashed_password", "temporary_password", "auth_uuid", STRONG):
             assert secret not in created.text
         async with model_database.session() as session:
             session.add(SystemSettings(bot_username="NeoAvlodBot", bot_token_encrypted="cipher"))
@@ -205,3 +209,34 @@ async def test_last_active_superadmin_cannot_be_deactivated(model_database: Data
         assert error.value.status_code == 409 and "Oxirgi" in error.value.message
         saved = await session.scalar(select(Staff).where(Staff.id == first.staff_id))
         assert saved and saved.status == Status.ACTIVE
+
+
+async def test_create_staff_auto_generates_temporary_password(
+    model_database: Database,
+) -> None:
+    who = await manager(model_database)
+    payload = body()
+    payload.pop("password")  # No password provided
+    async with client_for(who) as client:
+        created = await client.post(BASE, json=payload)
+        assert created.status_code == 201
+        data = created.json()
+        assert data["must_change_password"] is True
+        assert "password" not in data
+        assert "temporary_password" not in created.text
+        staff_id = uuid.UUID(data["id"])
+
+    async with model_database.session() as session:
+        saved = await session.get(Staff, staff_id)
+        assert saved is not None
+        assert saved.must_change_password is True
+        assert saved.temporary_password_encrypted is not None
+        assert saved.temporary_password_expires_at is not None
+        test_settings = Settings(
+            database_url=SecretStr("postgresql+asyncpg://user:pass@localhost/db"),
+            environment="test",
+        )
+        plain_temp = decrypt_token(saved.temporary_password_encrypted, test_settings)
+        assert len(plain_temp) >= 12
+        validate_password(plain_temp)
+        assert verify_password(saved.hashed_password, plain_temp)

@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta
 import httpx
 import pytest
 from factories import parent, staff, student
+from pydantic import SecretStr
 from test_learning_models import seed_group
 
 from neoavlod.database import Database
@@ -14,13 +15,75 @@ from neoavlod.models.common import Status
 from neoavlod.security.secrets import encrypt_token
 from neoavlod.services.bot_worker import (
     BotWorker,
+    polling_lease,
     process_telegram_update,
 )
 from neoavlod.services.onboarding import link_telegram_account
 from neoavlod.services.telegram import TelegramClient
 from neoavlod.settings import Settings
+from neoavlod.worker_health import healthy
 
 pytestmark = pytest.mark.anyio
+
+
+async def test_polling_lease_rejects_competitor_and_releases_after_restart(
+    model_database: Database,
+) -> None:
+    async with polling_lease(model_database) as first:
+        assert first is not None
+        async with polling_lease(model_database) as second:
+            assert second is None
+        worker = BotWorker(model_database, Settings())
+        assert await worker.run_single_iteration() == 0
+    async with polling_lease(model_database) as restarted:
+        assert restarted is not None
+
+
+async def test_rejected_start_keeps_polling_offset_and_health(model_database: Database) -> None:
+    settings = Settings()
+    async with model_database.session() as session, session.begin():
+        session.add(
+            SystemSettings(
+                bot_token_encrypted=encrypt_token("fixture-only-token", settings),
+                bot_username="FixtureOnlyBot",
+                version=1,
+            )
+        )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("getUpdates"):
+            return httpx.Response(
+                200,
+                json={
+                    "ok": True,
+                    "result": [
+                        {
+                            "update_id": 25,
+                            "message": {
+                                "chat": {"id": 12345, "type": "private"},
+                                "text": "/start staff_invalid",
+                            },
+                        }
+                    ],
+                },
+            )
+        return httpx.Response(200, json={"ok": True, "result": {}})
+
+    worker = BotWorker(model_database, settings, transport=httpx.MockTransport(handler))
+    assert await worker.run_single_iteration() == 1
+    async with model_database.session() as session:
+        config = await session.get(SystemSettings, 1)
+        assert config and config.last_update_id == 25
+        assert config.parameters.get("bot_poll_heartbeat")
+    assert await healthy()
+    async with model_database.session() as session, session.begin():
+        config = await session.get(SystemSettings, 1)
+        assert config
+        config.parameters = {
+            **config.parameters,
+            "bot_poll_heartbeat": (datetime.now(UTC) - timedelta(minutes=2)).isoformat(),
+        }
+    assert not await healthy()
 
 
 async def test_link_telegram_account_staff_parent_student(model_database: Database) -> None:
@@ -46,9 +109,7 @@ async def test_link_telegram_account_staff_parent_student(model_database: Databa
 
     # 2. Link Parent
     async with model_database.session() as session:
-        entity, msg = await link_telegram_account(
-            session, f"parent_{guardian.auth_uuid}", 222333
-        )
+        entity, msg = await link_telegram_account(session, f"parent_{guardian.auth_uuid}", 222333)
         await session.commit()
         assert entity.id == guardian.id
         assert entity.telegram_id == 222333
@@ -56,9 +117,7 @@ async def test_link_telegram_account_staff_parent_student(model_database: Databa
 
     # 3. Link Student
     async with model_database.session() as session:
-        entity, msg = await link_telegram_account(
-            session, f"student_{learner.auth_uuid}", 333444
-        )
+        entity, msg = await link_telegram_account(session, f"student_{learner.auth_uuid}", 333444)
         await session.commit()
         assert entity.id == learner.id
         assert entity.telegram_id == 333444
@@ -292,3 +351,164 @@ async def test_bot_worker_dynamic_reload_shuts_down_old_polling(
     # poll_task is done, meaning old polling cleanly exited upon version mismatch
     assert poll_task.done()
     assert not worker.is_stopped  # Worker itself was not stopped, only old session closed
+
+
+async def test_link_staff_with_temporary_password_delivers_and_wipes_credential(
+    model_database: Database,
+) -> None:
+    settings = Settings(
+        database_url=SecretStr("postgresql+asyncpg://user:pass@localhost/db"),
+        environment="test",
+        admin_origin="https://admin.eduneo.uz",
+        teacher_origin="https://teacher.eduneo.uz",
+    )
+    temp_pw = "Temp-pass-1234!"
+    enc_pw = encrypt_token(temp_pw, settings)
+
+    async with model_database.session() as session, session.begin():
+        person = staff(role=Role.ADMIN)
+        person.temporary_password_encrypted = enc_pw
+        person.temporary_password_expires_at = datetime.now(UTC) + timedelta(days=3)
+        person.must_change_password = True
+        session.add(person)
+
+    sent_messages: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "sendMessage" in str(request.url):
+            sent_messages.append(request.read().decode())
+            return httpx.Response(200, json={"ok": True, "result": {"message_id": 1}})
+        return httpx.Response(200, json={"ok": True})
+
+    client = TelegramClient("dummy_token", transport=httpx.MockTransport(handler))
+
+    async with model_database.session() as session:
+        update = {
+            "update_id": 10,
+            "message": {
+                "chat": {"id": 888999, "type": "private"},
+                "text": f"/start staff_{person.auth_uuid}",
+            },
+        }
+        handled = await process_telegram_update(session, client, update, settings=settings)
+        assert handled is True
+        assert len(sent_messages) == 1
+        msg = sent_messages[0]
+        assert "https://admin.eduneo.uz" in msg
+        assert person.username in msg
+        assert temp_pw in msg
+        assert "Parolingizni yangilab qo‘ying" in msg
+
+    # In DB: telegram_id linked, encrypted temporary password wiped
+    async with model_database.session() as session:
+        saved = await session.get(Staff, person.id)
+        assert saved is not None
+        assert saved.telegram_id == 888999
+        assert saved.auth_used_at is not None
+        assert saved.temporary_password_encrypted is None
+        assert saved.temporary_password_expires_at is None
+        assert saved.must_change_password is True
+
+
+async def test_delivery_failure_retains_credential_for_retry(
+    model_database: Database,
+) -> None:
+    settings = Settings(
+        database_url=SecretStr("postgresql+asyncpg://user:pass@localhost/db"),
+        environment="test",
+    )
+    temp_pw = "Temp-pass-retry!"
+    enc_pw = encrypt_token(temp_pw, settings)
+
+    async with model_database.session() as session, session.begin():
+        person = staff(role=Role.TEACHER)
+        person.temporary_password_encrypted = enc_pw
+        person.temporary_password_expires_at = datetime.now(UTC) + timedelta(days=3)
+        person.must_change_password = True
+        session.add(person)
+
+    def failing_handler(request: httpx.Request) -> httpx.Response:
+        if "sendMessage" in str(request.url):
+            return httpx.Response(500, json={"ok": False, "description": "Telegram network error"})
+        return httpx.Response(200, json={"ok": True})
+
+    client = TelegramClient("dummy_token", transport=httpx.MockTransport(failing_handler))
+
+    async with model_database.session() as session:
+        update = {
+            "update_id": 11,
+            "message": {
+                "chat": {"id": 555666, "type": "private"},
+                "text": f"/start staff_{person.auth_uuid}",
+            },
+        }
+        handled = await process_telegram_update(session, client, update, settings=settings)
+        assert handled is True
+
+    # In DB: transaction rolled back; credential is NOT lost
+    async with model_database.session() as session:
+        saved = await session.get(Staff, person.id)
+        assert saved is not None
+        assert saved.telegram_id is None
+        assert saved.auth_used_at is None
+        assert saved.temporary_password_encrypted == enc_pw
+
+
+async def test_repeat_start_does_not_reveal_password_and_explains_reset(
+    model_database: Database,
+) -> None:
+    settings = Settings(
+        database_url=SecretStr("postgresql+asyncpg://user:pass@localhost/db"),
+        environment="test",
+        teacher_origin="https://teacher.eduneo.uz",
+    )
+    async with model_database.session() as session, session.begin():
+        person = staff(role=Role.TEACHER)
+        person.telegram_id = 444333
+        person.auth_used_at = datetime.now(UTC)
+        person.temporary_password_encrypted = None
+        session.add(person)
+
+    sent_messages: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "sendMessage" in str(request.url):
+            sent_messages.append(request.read().decode())
+            return httpx.Response(200, json={"ok": True, "result": {"message_id": 1}})
+        return httpx.Response(200, json={"ok": True})
+
+    client = TelegramClient("dummy_token", transport=httpx.MockTransport(handler))
+
+    # 1. Plain /start from linked staff
+    async with model_database.session() as session:
+        update = {
+            "update_id": 12,
+            "message": {
+                "chat": {"id": 444333, "type": "private"},
+                "text": "/start",
+            },
+        }
+        handled = await process_telegram_update(session, client, update, settings=settings)
+        assert handled is True
+        assert len(sent_messages) == 1
+        msg = sent_messages[0]
+        assert "saqlanmaydi" in msg
+        assert "Parolni unutdingizmi?" in msg
+        assert "https://teacher.eduneo.uz" in msg
+
+    # 2. Re-using old token
+    sent_messages.clear()
+    async with model_database.session() as session:
+        update = {
+            "update_id": 13,
+            "message": {
+                "chat": {"id": 444333, "type": "private"},
+                "text": f"/start staff_{person.auth_uuid}",
+            },
+        }
+        handled = await process_telegram_update(session, client, update, settings=settings)
+        assert handled is True
+        assert len(sent_messages) == 1
+        msg = sent_messages[0]
+        assert "ishlatilgan" in msg
+        assert "Parolni unutdingizmi?" in msg

@@ -2,11 +2,11 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, cast
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Request, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Request, Response, UploadFile
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 from sqlalchemy import select
 
-from neoavlod.api.deps import IdentityDependency, SessionDependency
+from neoavlod.api.deps import IdentityDependency, OTPStoreDependency, SessionDependency
 from neoavlod.database import Database
 from neoavlod.errors import DomainError
 from neoavlod.models import AuthSession, Portal, RefreshToken, Role
@@ -24,6 +24,7 @@ from neoavlod.security.sessions import (
 )
 from neoavlod.services.login import begin_login, confirm_login, rate_limit
 from neoavlod.services.passwords import change_password, reset_password, send_reset
+from neoavlod.services.staff import delete_avatar, save_avatar, update_profile
 from neoavlod.services.telegram import DatabaseTelegramSender, TelegramSender
 from neoavlod.settings import Settings
 
@@ -34,13 +35,28 @@ class StaffProfile(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
     first_name: str
-    last_name: str
+    last_name: str | None
     username: str
-    phone: str
+    phone: str | None
     role: Role
     status: Status
     permissions: list[str]
     telegram_id: int | None
+    must_change_password: bool = False
+    avatar_url: str | None = None
+
+
+class ProfileUpdate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    first_name: str | None = Field(default=None, min_length=1, max_length=100)
+    last_name: str | None = Field(default=None, min_length=1, max_length=100)
+    phone: str | None = Field(default=None, pattern=r"^\+[1-9][0-9]{7,14}$", max_length=16)
+    username: str | None = Field(default=None, pattern=r"^[a-z0-9_]{3,64}$", max_length=64)
+
+    @field_validator("username", mode="before")
+    @classmethod
+    def normalize_username(cls, value: object) -> object:
+        return value.strip().lower() if isinstance(value, str) else value
 
 
 class LoginInput(BaseModel):
@@ -103,6 +119,7 @@ async def password_change(
     response: Response,
     session: SessionDependency,
     identity: IdentityDependency,
+    store: OTPStoreDependency,
 ) -> None:
     settings = cast(Settings, request.app.state.settings)
     ensure_origin(request, settings, portal)
@@ -120,6 +137,7 @@ async def password_change(
         body.old_password.get_secret_value(),
         body.new_password.get_secret_value(),
         portal,
+        store,
     )
     clear_cookies(response, settings)
 
@@ -131,6 +149,7 @@ async def password_reset_request(
     request: Request,
     session: SessionDependency,
     background: BackgroundTasks,
+    store: OTPStoreDependency,
 ) -> ChallengeResponse:
     settings = cast(Settings, request.app.state.settings)
     ensure_origin(request, settings, portal)
@@ -144,6 +163,7 @@ async def password_reset_request(
         send_reset,
         cast(Database, request.app.state.database),
         settings,
+        store,
         username,
         portal,
         challenge_id,
@@ -160,12 +180,14 @@ async def password_reset_confirm(
     request: Request,
     response: Response,
     session: SessionDependency,
+    store: OTPStoreDependency,
 ) -> None:
     settings = cast(Settings, request.app.state.settings)
     ensure_origin(request, settings, portal)
     await reset_password(
         session,
         settings,
+        store,
         body.challenge_id,
         body.code,
         portal,
@@ -181,6 +203,7 @@ async def login(
     request: Request,
     session: SessionDependency,
     sender: SenderDependency,
+    store: OTPStoreDependency,
 ) -> ChallengeResponse:
     settings = cast(Settings, request.app.state.settings)
     ensure_origin(request, settings, portal)
@@ -188,6 +211,7 @@ async def login(
         session,
         settings,
         sender,
+        store,
         body.username,
         body.password.get_secret_value(),
         portal,
@@ -203,10 +227,13 @@ async def login_confirm(
     request: Request,
     response: Response,
     session: SessionDependency,
+    store: OTPStoreDependency,
 ) -> StaffProfile:
     settings = cast(Settings, request.app.state.settings)
     ensure_origin(request, settings, portal)
-    person, tokens = await confirm_login(session, settings, body.challenge_id, body.code, portal)
+    person, tokens = await confirm_login(
+        session, settings, store, body.challenge_id, body.code, portal
+    )
     set_cookies(response, tokens, settings)
     return StaffProfile.model_validate(person)
 
@@ -216,6 +243,64 @@ async def me(portal: Portal, identity: IdentityDependency) -> StaffProfile:
     if identity.session.portal != portal:
         raise DomainError("Ushbu panelga kirish taqiqlangan", 403)
     return StaffProfile.model_validate(identity.staff)
+
+
+@router.patch("/me", response_model=StaffProfile)
+async def update_me(
+    portal: Portal,
+    body: ProfileUpdate,
+    request: Request,
+    session: SessionDependency,
+    identity: IdentityDependency,
+) -> StaffProfile:
+    if identity.session.portal != portal:
+        raise DomainError("Ushbu panelga kirish taqiqlangan", 403)
+    settings = cast(Settings, request.app.state.settings)
+    ensure_origin(request, settings, portal)
+    ensure_csrf(request, identity.session)
+    person = await update_profile(
+        session,
+        identity,
+        first_name=body.first_name,
+        last_name=body.last_name,
+        phone=body.phone,
+        username=body.username,
+    )
+    return StaffProfile.model_validate(person)
+
+
+@router.post("/avatar", response_model=StaffProfile)
+async def upload_avatar(
+    portal: Portal,
+    request: Request,
+    session: SessionDependency,
+    identity: IdentityDependency,
+    file: Annotated[UploadFile, File()],
+) -> StaffProfile:
+    if identity.session.portal != portal:
+        raise DomainError("Ushbu panelga kirish taqiqlangan", 403)
+    settings = cast(Settings, request.app.state.settings)
+    ensure_origin(request, settings, portal)
+    ensure_csrf(request, identity.session)
+    content = await file.read(5 * 1024 * 1024 + 1)
+    person = await save_avatar(session, identity, content, settings.media_dir)
+    return StaffProfile.model_validate(person)
+
+
+@router.delete("/avatar", response_model=StaffProfile)
+async def remove_avatar(
+    portal: Portal,
+    request: Request,
+    session: SessionDependency,
+    identity: IdentityDependency,
+) -> StaffProfile:
+    if identity.session.portal != portal:
+        raise DomainError("Ushbu panelga kirish taqiqlangan", 403)
+    settings = cast(Settings, request.app.state.settings)
+    ensure_origin(request, settings, portal)
+    ensure_csrf(request, identity.session)
+    person = await delete_avatar(session, identity, settings.media_dir)
+    return StaffProfile.model_validate(person)
 
 
 @router.post("/refresh", status_code=204)

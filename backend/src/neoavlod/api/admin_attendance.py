@@ -57,6 +57,47 @@ class AdminAttendanceList(BaseModel):
     page_size: int
 
 
+class MonthlyAttendanceRecordOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    attendance_id: uuid.UUID
+    student_id: uuid.UUID
+    student_name: str
+    date: date
+    status: AttendanceStatus
+    note: str | None
+
+
+class StudentMonthlyAttendanceSummaryOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    student_id: uuid.UUID
+    student_name: str
+    present_count: int
+    late_count: int
+    absent_count: int
+    attended_count: int
+    total_lessons: int
+
+
+class GroupMonthlyAttendanceSummaryOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    total_lessons: int
+    total_records: int
+    present_count: int
+    late_count: int
+    absent_count: int
+
+
+class GroupMonthlyAttendanceHistoryOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    group_id: uuid.UUID
+    group_name: str
+    month: str
+    dates: list[date]
+    records: list[MonthlyAttendanceRecordOut]
+    students_summary: list[StudentMonthlyAttendanceSummaryOut]
+    summary: GroupMonthlyAttendanceSummaryOut
+
+
 @router.get("", response_model=AdminAttendanceList)
 async def list_attendance(
     _: AttendanceReader,
@@ -89,3 +130,31 @@ async def list_attendance(
         page=result.page,
         page_size=result.page_size,
     )
+
+
+@router.get("/history", response_model=GroupMonthlyAttendanceHistoryOut)
+async def get_attendance_history(
+    _: AttendanceReader,
+    session: SessionDependency,
+    group_id: Annotated[uuid.UUID, Query()],
+    month: Annotated[str | None, Query(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")] = None,
+) -> GroupMonthlyAttendanceHistoryOut:
+    target_month = month or datetime.now().strftime("%Y-%m")
+    history = await service.get_group_monthly_attendance_history(
+        session, group_id, target_month
+    )
+    return GroupMonthlyAttendanceHistoryOut.model_validate(history)
+
+
+@router.get("/groups/{group_id}/history", response_model=GroupMonthlyAttendanceHistoryOut)
+async def get_group_attendance_history(
+    group_id: uuid.UUID,
+    _: AttendanceReader,
+    session: SessionDependency,
+    month: Annotated[str | None, Query(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")] = None,
+) -> GroupMonthlyAttendanceHistoryOut:
+    target_month = month or datetime.now().strftime("%Y-%m")
+    history = await service.get_group_monthly_attendance_history(
+        session, group_id, target_month
+    )
+    return GroupMonthlyAttendanceHistoryOut.model_validate(history)

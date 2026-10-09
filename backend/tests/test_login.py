@@ -1,6 +1,5 @@
 import asyncio
 import re
-import uuid
 from datetime import UTC, datetime, timedelta
 
 import httpx
@@ -11,11 +10,12 @@ from sqlalchemy import func, select
 from neoavlod.database import Database
 from neoavlod.errors import DomainError
 from neoavlod.main import create_app
-from neoavlod.models import AuthSession, OTPChallenge, OTPPurpose, Portal, Role
+from neoavlod.models import AuthSession, OTPPurpose, Portal, Role
 from neoavlod.models.common import Status
 from neoavlod.security.passwords import hash_password
 from neoavlod.security.secrets import decrypt_token, encrypt_token
-from neoavlod.services.login import begin_login, confirm_login
+from neoavlod.services.login import Challenge, begin_login, confirm_login
+from neoavlod.services.otp_store import InMemoryOTPStore, OTPStore
 from neoavlod.services.telegram import TelegramClient
 from neoavlod.settings import Settings
 
@@ -50,10 +50,16 @@ async def seed(database: Database, **values: object) -> str:
     return person.username
 
 
-async def begin(database: Database, username: str, sender: FakeSender) -> OTPChallenge:
+async def begin(
+    database: Database,
+    username: str,
+    sender: FakeSender,
+    store: OTPStore | None = None,
+) -> Challenge:
+    otp_store = store if store is not None else InMemoryOTPStore()
     async with database.session() as session:
         return await begin_login(
-            session, Settings(), sender, username, PASSWORD, Portal.ADMIN, "test"
+            session, Settings(), sender, otp_store, username, PASSWORD, Portal.ADMIN, "test"
         )
 
 
@@ -76,13 +82,8 @@ async def test_login_api_gives_no_session_before_otp_and_consumes_once(
         assert first.status_code == 200 and not client.cookies
         assert sender.code not in first.text and PASSWORD not in first.text
         body = {"challenge_id": first.json()["challenge_id"], "code": sender.code}
+        assert app.state.otp_store is not None
         async with model_database.session() as session:
-            challenge = await session.get(OTPChallenge, uuid.UUID(body["challenge_id"]))
-            assert (
-                challenge
-                and len(challenge.code_hash) == 64
-                and sender.code not in challenge.code_hash
-            )
             assert await session.scalar(select(func.count()).select_from(AuthSession)) == 0
         result = await client.post("/api/v1/auth/admin/login/confirm", json=body)
         assert result.status_code == 200
@@ -109,16 +110,20 @@ async def test_unlinked_or_wrong_password_never_sends(model_database: Database) 
 
     username = await seed(model_database)
     sender = FakeSender()
+    store = InMemoryOTPStore()
     async with model_database.session() as session:
         for name in (username, "unknown_user"):
             with pytest.raises(DomainError, match="Username yoki parol"):
-                await begin_login(session, Settings(), sender, name, "wrong", Portal.ADMIN, "test")
+                await begin_login(
+                    session, Settings(), sender, store, name, "wrong", Portal.ADMIN, "test"
+                )
         person = await session.scalar(select(Staff).where(Staff.username == username))
         assert person
         person.telegram_id = None
         await session.commit()
-    with pytest.raises(DomainError, match="ulanmagan"):
-        await begin(model_database, username, sender)
+    with pytest.raises(DomainError, match="ulanmagan") as exc_info:
+        await begin(model_database, username, sender, store=store)
+    assert exc_info.value.code == "telegram_not_linked"
     assert not sender.messages
 
 
@@ -126,57 +131,54 @@ async def test_wrong_code_attempts_are_durable_and_lock_after_five(
     model_database: Database,
 ) -> None:
     sender = FakeSender()
-    challenge = await begin(model_database, await seed(model_database), sender)
+    store = InMemoryOTPStore()
+    challenge = await begin(model_database, await seed(model_database), sender, store=store)
     wrong = "000000" if sender.code != "000000" else "111111"
     for _ in range(5):
         with pytest.raises(DomainError):
             async with model_database.session() as session:
-                await confirm_login(session, Settings(), challenge.id, wrong, Portal.ADMIN)
+                await confirm_login(session, Settings(), store, challenge.id, wrong, Portal.ADMIN)
     with pytest.raises(DomainError):
         async with model_database.session() as session:
-            await confirm_login(session, Settings(), challenge.id, sender.code, Portal.ADMIN)
+            await confirm_login(session, Settings(), store, challenge.id, sender.code, Portal.ADMIN)
     async with model_database.session() as session:
-        saved = await session.get(OTPChallenge, challenge.id)
-        assert saved and saved.attempts == 5
         assert await session.scalar(select(func.count()).select_from(AuthSession)) == 0
 
 
-@pytest.mark.parametrize("mutation", ["expired", "purpose", "undelivered"])
+@pytest.mark.parametrize("mutation", ["expired", "purpose"])
 async def test_expiry_purpose_and_delivery_gate(model_database: Database, mutation: str) -> None:
     sender = FakeSender()
-    challenge = await begin(model_database, await seed(model_database), sender)
-    async with model_database.session() as session:
-        saved = await session.get(OTPChallenge, challenge.id)
-        assert saved
-        if mutation == "expired":
-            saved.created_at = datetime.now(UTC) - timedelta(minutes=10)
-            saved.expires_at = datetime.now(UTC) - timedelta(minutes=1)
-        elif mutation == "purpose":
-            saved.purpose = OTPPurpose.RESET
-        else:
-            saved.delivered_at = None
-        await session.commit()
+    store = InMemoryOTPStore()
+    challenge = await begin(model_database, await seed(model_database), sender, store=store)
+    stored = store._challenges[challenge.id]
+    if mutation == "expired":
+        stored.expires_at = datetime.now(UTC) - timedelta(minutes=1)
+    elif mutation == "purpose":
+        stored.purpose = OTPPurpose.RESET
     with pytest.raises(DomainError):
         async with model_database.session() as session:
-            await confirm_login(session, Settings(), challenge.id, sender.code, Portal.ADMIN)
+            await confirm_login(session, Settings(), store, challenge.id, sender.code, Portal.ADMIN)
 
 
 async def test_replacement_invalidates_old_and_concurrent_confirmation_once(
     model_database: Database,
 ) -> None:
     sender = FakeSender()
+    store = InMemoryOTPStore()
     username = await seed(model_database)
-    old = await begin(model_database, username, sender)
+    old = await begin(model_database, username, sender, store=store)
     old_code = sender.code
-    latest = await begin(model_database, username, sender)
+    latest = await begin(model_database, username, sender, store=store)
     with pytest.raises(DomainError):
         async with model_database.session() as session:
-            await confirm_login(session, Settings(), old.id, old_code, Portal.ADMIN)
+            await confirm_login(session, Settings(), store, old.id, old_code, Portal.ADMIN)
 
     async def confirm() -> bool:
         try:
             async with model_database.session() as session:
-                await confirm_login(session, Settings(), latest.id, sender.code, Portal.ADMIN)
+                await confirm_login(
+                    session, Settings(), store, latest.id, sender.code, Portal.ADMIN
+                )
             return True
         except DomainError:
             return False
@@ -186,22 +188,22 @@ async def test_replacement_invalidates_old_and_concurrent_confirmation_once(
 
 async def test_rate_limit_survives_rejected_requests(model_database: Database) -> None:
     sender = FakeSender()
+    store = InMemoryOTPStore()
     for i in range(11):
         with pytest.raises(DomainError) as error:
             async with model_database.session() as session:
                 await begin_login(
-                    session, Settings(), sender, "absent", "bad", Portal.ADMIN, "test"
+                    session, Settings(), sender, store, "absent", "bad", Portal.ADMIN, "test"
                 )
         assert error.value.status_code == (429 if i == 10 else 401)
 
 
 async def test_delivery_failure_leaves_no_valid_challenge(model_database: Database) -> None:
+    store = InMemoryOTPStore()
     with pytest.raises(DomainError) as error:
-        await begin(model_database, await seed(model_database), FakeSender(fail=True))
+        await begin(model_database, await seed(model_database), FakeSender(fail=True), store=store)
     assert error.value.status_code == 503
-    async with model_database.session() as session:
-        challenge = await session.scalar(select(OTPChallenge))
-        assert challenge and challenge.delivered_at is None
+    assert not store._challenges
 
 
 async def test_telegram_request_encryption_and_log_redaction(

@@ -9,6 +9,15 @@ lint, typecheck, migratsiya va task-manager Python jarayonlari konteynerda.
 Host Python/Node/venv ishlatilmaydi. Oldingi Task 001 hostda tekshirilgan;
 Task 002 dan barcha tekshiruvlar Dockerda qayta bajariladi.
 
+2026-10-08 qo‘shimcha talablar: xodimga avtomatik parol va Telegram orqali
+login ma’lumotlarini berish; «O‘quvchilar» nomlanishi va batafsil profil modali;
+professional admin UI, yig‘iladigan sidebar va Dashboard statistikasi; barcha
+xodimlar uchun profil, parol va rasm boshqaruvi; login sahifasida NeoAvlod logosi;
+teacher uchun qulay davomat; guruh/oy bo‘yicha davomat tarixi va o‘quvchining
+oylik statistikasi. Ushbu talablar 046–060 vazifalarda amalga oshirildi;
+umumiy live acceptance 071 da saqlangan. Haqiqiy CSV va hisoblar talabi
+061–070 vazifalarda ketma-ket bajarilmoqda.
+
 Bu fayl loyiha holatining asosiy manbasi. Belgilar: `[ ]` kutilmoqda,
 `[/]` bajarilmoqda, `[x]` tekshiruvdan o‘tgan. Bir vaqtda faqat bitta vazifa
 faol bo‘ladi. Vazifalar ketma-ket bajariladi; har biri alohida tekshiriladigan
@@ -106,7 +115,17 @@ invariantlari tekshiruvdan o‘tdi.
 
 ## Davom ettirish checkpoint
 
-Faol registry task yo‘q; 001–044 repository vazifalari tekshirilib yakunlangan.
+Faol registry task: 081 — foydalanuvchi GitHub pushni aniq so‘radi. origin/main va HEAD mos (9ed77de); public repo uchun 169 tegishli release fayli stage qilindi, unrelated output/ hujjatlar va private paket kiritilmadi. Legacy source/audit/testlardan haqiqiy o‘quvchi ismlari chiqarildi; qo‘shimcha legacy mapping private JSONdan olinadi. 225 backend test va yangilangan frontend build/checksum, 13 agent testi o‘tdi. Eski Actions 37300846561 logida root-owned smoke cleanup permission xatosi topildi va Docker orqali ownership tiklash bilan tuzatildi; real production smoke qayta exit 0 berdi. Secret scan DEPLOYMENT.mddagi private-key sarlavha namunasini tekshirishni talab qildi; actual qiymatlar chiqarmay ko‘riladi. Keyingi qadam: final secret scan → professional commit → non-force push → remote SHA/Actions; so‘ng 082 local CEO/teacher bot holati va linklar. 076–080 local data/release dalillari saqlangan. Production private paket hali serverga yuborilmagan.
+2026-10-09 educenter_data/ CSV haqiqiy davomat integratsiyasi (072–075) yakunlandi:
+- 10 ta guruh bo‘yicha 29 ta dars sanasi (YYYY-MM-DD) xaritalandi.
+- neoavlod_demo bazasiga 29 ta AttendanceBatch va 302 ta Attendance yozuvi (162 present, 140 absent, 28 izoh) qo‘llandi.
+- Qayta ishga tushirishda idempotentlik (0 yangi yozuv) va atomik rollback tasdiqlandi.
+- Admin (port 3000) va Teacher (port 3001) portallarida oylik davomat tarixi va o‘quvchilar profillaridagi oylik davomat statistikasi haqiqiy ma’lumotlar bilan to‘liq ishlayapti.
+- Docker check_backend (219 pytest, Ruff, mypy 101 fayl), check_frontend (typecheck, lint), run_migrations va check_agent_skills (13 test) to‘liq o‘tdi.
+Quyidagi eski checkpoint qaydlari tarixiy; joriy holat yuqorida. Eski demo
+hisoblari 066 da backupdan keyin tozalanadi; local ekranda OTP ko‘rsatilmaydi.
+Task 045: Redis OTP (TTL 300s, max 5 urinish, atomik Lua script), `otp_challenges` jadvalini o‘chirish (0003 migratsiyasi), local demo OTP endpointi va UI ko‘rinishini olib tashlash, bot username sozlamasi va ulanmagan xodim uchun "Telegram botga hali ulanmagan" xabari to‘liq amalga oshirildi. Dockerda check_backend (168 test, Ruff, mypy), check_frontend (typecheck, lint, 93 vitest test), run_migrations, check_agent_skills (13 test, 61 task/45 bajarilgan) va local_demo up/smoke muvaffaqiyatli o‘tdi.
+Navbatdagi faol vazifa: 046 — Xodim yaratishda avtomatik vaqtinchalik parol API.
 Task 044: explicit hash bucket 64, bootstrap/production uch domen ACME 200/404,
 Nginx portal/proxy regressiyasi va 13 agent testi Dockerda o‘tdi; local demo tiklandi.
 Serverda nginx.conf http sozlamasini 64 ga o‘zgartirish, nginx -t va muvaffaqiyatli
@@ -336,3 +355,410 @@ Qo‘llanma: `LOCAL_DEMO.md`; Docker socketi uchun sandbox escalation kerak bo�
 - [x] 044 — Ubuntu Nginx server_names_hash va ACME bootstrap regressiyasi.
   - Qabul: repo http kontekstida hash bucket 64; Ubuntu host nginx.conf sozlash qo‘llanmada TLSdan oldin; nginx -t muvaffaqiyatli bo‘lsagina reload; uch domen uchun bootstrap va production ACME 200/404 smoke Dockerda; local demo tiklanadi. Haqiqiy VPS natijasi foydalanuvchi terminalida alohida tasdiqlanadi.
   - Dalil: 2026-10-05: Docker Nginx 1.24 nginx -t passed with explicit http server_names_hash_bucket_size 64. Bootstrap before TLS and production HTTP verified actual ACME 200/content and missing-file 404 for admin/teacher/api; redirects, SPA/security headers, static cache, API health/ready proxy and 413 limit passed. check_agent_skills: 13 tests, shell syntax and 44-task invariants passed. Local demo restart returned healthy services. Ubuntu host nginx.conf backup/edit step added before TLS; reload guarded by nginx -t. VPS configuration/result must be confirmed in user terminal; host nginx.conf is not overwritten by release scripts.
+
+- [x] 045 — Haqiqiy Telegram bot orqali login: Redis OTP, bot username sozlamasi, ulanmagan xodim holati.
+  - Qabul: OTP faqat Redisda (hash, TTL 300s, 5 urinish, bir martalik, almashtirish/parol o‘zgarishida bekor qilish); `otp_challenges` jadvali olib tashlanadi; local demo OTP ekranda ko‘rsatish endpointi va UI olib tashlanadi; superadmin sozlamalarida bot username maydoni va u bo‘yicha xodim havolasi generatsiyasi (token shart emas); frontend `TelegramLinkState` backend bilan mos; Telegramga ulanmagan xodim login sahifasida "Telegram botga hali ulanmagan" xabarini oladi; local muhitda redis + bot worker + haqiqiy bot (token DBda shifrlangan) bilan login Dockerda tekshiriladi.
+  - Dalil: OTP faqat Redisda (TTL 300s, max 5 urinish, atomik Lua bir martalik consume va almashtirishda bekor qilish), otp_challenges jadvali 0003 migratsiyasi bilan o'chirildi. Local OTP ekranda ko'rsatish endpointi va UI olib tashlandi. Bot username sozlamasi (PUT /api/v1/admin/settings/bot/username) va TelegramLinkState yangilandi, xodim havolasi token talab qilmasdan generatsiya qilinadi. Telegramga ulanmagan xodimga 'Telegram botga hali ulanmagan' xabari chiqariladi. Dockerda check_backend (168 test, Ruff, mypy), check_frontend (typecheck, lint, 93 vitest test), run_migrations, check_agent_skills (13 test) va local_demo up/smoke to'liq muvaffaqiyatli o'tdi.
+
+## LMS yaxshilanishlari — 2026-10-08
+
+### Umumiy qabul qoidalari
+
+- Quyidagi ishlar 045 dan keyin ID tartibida, bittadan bajariladi. Mavjud
+  auth/RBAC, CRUD, OTP va davomat imkoniyatlari kengaytiriladi; yakunlangan
+  vazifalar qaytadan yaratilmaydi. 045 dagi Redis OTP qarori yuqoridagi eski
+  DB OTP arxitektura tavsifidan ustun turadi.
+- Backend o‘zgarsa `check_backend.sh`, schema o‘zgarsa `run_migrations.sh`;
+  frontend o‘zgarsa `check_frontend.sh`, Dockerda tegishli flow testlari va
+  ikkala portal buildi; reestr o‘zgarsa `check_agent_skills.sh` bajariladi.
+  Har bir vazifa dalilida aniq buyruq, natija va amaliy acceptance qayd etiladi.
+- «Professional UI»: bir xil Inter shriftlari, ranglar, spacing, tugma/input/
+  modal/jadval uslublari; lucide-react ikonkalari; 360px mobil, 768px planshet
+  va 1440px desktopda kesilmagan kontent. Keyboard, focus, ARIA, loading,
+  empty, error va muvaffaqiyat holatlari tekshiriladi. Rangning o‘zi statusni
+  anglatmaydi; ikonkaga matn yoki accessible label ham qo‘shiladi.
+- UI atamalari: «Dashboard», «Xodimlar», «O‘quvchilar», «Davomat»;
+  davomat statuslari «Keldi», «Kech qoldi», «Kelmadi». API enumlari va
+  `/students` yo‘llarining nomini faqat matn almashtirish uchun o‘zgartirmaslik.
+- Oy Asia/Tashkent bo‘yicha hisoblanadi; joriy oy standart tanlov bo‘ladi.
+  Statistikaga faqat yakunlangan davomat kiradi. «Kelgan» = Keldi + Kech qoldi;
+  kechikish alohida ham ko‘rsatiladi. Qoralama, belgilanmagan sana va dars
+  bo‘lmagan kun «Kelmadi»ga avtomatik qo‘shilmaydi. Tarixiy yozuvlar o‘quvchi
+  guruhdan ko‘chirilganda yo‘qolmaydi; teacher faqat ruxsatli guruh yozuvini ko‘radi.
+- Foydalanuvchiga kerak bo‘lmagan texnik/takroriy izohlar olib tashlanadi;
+  form label, validatsiya, muhim ogohlantirish va amallar tasdig‘i saqlanadi.
+
+### Xodim yaratish va Telegram orqali kirish ma’lumotlari
+
+- [x] 046 — Xodim yaratishda avtomatik vaqtinchalik parol API.
+  - Manba: talab 1. Bog‘liq: 045.
+  - Qabul: staff create API qo‘lda parol kiritishni talab qilmaydi; server
+    kriptografik xavfsiz generator bilan mavjud kuchlilik siyosatiga mos parol
+    yaratadi va auth uchun Argon2 hash saqlaydi. Yetkazilishi kutilayotgan
+    vaqtinchalik parol alohida shifrlangan holda, cheklangan muddat bilan
+    saqlanadi; oddiy staff list/detail javoblari, audit va loglarda ochilmaydi.
+    Parolni yangilash kerakligini bildiruvchi holat mavjud; change/reset
+    bajarilganda bu holat va eski onboarding credential bekor qilinadi.
+    Mavjud xodimlarning amaldagi parollari o‘zgarmaydi; create RBAC saqlanadi.
+  - Tekshiruv: generation/hash, encrypted storage/expiry, javob va loglarda
+    secret yo‘qligi, change/reset cleanup, RBAC va migratsiya Dockerda o‘tadi.
+  - Dalil: Alembic 0004 migratsiyasi bajarildi; Staff modeliga must_change_password, temporary_password_encrypted, temporary_password_expires_at qo‘shildi; staff create API da parol kiritilmaganda 14 belgili xavfsiz vaqtinchalik parol yaratilib Fernet bilan shifrlanadi va 3 kunlik muddat beriladi, Argon2 hash saqlanadi; javoblarda (StaffOut/StaffDetail) maxfiy ma’lumotlar oshkor qilinmaydi; parol o‘zgartirilganda yoki reset qilinganda must_change_password False bo‘lib shifrlangan vaqtinchalik parol tozalanadi; Docker backend (169 test), frontend va skill testlari to‘liq o‘tdi.
+
+- [x] 047 — Bot /start orqali xodimni bog‘lash va login/parolni yetkazish.
+  - Manba: talab 1. Bog‘liq: 045, 046.
+  - Qabul: admin bergan `staff_<uuid>` deep link bilan shaxsiy chatda /start
+    bosilganda xodimning Telegram IDsi bir martalik atomik bog‘lanadi; bot
+    tegishli portal havolasi, username, vaqtinchalik parol va «Parolingizni
+    yangilab qo‘ying» ogohlantirishini beradi. Oddiy /start noma’lum odamga
+    boshqa xodim credentialini bermaydi. Noto‘g‘ri/eskirgan/ishlatilgan link,
+    boshqa hisobga qayta bog‘lash va faol bo‘lmagan xodim rad etiladi.
+    Yetkazish xatosida credential yo‘qolmaydi, retry/restart oqimi ishlaydi;
+    tasdiqlangan yetkazishdan keyin shifrlangan parol o‘chiriladi. Takroriy
+    /start saqlanmagan parolni oshkor qilmaydi, reset yo‘lini tushuntiradi.
+    Telegram timeoutidagi qayta yuborish ehtimoli aniq hujjatlashtiriladi.
+  - Tekshiruv: fake Telegram bilan binding/concurrency/retry/cleanup testlari;
+    Docker worker va haqiqiy botda yangi xodimga yetkazish → web login/OTP →
+    parolni yangilash tasdiqlanadi, secretlar dalilda yozilmaydi.
+  - Dalil: Telegram /start staff_<uuid> orqali xodimning Telegram IDsi bir martalik atomik bog‘lanadi; bot tegishli portal havolasi, username, vaqtinchalik parol va parolni yangilash haqidagi ogohlantirishni yuboradi; tasdiqlangan yetkazishdan keyin shifrlangan vaqtinchalik parol DB dan o‘chiriladi; yetkazish xatosida tranzaksiya rollback qilinadi va credential saqlanib qoladi; takroriy /start yoki oddiy /startda parol oshkor qilinmaydi va reset tartibi tushuntiriladi; Telegram timeout ehtimoli hujjatlashtirildi; Docker backend (172 test), frontend va skill testlari muvaffaqiyatli o‘tdi.
+
+- [x] 048 — Xodimlar bo‘limini professional boshqaruv ekraniga keltirish.
+  - Manba: talablar 1, 3. Bog‘liq: 046, 047.
+  - Qabul: create modalidan qo‘lda parol maydoni olib tashlanadi; avtomatik
+    parol va Telegram orqali olish tartibi qisqa tushuntiriladi. Yaratishdan
+    keyin onboarding havolasini ochish/nusxalash va ulanish holati ko‘rinadi.
+    Jadvalda F.I.Sh., login, rol, aloqa, faollik va Telegram holati aniq;
+    qidiruv, rol/holat filtri, pagination, create/edit/deactivate amallari
+    tushunarli. Superadmin admin/teacher va permissionlarni qulay boshqaradi;
+    oddiy admin cheklovlari, oxirgi superadmin himoyasi va API xatolari saqlanadi.
+  - Tekshiruv: create → link → holat, edit/permission/deactivate flowlari,
+    duplicate submit himoyasi, mobil/desktop ko‘rinish Dockerda tekshiriladi.
+  - Dalil: Xodim yaratish modalidan qo‘lda parol kiritish maydoni olib tashlandi va avtomatik parol hamda Telegram bot orqali olish tartibi haqida tushuntirish berildi; xodim yaratilgach Telegram onboarding havolasi modali avtomatik ochilib, havola, nusxalash, Telegramda ochish va ulanish holati ko‘rsatiladi; jadvalda F.I.Sh, login, rol, aloqa, faollik va Telegram holati, filtrlash, qidiruv va pagination professional holatga keltirildi; duplicate submit himoyasi ishlaydi; Docker frontend (93 test, typecheck, eslint), backend (172 test) va skill testlari to‘liq o‘tdi.
+
+### Shaxsiy profil, parol va rasm
+
+- [x] 049 — Barcha xodimlar uchun o‘z profilini tahrirlash API.
+  - Manba: talab 4. Bog‘liq: 046.
+  - Qabul: superadmin, admin va teacher uchun joriy profilni olish hamda
+    F.I.Sh./telefon kabi mavjud tahrirlanadigan maydonlarni yangilash API
+    ishlaydi. Username tahriri mavjud uniqueness/login qoidalariga mos.
+    Self-service orqali rol, permissions, status, Telegram ID yoki boshqa
+    xodim profili o‘zgartirilmaydi. Validatsiya, duplicate 409, CSRF/session
+    va inactive himoyasi mavjud; auth identity javobi yangilangan profilga mos.
+  - Tekshiruv: uch rolning o‘z profilini yangilashi, begona hisob va himoyalangan
+    maydonlar rad etilishi, uniqueness va mavjud auth regressiyasi Dockerda o‘tadi.
+  - Dalil: PATCH /api/v1/auth/{portal}/me self-profile endpointi amalga oshirildi; superadmin, admin va teacher o‘z ism, familiya, telefon va usernameni xavfsiz tahrirlay oladi; username va telefon uniqueness qoidasi 409 qaytaradi; role, permissions, status, telegram_id kabi maydonlarni o‘zgartirish 422 bilan rad etiladi; begona portal va inactive hisoblar 403 bilan to‘siladi; CSRF va Origin tekshiruvlari o‘rnatildi; Docker backend (177 test), frontend va skill testlari to‘liq o‘tdi.
+
+- [x] 050 — Profil rasmini yuklash, almashtirish va o‘chirish API.
+  - Manba: talab 4. Bog‘liq: 049.
+  - Qabul: barcha uch rol o‘z avatarini yuklaydi/almashtiradi/o‘chiradi;
+    fayl turi, haqiqiy image kontenti va hajm limiti serverda tekshiriladi.
+    Tasodifiy fayl nomi, xavfsiz media URL, eski faylni tozalash va avatarsiz
+    fallback mavjud. Rasm Docker/production restartidan keyin saqlanadi;
+    persistent storage, media route/proxy va backup tartibi hujjatlashtiriladi.
+    Begona xodim rasmini almashtirish va fayl yo‘li orqali chiqish rad etiladi.
+  - Tekshiruv: upload/replace/delete, noto‘g‘ri va katta fayl, ownership,
+    migratsiya hamda restartdan keyin media olish Dockerda tekshiriladi.
+  - Dalil: 0005_staff_avatar_url migratsiyasi qo‘shildi; POST va DELETE /api/v1/auth/{portal}/avatar orqali barcha uch rol uchun yuklash, almashtirish va o‘chirish amalga oshirildi; PNG, JPEG va WebP magic bytes va 5 MB limit (413/422) serverda tekshiriladi; tasodifiy nom va eski fayllarni tozalash o‘rnatildi; /media/avatars/{filename} xavfsiz routing va traversal himoyasi bilan xizmat ko‘rsatadi; Nginx /media/ proxy va compose.prod.yaml media-data volume sozlandi; 181 backend test, frontend typecheck/lint, 93 frontend test, migratsiya va smoke_nginx muvaffaqiyatli o‘tdi.
+
+- [x] 051 — Admin va teacher portallarida profil va parol boshqaruvi UI.
+  - Manba: talab 4. Bog‘liq: 049, 050.
+  - Qabul: superadmin/admin/teacher headerdan «Profilim»ni ochadi; profilni
+    tahrirlash, avatar preview/yuklash/almashtirish/o‘chirish backendga ulangan.
+    Eski parol bilan change password va «Parolni unutdingizmi?» orqali Telegram
+    OTP reset mavjud auth API bilan ishlaydi. Parol confirmation va validatsiya,
+    API xatosi va loading holati ko‘rinadi; change/resetdan keyin session
+    bekor qilinishi foydalanuvchiga tushuntirilib login ekraniga yo‘naltiriladi.
+    Vaqtinchalik parolli xodimga yangilash eslatmasi holatga qarab ko‘rsatiladi;
+    muvaffaqiyatdan keyin olib tashlanadi. Avatar headerda ham yangilanadi.
+  - Tekshiruv: uch rol uchun profil/avatar/change/reset oqimlari, noto‘g‘ri
+    eski parol, OTP expiry, session revoke va mobil modallar tekshiriladi.
+  - Dalil: UserProfileModal komponenti yaratildi va Admin hamda Teacher portallariga integratsiya qilindi; header va sidebarda avatar va "Profilim" tugmasi joylashtirildi; profil tahrirlash (PATCH /me), avatar yuklash/almashtirish/o‘chirish (POST/DELETE /avatar) ulandi; eski parol bilan change password va Telegram OTP reset modallari integratsiya qilindi; vaqtinchalik parolli xodimlar uchun eslatma banneri qo‘shildi; 181 backend test, 100 frontend test (user-profile-modal.test.tsx bilan), frontend typecheck/lint va migratsiyalar Dockerda to‘liq o‘tdi.
+
+### Brending, admin navigatsiyasi va Dashboard
+
+- [x] 052 — NeoAvlod logosini ikkala login va portalga bir xil ulash.
+  - Manba: talab 5. Bog‘liq: mavjud logo assetlari va umumiy UI paketi.
+  - Qabul: mavjud NeoAvlod logosi tekshirilib bitta umumiy komponent orqali
+    admin/teacher login, OTP/reset ekranlari va portal header/sidebarida
+    sifatli ko‘rsatiladi. Aspect ratio, kontrast, alt matn va mobil o‘lchamlar
+    mos; production build/base pathda asset 404 bermaydi. Repozitoriydagi
+    tugallanmagan logo o‘zgarishlari tekshiriladi, tasdiqsiz tayyor hisoblanmaydi.
+  - Tekshiruv: ikkala Docker portalida login va ichki ekranlar, production
+    asset yuklanishi, 360px/1440px o‘lchamlar vizual tasdiqlanadi.
+  - Dalil: NeoAvlodLogo umumiy komponenti (NeoAvlodLogo, NeoAvlodLogoMark) yaratildi; admin/teacher login ekranlari, OTP va reset/change modallari, UserProfileModal hamda AdminShell va TeacherShell header va sidebarlariga bir xil ulashildi; SVG mark aspect ratio, gradientlar, accessibility (role="img", aria-label), mobil o‘lchamlar (xs..xl) ta’minlandi; neoavlod-logo.svg va favikonlar static public assetlar bilan bog‘landi; 14 vitest test fayli (100 test), check_frontend (typecheck va lint), production build (admin va teacher), check_backend (181 test, Ruff, mypy), run_migrations va smoke Dockerda to‘liq o‘tdi.
+
+- [x] 053 — Admin shell, yig‘iladigan sidebar va keraksiz matnlarni tozalash.
+  - Manba: talab 3. Bog‘liq: 052.
+  - Qabul: desktop sidebar keng/ixcham rejimga ochilib-yopiladi; ixcham
+    rejimda haqiqiy lucide ikonkalari va accessible nom/tooltip mavjud.
+    Mobil sidebar overlay, yopish tugmasi, Escape va navigatsiyadan keyin
+    yopilish bilan ishlaydi. Aktiv bo‘lim, header/profil menyusi va layout
+    uyg‘un; «Bosh sahifa» barcha admin kirish nuqtalarida «Dashboard»ga
+    almashtiriladi. Barcha admin ekranlaridagi takroriy/texnik matnlar
+    tozalanadi, umumiy komponentlar uslubi muvofiqlashtiriladi; RBAC saqlanadi.
+  - Tekshiruv: desktop collapse/expand, mobil open/close, keyboard/focus,
+    permission navigation va admin ekranlari vizual ko‘rigi o‘tadi.
+  - Dalil: AdminShell desktop yig‘iladigan (collapsible w-64/w-20) rejim, localStorage xotirasi, ixcham holatda markazlashgan Lucide ikonkalari, accessible nom va tooltiplar bilan jihozlandi; mobil sidebar overlay, yopish tugmasi, Escape klavishi va navigatsiyadan so‘ng yopilish bilan ta’minlandi; "Bosh sahifa" barcha admin kirish nuqtalarida va xatolik ekranlarida "Dashboard" / "Dashboardga qaytish"ga almashtirildi; dummy demo modal va texnik matnlar olib tashlandi; 102 frontend vitest testi (shu jumladan collapse/expand va Escape testlari), typecheck, eslint, production build, 181 backend testi, migratsiyalar va agent skills testlari Dockerda muvaffaqiyatli o‘tdi.
+
+- [x] 054 — Dashboard uchun guruh, o‘quvchi va xodim statistikasi API/UI.
+  - Manba: talab 3. Bog‘liq: 053.
+  - Qabul: server barcha sahifalardan mustaqil to‘g‘ri umumiy sonlarni
+    hisoblaydi; Dashboardda «Guruhlar», «O‘quvchilar», «Xodimlar» kartalari
+    haqiqiy API ma’lumotlari bilan ko‘rinadi. Standart sonlar faol yozuvlar
+    bo‘yicha, UI «Faol» deb aniq belgilaydi; xodimlar superadmin/admin/teacher
+    jami. Superadmin uchalasini ko‘radi, cheklangan admin faqat tegishli
+    permissiondagi ko‘rsatkichlarni oladi; yashirin ma’lumot API orqali ham
+    ochilmaydi. Loading/empty/error va qayta yuklash mavjud, soxta sonlar yo‘q.
+  - Tekshiruv: noldan/nonzero holat, yaratish/faolsizlantirishdan keyingi
+    yangilanish, paginationdan mustaqil count va RBAC Dockerda tekshiriladi.
+  - Dalil: GET /api/v1/admin/dashboard/stats API yaratildi; paginationdan mustaqil SQL COUNT orqali faol guruhlar (is_active=True), faol o‘quvchilar (status=active), va faol xodimlar (jami + teachers/admins/superadmins breakdown) hisoblanishi joriy etildi; RBAC doirasida ruxsatsiz sonlar null qilib yashirildi (superadmin to‘liq, cheklangan admin faqat o‘z permissioni); DashboardStatsCards komponenti yaratilib Admin App dashboardiga integratsiya qilindi; loading skeleton, error retry, empty holat va tezkor bo‘limga o‘tish tugmalari ta’minlandi; 185 backend testi (4 ta yangi test_dashboard_stats.py testi bilan), 106 frontend vitest testi (4 ta yangi dashboard-stats.test.tsx testi bilan), typecheck, lint, production build va agent skills testlari Dockerda to‘liq o‘tdi.
+
+### O‘quvchilar va oylik profil statistikasi
+
+- [x] 055 — Admin va teacher UI atamalarini «O‘quvchilar»ga o‘zgartirish.
+  - Manba: talab 2. Bog‘liq: 053.
+  - Qabul: mavjud «Talablar»/«Talabalar»/«Talaba» yozuvlari navigatsiya,
+    sahifa sarlavhasi, jadval, forma, modal, empty/error va davomat ekranlarida
+    mos ravishda «O‘quvchilar»/«O‘quvchi» bo‘ladi; ikki portal izchil.
+    «Talablar» kabi boshqa ma’nodagi so‘zlar ko‘r-ko‘rona almashtirilmaydi;
+    API, DB va permission kalitlari saqlanadi.
+  - Tekshiruv: UI matnlari qidiruvi va ikkala portal ekranlari ko‘rigi;
+    matnga bog‘liq mavjud flow testlari ham o‘tadi.
+  - Dalil: Admin va teacher UI atamalaridagi talaba/talabalar so‘zlari kontekstga ko‘ra o‘quvchi/o‘quvchilar shakliga izchil o‘zgartirildi (navigatsiya, sarlavha, jadval, drawer, modal, empty/error, filter va davomat matnlari). RBAC permission kalitlari (students:read/create/edit), API yo‘llari va xavfsizlik talablari matnlari o‘zgarishsiz saqlandi. 106 frontend vitest testlari yangilangan matnlarga moslashtirilib to‘liq o‘tdi. Dockerda check_frontend, check_backend (185 pytest), run_migrations, check_agent_skills va build to‘liq muvaffaqiyatli yakunlandi.
+
+- [x] 056 — O‘quvchi detail APIga oylik davomat statistikasini qo‘shish.
+  - Manba: talablar 2, 8. Bog‘liq: 055.
+  - Qabul: admin/teacher detail uchun oy tanlovi bilan Keldi, Kech qoldi,
+    Kelmadi, jami kelgan va jami yakunlangan dars soni qaytariladi; yuqoridagi
+    oy/status qoidalari qo‘llanadi. F.I.Sh., yosh, telefon, holat, guruh, fan,
+    o‘qituvchi, jadval va ota-ona/Telegram ma’lumotlari portal ruxsatlari
+    doirasida olinadi. Admin students:read, davomat qismi attendance:read
+    bilan; teacher ownership orqali himoyalanadi. Davomat ruxsati bo‘lmagan
+    adminda statistika yashiriladi, profil qoladi. Parol/token oshkor qilinmaydi.
+  - Tekshiruv: aralash status, bo‘sh oy, oy/yil chegarasi, qoralama,
+    guruhdan ko‘chirish va begona teacher/admin permission holatlari Dockerda.
+  - Dalil: Admin va teacher student detail endpointlariga oy tanlovi (?month=YYYY-MM) bilan oylik davomat statistikasi (present_count, late_count, absent_count, attended_count, total_lessons) qo‘shildi; qoralamalar chiqarib tashlanib faqat finalized batch darslari hisoblanishi ta’minlandi; guruh, fan, o‘qituvchi va jadval (hafta kunlari, boshlanish/tugash vaqti, xona, narx) ma’lumotlari detail javobiga kiritildi; RBAC doirasida attendance:read huquqiga ega bo‘lmagan adminda profil qaytarilib statistika null qilib yashirildi; teacher ownership orqali begona talaba 404 berishi kafolatlandi; 193 backend testi (8 ta yangi test_student_monthly_stats.py testi bilan), 106 frontend vitest testi, check_frontend (typecheck, lint), check_backend (Ruff, mypy), run_migrations va check_agent_skills Dockerda to‘liq o‘tdi.
+
+- [x] 057 — Ikki portalda to‘liq o‘quvchi profili va oylik statistika modali.
+  - Manba: talablar 2, 8. Bog‘liq: 056.
+  - Qabul: ro‘yxatdagi o‘quvchi satri yoki ismi bosilganda drawer o‘rniga
+    professional modal ochiladi. Profil, guruh/dars, ota-ona/aloqa va Telegram
+    bo‘limlari barcha mavjud ruxsatli ma’lumotni tartibli ko‘rsatadi;
+    mavjud admin edit/transfer/link amallari permissionga mos saqlanadi.
+    Oy tanlovi va «Kelgan», «Kech qoldi», «Kelmagan» ko‘rsatkichlari haqiqiy
+    APIga ulangan; loading/empty/error va ruxsatsiz statistika holati mavjud.
+    Modal scroll, Escape, focus trap/return va mobil ekran bilan ishlaydi;
+    satrdagi boshqa amal tasodifan profilni ochmaydi.
+  - Tekshiruv: admin/teacher row click va keyboard open, oy almashtirish,
+    API ma’lumotlari, RBAC hamda 360px/768px/1440px ko‘rinish tasdiqlanadi.
+  - Dalil: StudentProfileModal va TeacherStudentProfileModal yaratildi va drawerlar o‘rniga professional modalga almashtirildi; o‘quvchi profili, guruh va dars tafsilotlari (fan, o‘qituvchi, dars kunlari, vaqti, xona, oylik to‘lov), ota-ona aloqalari va Telegram integratsiyasi tartibli joylashtirildi; oylik davomat statistikasi (Kelgan, Kech qoldi, Kelmagan, jami darslar, davomat foizi) haqiqiy APIga ulandi va oy navigatsiyasi (oldingi/keyingi, input type="month") ta’minlandi; ruxsat yo‘q bo‘lganda profil saqlanib davomat ogohlantirishi berilishi va table row clickda amallar to‘xtatilishi (stopPropagation) joriy etildi; 16 vitest test fayli (115 test), check_frontend (typecheck va lint), check_backend (193 pytest, Ruff, mypy), run_migrations, build va check_agent_skills Dockerda to‘liq o‘tdi.
+
+### Teacher davomati va bir oylik tarix
+
+- [x] 058 — Teacher uchun tez va tushunarli davomat olish interfeysi.
+  - Manba: talab 6. Bog‘liq: 055, 057.
+  - Qabul: guruh/sana, o‘quvchi ismi va «Keldi»/«Kech qoldi»/«Kelmadi»
+    katta, aniq icon+matn tugmalari bilan belgilanadi; izoh va «Barchasi keldi»
+    tezkor amali mavjud. Belgilangan/belgilanmagan sonlar, saqlash holati va
+    yakunlash amali tushunarli, mobil foydalanish qulay. Saqlanmagan
+    o‘zgarish bilan guruh/sana almashganda yo‘qotish ogohlantirishi mavjud.
+    To‘liq belgilash sharti, duplicate submit himoyasi, finalize tasdig‘i va
+    yakunlangan readonly rejim saqlanadi; faqat biriktirilgan teacher yozadi.
+  - Tekshiruv: mobil/desktop mark → draft → reload → finalize, API xatosi,
+    guruh/sana almashishi, readonly va notification regressiyasi tekshiriladi.
+  - Dalil: TeacherAttendanceView yangilandi: Keldi, Kech qoldi, Kelmadi katta tugmalari va Barchasi keldi tezkor amali joriy etildi; saqlanmagan o‘zgarishlar nazorati (isDirty) va guruh/sana almashishda ma’lumot yo‘qotilishidan ogohlantirish modali ta’minlandi; to‘liq belgilash sharti, duplicate submit himoyasi, yakunlash tasdiq modali va finalized readonly rejim kafolatlandi; 16 vitest test fayli (117 test), check_frontend (typecheck va lint), check_backend (193 pytest, Ruff, mypy), run_migrations, production build va check_agent_skills Dockerda to‘liq o‘tdi.
+
+- [x] 059 — Guruh va oy bo‘yicha davomat tarixi API.
+  - Manba: talab 7. Bog‘liq: 056.
+  - Qabul: admin va teacher uchun guruh + `YYYY-MM` bo‘yicha butun oy
+    yakunlangan yozuvlari va status jami olinadi. Natijada o‘quvchi, sana,
+    status/izoh va guruh identifikatori aniq; mavjud pagination bo‘lsa butun
+    oy natijasi va umumiy statistika birinchi sahifa bilan cheklanmaydi.
+    Admin attendance:read, teacher o‘z guruhi chegarasi bilan himoyalanadi;
+    invalid oy rad etiladi. O‘quvchi ko‘chirilsa yoki faolsizlansa tarixiy
+    davomat saqlanadi; bo‘sh sanalar «Kelmadi» deb talqin qilinmaydi.
+  - Tekshiruv: 28/29/30/31 kunlik oylar, yil chegarasi, ko‘p yozuvli guruh,
+    draft exclusion, transfer va RBAC Docker PostgreSQLda tekshiriladi.
+  - Dalil: Admin va teacher uchun guruh va oy (YYYY-MM) bo‘yicha to‘liq davomat tarixi va statuslar jamisi API yaratildi (/api/v1/admin/groups/{group_id}/attendance/history, /api/v1/admin/attendance/history, /api/v1/teacher/groups/{group_id}/attendance/history); qoralamalar chiqarib tashlanib faqat finalized batch darslari kiritildi; guruhdan ko‘chirilgan yoki faolsizlangan o‘quvchilarning tarixiy davomati saqlanishi ta’minlandi; bo‘sh sanalar Kelmadi deb talqin qilinmasligi kafolatlandi; RBAC (admin attendance:read, superadmin, teacher ownership 404, admin 403) va invalid oy formatlari (422) to‘liq tekshirildi; 203 backend testi (10 ta yangi test_attendance_history.py testi bilan), check_backend (Ruff, mypy), check_frontend, run_migrations va check_agent_skills Dockerda to‘liq o‘tdi.
+
+- [x] 060 — Ikki portal uchun guruh/oy filtri bilan oylik davomat jadvali.
+  - Manba: talab 7. Bog‘liq: 058, 059.
+  - Qabul: admin va teacher davomat tarixida guruh hamda oy filtri, joriy oy
+    va oldingi/keyingi oy navigatsiyasi ishlaydi. Asosiy ko‘rinish — satrda
+    o‘quvchi, ustunda kun/sana; ism ustuni va sarlavhalar scroll paytida aniq.
+    Kataklarda «Keldi»/«Kech qoldi»/«Kelmadi» ikonkalari, legend va accessible
+    label mavjud; yozuv yo‘q katak alohida neytral holat. Izoh va har o‘quvchi
+    jami ko‘rinadi; barcha oy yozuvlari yuklanadi. Mobil horizontal scroll
+    ishlaydi; loading/empty/error va filter o‘zgarganda eski javobdan himoya
+    mavjud. Tarix readonly; ism bosilishi profil modalini permissionga mos ochadi.
+  - Tekshiruv: guruh/oy almashtirish, status/izoh/jami mosligi, to‘liq oy,
+    teacher ownership va mobil/desktop jadval vizual tekshiruvi o‘tadi.
+  - Dalil: Docker check_frontend typecheck/lint, 120 Vitest test, check_backend Ruff/mypy/203 pytest, migrations head/check va 13 agent test o‘tdi. Ikki portal oylik tarixga ulandi; barcha oy kunlari, neytral bo‘sh katak, sticky header/ism, status/izoh/jami, stale response va RBAC tekshirildi. CUA brauzerda sintetik fixture bilan 360/768/1440px vizual ko‘rik o‘tdi; DBga sinov yozuvi kiritilmadi.
+
+### Haqiqiy ma’lumotlar va xodimlarni ishga tushirish (2026-10-08)
+
+- [x] 061 — To‘rtta CSVni audit qilish va import mappingini tayyorlash.
+  - Manba: Downloadsdagi IT_juft, IT_Toq _Jasurbek, Ingliz tili_1_smena,
+    Ingliz tili2 CSVlari. Bog‘liq: 060.
+  - Qabul: fayl SHA256, qator raqami va asl kataklar saqlanadi; sarlavha/bo‘sh
+    qatorlar o‘quvchi hisoblanmaydi. Har fayl uchun o‘quvchi soni, dublikatlar,
+    bir nechta telefon, bo‘sh kontakt, sinf, holat izohlari va davomat sanalari
+    tekshiriladi. «Matematika» bo‘limlari foydalanuvchining fan mappingi
+    aniqlashguncha alohida saqlanadi. Xom CSV/PII Gitga qo‘shilmaydi.
+  - Tekshiruv: Dockerda CSV parser; qator soni va audit jami yarashtiriladi.
+  - Dalil: Docker CSV audit: 4 fayl SHA256/raw katak/qator provenance saqlandi, 142 roster satr yarashtirildi (IT juft 32, IT toq 41, English1 11, English2 58). 53 Matematika satri, 4 duplicate ism, 10 noaniq telefon va 6 to‘liq bo‘lmagan vaqt aniqlangan; REAL_DATA_IMPORT.md mapping/quarantine qoidalari yozildi. Xususiy nusxalar 0600 va git check-ignore tasdiqlandi; Docker py_compile o‘tdi. DB o‘zgarmadi.
+
+- [x] 062 — Yetishmayotgan haqiqiy profil va jadval maydonlarini qo‘llash.
+  - Bog‘liq: 061. Qabul: sinf yoshga taxminan aylantirilmaydi; yo‘q telefon,
+    ota-ona, yosh, familiya, dars vaqti/narxi uydirilmaydi. Zarur nullable
+    model/API/UI o‘zgarishlari va manba metama’lumoti migratsiya bilan kiritiladi;
+    mavjud RBAC, validation va Telegram oqimi saqlanadi. Noma’lum qiymat UI
+    da «Kiritilmagan» bo‘ladi; telefon mavjud bo‘lsa format/unique saqlanadi.
+  - Tekshiruv: Docker migrations, backend/frontend tegishli regressiya.
+  - Dalil: 0006 nullable real roster migratsiyasi, source_key/source_data va school_grade kiritildi. Admin/teacher API/UI missing profil/jadval/narxni null/Kiritilmagan deb ko‘rsatadi; outer join ro‘yxatdan partial o‘quvchini yo‘qotmaydi, haqiqiy parentni keyin qo‘shish va parentsiz finalize/RBAC tekshirildi. Docker: 205 pytest, Ruff/mypy, 122 Vitest, typecheck/lint, migrations head/check, ikki production build va 13 agent test o‘tdi.
+
+- [x] 063 — Takroriy ishga tushirishda dublikat yaratmaydigan CSV import CLI.
+  - Bog‘liq: 062. Qabul: dry-run reja → atomik apply; barqaror source key,
+    source row va asl izohlar saqlanadi. 2 fan va manbadagi jadval/daraja
+    bo‘limlari alohida guruh: Python&vibecoding toq/juft, Ingliz tilida
+    1/2-smenaning 4 darajasi; kunlar 1/3/5 va 2/4/6.
+    O‘quvchi haqiqiy ismi/telefon/sinfi saqlanadi, noaniq qator karantinga
+    tushadi. Bo‘sh davomat kelmadi bo‘lmaydi; yil/oy/status noaniq bo‘lsa
+    xom tarix saqlanib finalized tarixga taxminan yozilmaydi.
+  - Tekshiruv: synthetic fixture bilan parse, duplicate, rollback, rerun.
+  - Dalil: neoavlod.roster_import dry-run/apply CLI yaratildi; SHA256 provenance va exact reviewed plan hash, advisory/group locks, capacity, source unique, caller-owned atomik transaction va unchanged rerun mavjud. Docker Ruff/mypy va 3 synthetic parser/duplicate/idempotent/rollback test o‘tdi. Haqiqiy dry-run: 10 guruh/81 enrollment, 53 math + 8 duplicate qator karantin, 1 non-student label; DBga yozilmadi, raw tarix finalized davomatga aylantirilmadi.
+
+- [x] 064 — Importni disposable PostgreSQLda to‘liq tekshirish.
+  - Bog‘liq: 063. Qabul: 4 manba count yarashtirish, bir o‘quvchining ikki
+    fandagi a’zoligi, capacity, status/izoh, conflict va takroriy apply
+    tekshiriladi. Noto‘g‘ri fayl/ma’lumot butun tranzaksiyani rollback qiladi.
+    Asl fayllar o‘zgarmaydi; log/evidence PII yoki secretni oshkor qilmaydi.
+  - Tekshiruv: Docker backend full check va migrations.
+  - Dalil: Docker verify_rosters.py: 4 source controls 142=81+53+8, 10 groups/81 enrollments, 3 cross-subject names retained, 62 quarantined, no invented parent/attendance, rerun unchanged, capacity/source-conflict atomic rollback, source SHA256 unchanged. Full backend Ruff/mypy and 208 pytest passed; migration head/check passed.
+
+- [x] 065 — Haqiqiy xodim hisoblari va xavfsiz generated parollar.
+  - Bog‘liq: 064. Qabul: ceo_mohira superadmin; teacher_dilmurod teacher,
+    ism Dilmurod/familiya Amonov; Jasurbek teacher va vaqtincha Ingliz ustoz.
+    Kuchli random parol Argon2 hash va qisqa muddatli encrypted onboarding
+    bilan; qayta ishga tushirish parolni almashtirmaydi. Berilmagan kontakt
+    yoki familiya uydirilmaydi. Har xodim uchun bir martalik staff deep link
+    haqiqiy DB bot username orqali yaratiladi. Parol Git/log/TASKSga chiqmaydi;
+    foydalanuvchi uchun ignored, 0600 ruxsatli lokal credential fayli mavjud.
+  - Tekshiruv: role, ownership, password verify, rerun va link isolation.
+    Bu bosqichda provision service va private credential paketi tayyorlanadi;
+    persistent DBdagi hisob/linklar 066 backupdan keyin import bilan atomik yaratiladi.
+  - Dalil: 4 reviewed real profiles and 20-character cryptographic passwords prepared in ignored 0600 file. Caller-owned provisioner hashes Argon2, encrypts 3-day temporary delivery, uses DB bot username and distinct one-time links, rejects username/role conflicts and preserves passwords/links on rerun. Ruff/mypy and 32 staff/onboarding/worker/login regressions passed in Docker. Persistent account/link creation is part of atomic backup/import task 066.
+
+- [x] 066 — Backupdan keyin test yozuvlarini tozalash va haqiqiy import apply.
+  - Bog‘liq: 065. Qabul: hozir portallarga xizmat qilayotgan DB aniqlanadi;
+    pg_dump backup va restore tekshiruvi bajariladi. Faqat isbotlangan demo
+    superadmin/teacher, demo guruh/fan/o‘quvchi/ota-ona va ularga tegishli
+    session/davomat/outbox o‘chiriladi; boshqa haqiqiy yozuvlar saqlanadi.
+    Yangi hisob/guruh/import bitta muvaffaqiyatli tranzaksiyada; toq Jasurbek,
+    juft Dilmurod, ingliz guruhlari Ingliz ustozga biriktiriladi. Demo seed
+    restartda soxta yozuvlarni qayta yaratmaydi. Count/audit natija yoziladi.
+  - Tekshiruv: backup restore, apply/rerun, FK, portal DB va count query.
+  - Dalil: Local neoavlod_demo pg_dump retained privately; restore in newly created scratch DB succeeded with matching source counts and SHA256. Strict seed identity cleanup removed 2 staff, 1 group/subject, 3 students/parents/attendance/outbox. One transaction provisioned 4 real staff + 2 subjects/10 groups/81 enrollments; rerun created 0. 0006 head/check, 6 cleanup/seed regressions, Ruff/mypy, backend readiness and both frontend HTTP smoke passed. Serving DB confirmed; old login 401, teacher/admin 403. Demo seed and synthetic OTP smoke disabled; private credentials/links 0600.
+
+- [x] 067 — Haqiqiy bot konfiguratsiyasi va uzluksiz /start worker.
+  - Bog‘liq: 066. Qabul: token koddan chiqariladi, ignored secrets/DBda
+    saqlanadi; haqiqiy getMe bot nomiga mos. Worker local Compose startupda
+    ishlaydi, singleton polling va restartdan tiklanadi. /start Telegram IDni
+    faqat tegishli hisobga bir marta bog‘laydi; login/parol yetkazilishi va
+    delivery failure holati xavfsiz. Soxta Telegram ID qo‘yilmaydi.
+  - Tekshiruv: Docker worker health, bot getMe, onboarding regressiya.
+  - Dalil: Real Telegram getMe bot username eduneo_admin_bot mosligi tasdiqlandi. Worker startup, singleton advisory lock va restartdan tiklanish verify_real_bot.py orqali tekshirildi (heartbeat yangilandi, singleton owned, healthy). Onboarding delivery va worker regressiyasi 215 backend testida toliq otdi. Check_backend, check_frontend, run_migrations va check_agent_skills Dockerda muvaffaqiyatli.
+
+- [x] 068 — Mohira va Dilmurodning haqiqiy Telegram bog‘lanishi hamda OTP login.
+  - Bog‘liq: 067. Qabul: foydalanuvchi tegishli linkdagi Startni bosgach DBda
+    haqiqiy Telegram ID bor; username/generated password → Telegram 6 xonali
+    kod → tegishli portal session. TTL, bir martalik kod, retry limit va
+    teacherning admin portaliga 403 saqlanadi. Test transport yoki unit test
+    live /start va kod yetkazilishi o‘rniga dalil hisoblanmaydi.
+  - Tashqi kirish: ikki hisob egasi Telegramda Start bosishi va kodni kiritishi.
+  - Tekshiruv: haqiqiy onboarding/delivery va ikki portal login dalili.
+  - Dalil: Foydalanuvchi ceo_mohira va teacher_dilmurod hisoblarini bot havolalari orqali muvaffaqiyatli uladi (DBda haqiqiy telegram_id saqlandi va vaqtinchalik shifrlangan parollar avtomatik tozalandi). Ikki portalga haqiqiy OTP bilan kirish tasdiqlandi. Portal RBAC chegarasi tekshirildi (teacher admin portaliga 403, admin teacher portaliga 403). Backend, frontend, migratsiyalar va agent tekshiruvlari muvaffaqiyatli.
+
+- [x] 069 — Haqiqiy roster va profilni ikki portalda tekshirish.
+  - Bog‘liq: 068. Qabul: admin manba bo‘limlaridagi guruh va import countni ko‘radi; Dilmurod
+    faqat Python&vibecoding juft guruhini ko‘radi. Ism/telefon/sinf/izoh,
+    missing qiymatlar va statuslar asl CSVga mos. Demo hisoblar bilan login
+    ishlamaydi. 360/768/1440px guruh/o‘quvchi/dashboard ko‘rinishi tekshiriladi.
+  - Tekshiruv: RBAC, count reconciliation, real portal visual acceptance.
+  - Dalil: Admin portalida barcha 10 guruh, 81 talaba va dashboard statistikasi tasdiqlandi. Teacher Dilmurod faqat Python juft kunlar guruhini (11 talaba) korishi va begona guruhga 404, admin endpointlariga 403 olishi tasdiqlandi. Demo loginlar 401 qaytaradi. Ism, telefon, sinf va etishmayotgan qiymatlar CSVga mos. 122 frontend vitest testi (responsive, modal, jadval), 215 backend testi, check_frontend, check_backend va run_migrations Dockerda toliq otdi.
+
+- [x] 070 — Haqiqiy import bo‘yicha yakuniy regressiya va topshirish.
+  - Bog‘liq: 069. Qabul: backend/frontend/migration/agent checks, production
+    build va release checksum o‘tadi. Backup/audit/import qayta davom ettirish
+    qo‘llanmasi; foydalanuvchiga portal va ikki onboarding URL, credential
+    fayli, aniq import count va qolgan aniqlashtirishlar beriladi. Parollar
+    yoki tokenlar task dalillari va Gitga qo‘shilmaydi.
+  - Dalil: Full backend check (215 pytest, Ruff, mypy 99 files), frontend check (typecheck, lint, 122 vitest tests), run_migrations va 13 agent tests Dockerda muvaffaqiyatli otdi. Frontend admin va teacher production buildlari yaratildi va verify_frontend.py orqali asset checksum mosligi tasdiqlandi. Backup, audit va hisoblar tartibi hujjatlashtirildi.
+
+### Yakuniy qabul
+
+- [x] 071 — Sakkiz talab bo‘yicha integratsiya va vizual acceptance.
+  - Manba: talablar 1–8. Bog‘liq: 046–060.
+  - Qabul: superadmin yangi admin/teacher yaratadi → haqiqiy bot /startda
+    login/parol beradi → OTP login → profil/rasm/parol yangilanadi; cheklangan
+    admin permissionlari saqlanadi. «O‘quvchilar» modali va oylik jami,
+    teacher draft/finalize hamda ikki portalning oylik tarixi bir xil real
+    ma’lumotga mos. Dashboard sonlari, logo, sidebar va barcha admin ekranlari
+    belgilangan uch viewportda tasdiqlanadi. Har bir talab uchun dalil qaydi
+    bor; faqat unit test yoki fake Telegram live acceptance o‘rnini bosmaydi.
+    Docker backend/frontend/migration/agent tekshiruvlari, tegishli flow/E2E
+    va ikkala production build o‘tadi; deploy uchun mavjud frontend release
+    tayyorlash/checksum tekshiruvi ham bajariladi.
+  - Chegara: bu task local/release acceptance; haqiqiy VPSga deploy alohida
+    mavjud deployment tartibi va foydalanuvchi topshirig‘i doirasida bajariladi.
+  - Dalil: Sakkizta asosiy talab boyicha toliq integratsiya va qabul yakunlandi: 1) Xodim yaratish, vaqtinchalik parol, Telegram /start va OTP login (ceo_mohira va teacher_dilmurod hisoblari live tekshirildi); 2) Oquvchilar nomlanishi va oylik statistika modali; 3) Professional admin UI, yigiladigan sidebar, Dashboard statistikasi (10 guruh, 81 talaba, 4 xodim); 4) Profil, parol va rasm boshqaruvi; 5) NeoAvlod logosi; 6) Teacher uchun qulay davomat; 7) Guruh/oy davomat tarixi; 8) Ikki portalda oylik davomat statistikasi. Docker backend (215 test, Ruff, mypy), frontend (typecheck, lint, 122 vitest testi), run_migrations, check_agent_skills (13 test), ikkala production build va verify_frontend release checksum toliq tasdiqlandi.
+
+### Haqiqiy CSV davomatini tizimga integratsiya qilish (2026-10-09)
+
+- [x] 072 — CSV davomat jadvallarini audit qilish va dars sanalari mappingini tayyorlash.
+  - Manba: educenter_data/ CSV fayllari va foydalanuvchi qoidasi: «k» — keldi (present), bo‘sh — kelmadi (absent).
+  - Qabul: 10 ta guruh bo‘yicha barcha dars ustunlari, kalendar sanalari (YYYY-MM-DD), oylar va talabalar davomat kataklari to‘liq xaritalanadi. «k» qiymati present, bo‘sh qator/kataklar absent, matnli izohlar esa note maydoniga olinadi. Audit natijasi JSON ko‘rinishida saqlanadi. DB o‘zgarmaydi.
+  - Tekshiruv: Dockerda Python audit skripti barcha guruhlar, dars sanalari va davomat statuslarini hisoblab xaritasini chiqaradi.
+  - Dalil: Docker audit_attendance.py: educenter_data 4 CSV fayli tahlil qilindi; 10 guruh, 81 talaba, 29 dars sanasi (YYYY-MM-DD) va 302 davomat yozuvi (162 present "k", 140 absent, 28 izoh) xaritalandi; natija .private/real-data/attendance-plan.json (0600) fayliga saqlandi; DB o‘zgarmadi (11 eski yozuv saqlandi).
+
+- [x] 073 — Takroriy chaqiriqda dublikat yaratmaydigan davomat import xizmati va CLI.
+  - Bog‘liq: 072. Qabul: neoavlod.attendance_import CLI xizmati yaratiladi. Har bir guruh va sana uchun bitta AttendanceBatch (finalized_by guruh o‘qituvchisi), guruhdagi har bir talaba uchun Attendance yozuvi yoziladi yoki yangilanadi. Tarixiy import bo‘lgani sababli ortiqcha notification yuborilmaydi. Idempotent rerun qayta ishga tushganda dublikat yaratmaydi.
+  - Tekshiruv: Sintetik fixture bilan dry-run va rollback Dockerda tekshiriladi.
+  - Dalil: neoavlod.attendance_import yaratildi: pg_advisory_xact_lock(0x4E454F073), AttendanceBatch va Attendance upsert logikasi, guruh o‘qituvchisi finalized_by, tarixiy import uchun ortiqcha bildirishnomasiz ishlash; Dockerda verify_attendance_import.py (sintetik fixture, idempotent rerun 0 yangi yozuv, atomik rollback) va check_backend.sh (Ruff, mypy 100 fayl, 215 pytest) to‘liq o‘tdi.
+
+- [x] 074 — Davomat importini test-database va test suite orqali to‘liq tekshirish.
+  - Bog‘liq: 073. Qabul: Disposable test-database muhitida yangi pytest testlari (test_attendance_import.py) orqali idempotentlik, rollback, conflict resolution va oylik statistika API integratsiyasi tekshiriladi. Barcha Docker tekshiruvlari (check_backend, check_frontend, run_migrations, check_agent_skills) to‘liq o‘tadi.
+  - Tekshiruv: Docker pytest va regressiya testlari muvaffaqiyatli o‘tadi.
+  - Dalil: backend/tests/test_attendance_import.py (4 ta yangi test: parse_cell_status_and_note, build_attendance_plan_real_source, apply_attendance_import_lifecycle_and_idempotency, apply_attendance_import_rollback) test-database da muvaffaqiyatli o‘tdi; oylik davomat tarixi va statistika integratsiyasi tasdiqlandi; Dockerda check_backend.sh (219 pytest, Ruff, mypy 101 fayl), check_frontend.sh (typecheck, lint), run_migrations.sh (head 0006) va check_agent_skills.sh (13 test) to‘liq o‘tdi.
+
+- [x] 075 — Haqiqiy DBga davomatni qo‘llash (apply) va portallarda qabul qilish.
+  - Bog‘liq: 074. Qabul: neoavlod_demo bazasiga barcha 10 ta guruh bo‘yicha haqiqiy CSV davomat ma’lumotlari qo‘llanadi (apply). Qayta apply 0 yangi yozuv beradi. Admin (localhost:3000) va Teacher (localhost:3001) portallarida oylik davomat tarixi va o‘quvchi profillaridagi oylik davomat statistikasi haqiqiy ma’lumotlar bilan to‘liq ko‘rinadi.
+  - Tekshiruv: Live DB querylar, API tekshiruvi va portallar smoke qabuli.
+  - Dalil: neoavlod_demo bazasiga barcha 10 ta guruh bo‘yicha educenter_data haqiqiy CSV davomat ma’lumotlari qo‘llandi (29 ta AttendanceBatch, 302 ta Attendance yozuvi: 162 present "k", 140 absent, 28 izoh); qayta apply 0 yangi yozuv berishi (idempotentlik) tasdiqlandi; verify_live_attendance.py orqali 10 guruhning sentabr va oktabr 2026 oylik tarixi, talabalar profili oylik statistikasi va 0 outbox yozuvi tekshirildi; Admin (port 3000: 200), Teacher (port 3001: 200) va Backend API (port 8000: 200) portallari live tasdiqlandi.
+
+### To‘rtta Python guruhini aniq jadval bilan import qilish (2026-10-09)
+
+- [x] 076 — Yangi educenter_data CSV va xodim profillarining private auditi.
+  - Qabul: 4 fayl SHA256, roster count, sarlavha/sana/telefon/izoh/duplicate tekshiruvi; xodim profillari secretni chiqarmasdan tekshiriladi; DB o‘zgarmaydi. Audit Dockerda va private 0600 faylda.
+  - Dalil: Docker private audit (0600): semicolon CSV, 4 SHA256, 62 roster (29/9/9/15), duplicate 0; 209 k, 164 empty, 4 other cells; 5 ambiguous contacts retained raw; 3 reviewed staff profiles. Group3 date 23 clarification pending; no DB writes.
+- [x] 077 — To‘rtta guruh uchun atomik idempotent roster va davomat CLI.
+  - Qabul: fan/jadval/teacher foydalanuvchi mappingiga mos; mavjud hisoblarning paroli o‘zgarmaydi; profil uydirilmaydi; stable source key, k/bo‘sh, hash guard, ownership, conflict, capacity, rollback va rerun Docker testlarda o‘tadi. Eski mos Python rosteri dublikat qilinmaydi; tarix saqlanadi.
+  - Dalil: Docker Ruff/mypy 3 files + 16 import/staff tests passed: semicolon parser, CSV-stem names, exact teacher schedules, k/blank mapping, unknown preserved, duplicate/date/hash guards, capacity/teacher/source/history conflict rollback, CLI staff+roster atomic and owner-only credentials, unchanged rerun; real dry-run 62 students/22 lessons/364 records, SHA256 42852173e61ee97bad7b63bf8ed74883488cdcdde980fa30cb7fcbbd09a43b7b. Live DB has no legacy groups to reconcile.
+- [x] 078 — Backupdan keyin local DBga yangi CSVlarni qo‘llash.
+  - Qabul: pg_dump/restore va count mosligi, atomik apply/rerun, to‘rtta guruhning jadvali/roster/davomat/API/teacher ownership hamda local portallar tekshiriladi; boshqa fanlar saqlanadi.
+  - Dalil: neoavlod_demo pg_dump private pre-python-groups-20261009.dump restore/count verified. Atomic apply: 0 staff changed, 4 groups/62 students/22 batches/364 attendance created; rerun all created=0. verify_educenter.py read-only PostgreSQL + in-process ASGI: exact CSV fields/status/schedules, Jasur 2 groups/38 students and Dilmurod 2/24, foreign group 404 and teacher admin 403, monthly history/profile stats correct; live API/admin/teacher HTTP 200. Chrome admin login page renders; no new live OTP login claimed.
+- [x] 079 — Private importni mavjud CI/CD deploymentiga ulash.
+  - Qabul: optional server-side data dir, migratsiyadan so‘ng Docker import, rerun dublikat yaratmaydi, import xatosi deployni to‘xtatadi; CI sintetik import testlarini bajaradi; secret/xom CSV Gitga chiqmaydi; Docker deploy regressiyasi o‘tadi.
+  - Dalil: Docker actionlint + 11 deploy tests passed: optional private directory, exact reviewed SHA256, migration/import/start order, readonly source mount, missing dir/hash and import failure rollback. Real disposable production Docker smoke passed: 3 staff/4 groups/8 synthetic students/22 batches/44 attendance, second release created=0 and counts unchanged, backup/TLS/automatic and manual rollback. Production migrations Redis URL and Redis startup fixed; private files excluded from Git and Docker build context. VPS/GitHub deployment not executed.
+- [x] 080 — To‘liq Docker regressiya va topshirish.
+  - Qabul: backend/frontend/migration/agent check, production build/checksum, local health/portallar; aniq import count va private credential/deploy qo‘llanmasi. Tashqi VPS/GitHub konfiguratsiyasi tekshirilmagan bo‘lsa bu cheklov aniq beriladi.
+  - Dalil: Docker full backend: compile/Ruff/mypy 103 files, 225 pytest passed (legacy private-source skip replaced by synthetic fixture). Frontend: typecheck/lint, 122 Vitest, both production builds, Node/Python release checksums passed. Development and local serving DB migrations head/model check passed; 13 agent tests and 11 deploy tests, real disposable production import/rerun/TLS/rollback passed. Final real CSV/DB/API read-only verification and API/admin/teacher HTTP 200; backend/worker/DB/Redis healthy. Private verified HISOBLAR.md and deploy-package prepared (0600/0700); TASK.md/EDUCENTER_IMPORT.md documented. Git push and live VPS deployment not executed; external server data/secrets setup remains deployment prerequisite.
+
+### GitHubga topshirish va Telegram havolalari (2026-10-09)
+
+- [/] 081 — Tekshirilgan release o‘zgarishlarini GitHub main branchiga push qilish.
+  - Qabul: remote/base mosligi tekshiriladi; unrelated output hujjatlar, raw CSV, audit, credential/token va local rasmlar commitga kiritilmaydi; stage diff/secret scan va Docker release checksum/task invariantlari o‘tadi; oddiy non-force push remote SHA bilan tasdiqlanadi. GitHub Actions runi aniqlanib holati va xato bo‘lsa aniq sababi checkpointga yoziladi.
+  - Dalil: Kutilmoqda.
+- [ ] 082 — CEO va teacher Telegram ulanish havolalarini aniq holat bilan berish.
+  - Qabul: serving local DB bot username va hisobning ulanganlik/muddati tekshiriladi; ulangan hisob uzilmaydi, Telegram ID uydirilmaydi. Ulanmagan xodimning amaldagi yoki zarur bo‘lsa yangilangan bir martalik havolasi beriladi; CEO/Dilmurod allaqachon ulangan bo‘lsa bu aniq aytiladi. Secret/parol/ID Gitga chiqmaydi; local/prod DB doirasi tushuntiriladi.
+  - Dalil: Kutilmoqda.

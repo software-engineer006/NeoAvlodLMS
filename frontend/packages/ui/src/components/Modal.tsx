@@ -4,11 +4,11 @@ import { X } from "lucide-react";
 export interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
-  title?: string;
-  description?: string;
+  title?: React.ReactNode;
+  description?: React.ReactNode;
   children: React.ReactNode;
   footer?: React.ReactNode;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "sm" | "md" | "lg" | "xl" | "2xl";
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -44,21 +44,22 @@ export const Modal: React.FC<ModalProps> = ({
     sm: "max-w-sm",
     md: "max-w-md",
     lg: "max-w-lg",
-    xl: "max-w-xl",
+    xl: "max-w-2xl",
+    "2xl": "max-w-3xl",
   };
 
   return (
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs transition-opacity"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-xs transition-opacity"
       onClick={onClose}
     >
       <div
-        className={`bg-white rounded-xl shadow-xl border border-slate-100 w-full ${sizeClasses[size]} overflow-hidden transform transition-all`}
+        className={`bg-white rounded-xl shadow-xl border border-slate-100 w-full ${sizeClasses[size]} overflow-hidden transform transition-all flex flex-col max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-4rem)]`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+        <div className="px-5 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
           <div>
             {title && <h3 className="text-base font-semibold text-slate-900">{title}</h3>}
             {description && <p className="text-xs text-slate-500 mt-0.5">{description}</p>}
@@ -72,9 +73,9 @@ export const Modal: React.FC<ModalProps> = ({
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="p-6 max-h-[calc(100vh-16rem)] overflow-y-auto">{children}</div>
+        <div className="p-5 sm:px-6 py-5 overflow-y-auto flex-1">{children}</div>
         {footer && (
-          <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+          <div className="px-5 sm:px-6 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3 shrink-0">
             {footer}
           </div>
         )}

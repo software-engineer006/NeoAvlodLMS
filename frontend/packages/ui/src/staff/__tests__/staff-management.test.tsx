@@ -177,18 +177,17 @@ describe("Staff & Permission Management (Task 029)", () => {
       );
 
       expect(screen.getByText("Yangi xodim qo‘shish")).toBeDefined();
+      expect(screen.getByText("Vaqtinchalik parol avtomatik yaratiladi")).toBeDefined();
 
       const firstNameInput = screen.getByLabelText(/Ism/);
       const lastNameInput = screen.getByLabelText(/Familiya/);
       const phoneInput = screen.getByLabelText(/Telefon raqami/);
       const usernameInput = screen.getByLabelText(/Foydalanuvchi nomi/);
-      const passwordInput = screen.getByLabelText(/Boshlang‘ich parol/);
 
       fireEvent.change(firstNameInput, { target: { value: "Test" } });
       fireEvent.change(lastNameInput, { target: { value: "User" } });
       fireEvent.change(phoneInput, { target: { value: "invalid-phone" } });
       fireEvent.change(usernameInput, { target: { value: "testuser" } });
-      fireEvent.change(passwordInput, { target: { value: "pass1234" } });
 
       const submitBtn = screen.getByRole("button", { name: "Yaratish" });
       fireEvent.click(submitBtn);
@@ -219,7 +218,7 @@ describe("Staff & Permission Management (Task 029)", () => {
       });
     });
 
-    it("submits valid create payload to apiClient.post", async () => {
+    it("submits valid create payload to apiClient.post without password", async () => {
       const postSpy = vi.spyOn(apiClient, "post").mockResolvedValueOnce({
         id: "new-staff-id",
         first_name: "Aziz",
@@ -250,7 +249,6 @@ describe("Staff & Permission Management (Task 029)", () => {
       fireEvent.change(screen.getByLabelText(/Familiya/), { target: { value: "Karimov" } });
       fireEvent.change(screen.getByLabelText(/Telefon raqami/), { target: { value: "+998901234567" } });
       fireEvent.change(screen.getByLabelText(/Foydalanuvchi nomi/), { target: { value: "aziz_teacher" } });
-      fireEvent.change(screen.getByLabelText(/Boshlang‘ich parol/), { target: { value: "Secret1234" } });
 
       fireEvent.click(screen.getByRole("button", { name: "Yaratish" }));
 
@@ -260,7 +258,6 @@ describe("Staff & Permission Management (Task 029)", () => {
           last_name: "Karimov",
           phone: "+998901234567",
           username: "aziz_teacher",
-          password: "Secret1234",
           role: "teacher",
           permissions: [],
         });

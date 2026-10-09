@@ -1,6 +1,8 @@
+import calendar
 import uuid
 from dataclasses import dataclass
 from datetime import date, datetime
+from typing import Any
 
 import httpx
 from sqlalchemy import ColumnElement, func, select
@@ -31,7 +33,7 @@ from neoavlod.services.outbox import dispatch_pending_outbox
 class AttendanceEntry:
     student_id: uuid.UUID
     student_first_name: str
-    student_last_name: str
+    student_last_name: str | None
     status: AttendanceStatus | None
     note: str | None
     marked_at: datetime | None
@@ -76,6 +78,57 @@ class AdminAttendancePage:
     total: int
     page: int
     page_size: int
+
+
+@dataclass(frozen=True)
+class StudentMonthlyAttendanceStats:
+    month: str
+    present_count: int
+    late_count: int
+    absent_count: int
+    attended_count: int
+    total_lessons: int
+
+
+@dataclass(frozen=True)
+class MonthlyAttendanceRecord:
+    attendance_id: uuid.UUID
+    student_id: uuid.UUID
+    student_name: str
+    date: date
+    status: AttendanceStatus
+    note: str | None
+
+
+@dataclass(frozen=True)
+class StudentMonthlyAttendanceSummary:
+    student_id: uuid.UUID
+    student_name: str
+    present_count: int
+    late_count: int
+    absent_count: int
+    attended_count: int
+    total_lessons: int
+
+
+@dataclass(frozen=True)
+class GroupMonthlyAttendanceSummary:
+    total_lessons: int
+    total_records: int
+    present_count: int
+    late_count: int
+    absent_count: int
+
+
+@dataclass(frozen=True)
+class GroupMonthlyAttendanceHistory:
+    group_id: uuid.UUID
+    group_name: str
+    month: str
+    dates: list[date]
+    records: list[MonthlyAttendanceRecord]
+    students_summary: list[StudentMonthlyAttendanceSummary]
+    summary: GroupMonthlyAttendanceSummary
 
 
 async def is_date_finalized(
@@ -289,7 +342,7 @@ async def finalize_attendance(
     # 5. Check that EVERY active student has attendance marked
     missing = [s for s in active_students if s.id not in records_by_student]
     if missing:
-        names = ", ".join(f"{s.first_name} {s.last_name}" for s in missing)
+        names = ", ".join(f"{s.first_name} {s.last_name or ''}".strip() for s in missing)
         msg = f"Barcha faol talabalar uchun davomat belgilanishi shart. Belgilanmagan: {names}"
         raise DomainError(msg, 422)
 
@@ -311,14 +364,14 @@ async def finalize_attendance(
         existing_outbox = await session.scalar(
             select(NotificationOutbox.id).where(NotificationOutbox.idempotency_key == idem_key)
         )
-        if not existing_outbox:
+        if not existing_outbox and s.parent is not None:
             status_labels = {
                 AttendanceStatus.PRESENT: "Bor",
                 AttendanceStatus.ABSENT: "Yo‘q",
                 AttendanceStatus.LATE: "Kechikdi",
             }
             payload = {
-                "student_name": f"{s.first_name} {s.last_name}",
+                "student_name": f"{s.first_name} {s.last_name or ''}".strip(),
                 "group_name": s.group.name,
                 "date": target_date.isoformat(),
                 "status": att.status.value,
@@ -405,9 +458,9 @@ async def list_admin_attendance(
                 group_id=att.group_id,
                 group_name=g_name,
                 teacher_id=att.marked_by,
-                teacher_name=f"{t_fn} {t_ln}",
+                teacher_name=f"{t_fn} {t_ln or ''}".strip(),
                 student_id=att.student_id,
-                student_name=f"{s_fn} {s_ln}",
+                student_name=f"{s_fn} {s_ln or ''}".strip(),
                 status=att.status,
                 note=att.note,
                 marked_at=att.updated_at,
@@ -431,3 +484,189 @@ async def dispatch_pending_outbox_stub(
         return await dispatch_pending_outbox(database, transport=transport)
     except Exception:
         return 0
+
+
+def parse_month_string(month_str: str) -> tuple[date, date]:
+    parts = month_str.split("-")
+    if len(parts) != 2 or len(parts[0]) != 4 or len(parts[1]) != 2:
+        raise DomainError("Noto‘g‘ri oy formati (YYYY-MM talab qilinadi)", 422)
+    try:
+        year = int(parts[0])
+        month_num = int(parts[1])
+        if month_num < 1 or month_num > 12:
+            raise ValueError
+        _, last_day = calendar.monthrange(year, month_num)
+        return date(year, month_num, 1), date(year, month_num, last_day)
+    except (ValueError, OverflowError):
+        raise DomainError("Noto‘g‘ri oy formati (YYYY-MM talab qilinadi)", 422) from None
+
+
+async def get_student_monthly_attendance_stats(
+    session: AsyncSession,
+    student_id: uuid.UUID,
+    month_str: str,
+) -> StudentMonthlyAttendanceStats:
+    start_date, end_date = parse_month_string(month_str)
+
+    stmt = (
+        select(
+            Attendance.status,
+            func.count(Attendance.id).label("count"),
+        )
+        .join(AttendanceBatch, Attendance.batch_id == AttendanceBatch.id)
+        .where(
+            Attendance.student_id == student_id,
+            Attendance.date >= start_date,
+            Attendance.date <= end_date,
+        )
+        .group_by(Attendance.status)
+    )
+    result = await session.execute(stmt)
+    status_counts = {row[0]: int(row[1]) for row in result.all()}
+
+    present_count = status_counts.get(AttendanceStatus.PRESENT, 0)
+    late_count = status_counts.get(AttendanceStatus.LATE, 0)
+    absent_count = status_counts.get(AttendanceStatus.ABSENT, 0)
+    attended_count = present_count + late_count
+    total_lessons = present_count + late_count + absent_count
+
+    return StudentMonthlyAttendanceStats(
+        month=month_str,
+        present_count=present_count,
+        late_count=late_count,
+        absent_count=absent_count,
+        attended_count=attended_count,
+        total_lessons=total_lessons,
+    )
+
+
+async def get_group_monthly_attendance_history(
+    session: AsyncSession,
+    group_id: uuid.UUID,
+    month_str: str,
+    teacher: Identity | None = None,
+) -> GroupMonthlyAttendanceHistory:
+    if teacher is not None:
+        await ensure_group_owner(session, teacher, group_id)
+
+    group = await session.get(Group, group_id)
+    if group is None:
+        raise DomainError("Guruh topilmadi", 404)
+
+    start_date, end_date = parse_month_string(month_str)
+
+    batches_stmt = (
+        select(AttendanceBatch.date)
+        .where(
+            AttendanceBatch.group_id == group_id,
+            AttendanceBatch.date >= start_date,
+            AttendanceBatch.date <= end_date,
+        )
+        .order_by(AttendanceBatch.date.asc())
+    )
+    batch_dates = list((await session.scalars(batches_stmt)).all())
+
+    records_stmt = (
+        select(
+            Attendance,
+            Student.first_name,
+            Student.last_name,
+        )
+        .join(AttendanceBatch, Attendance.batch_id == AttendanceBatch.id)
+        .join(Student, Attendance.student_id == Student.id)
+        .where(
+            Attendance.group_id == group_id,
+            Attendance.date >= start_date,
+            Attendance.date <= end_date,
+        )
+        .order_by(Attendance.date.asc(), Student.first_name.asc(), Student.last_name.asc())
+    )
+    att_rows = (await session.execute(records_stmt)).all()
+
+    active_students_stmt = (
+        select(Student)
+        .where(
+            Student.group_id == group_id,
+            Student.status == Status.ACTIVE,
+        )
+        .order_by(Student.first_name.asc(), Student.last_name.asc())
+    )
+    active_students = list((await session.scalars(active_students_stmt)).all())
+
+    records: list[MonthlyAttendanceRecord] = []
+    students_map: dict[uuid.UUID, dict[str, Any]] = {}
+
+    for att, s_fn, s_ln in att_rows:
+        student_name = f"{s_fn} {s_ln or ''}".strip()
+        records.append(
+            MonthlyAttendanceRecord(
+                attendance_id=att.id,
+                student_id=att.student_id,
+                student_name=student_name,
+                date=att.date,
+                status=att.status,
+                note=att.note,
+            )
+        )
+        s_id = att.student_id
+        if s_id not in students_map:
+            students_map[s_id] = {
+                "name": student_name,
+                "present": 0,
+                "late": 0,
+                "absent": 0,
+            }
+        if att.status == AttendanceStatus.PRESENT:
+            students_map[s_id]["present"] += 1
+        elif att.status == AttendanceStatus.LATE:
+            students_map[s_id]["late"] += 1
+        elif att.status == AttendanceStatus.ABSENT:
+            students_map[s_id]["absent"] += 1
+
+    for st in active_students:
+        if st.id not in students_map:
+            students_map[st.id] = {
+                "name": f"{st.first_name} {st.last_name or ''}".strip(),
+                "present": 0,
+                "late": 0,
+                "absent": 0,
+            }
+
+    students_summary: list[StudentMonthlyAttendanceSummary] = []
+    for s_id, s_data in sorted(students_map.items(), key=lambda item: item[1]["name"].lower()):
+        pres_cnt = s_data["present"]
+        late_cnt = s_data["late"]
+        abs_cnt = s_data["absent"]
+        students_summary.append(
+            StudentMonthlyAttendanceSummary(
+                student_id=s_id,
+                student_name=s_data["name"],
+                present_count=pres_cnt,
+                late_count=late_cnt,
+                absent_count=abs_cnt,
+                attended_count=pres_cnt + late_cnt,
+                total_lessons=pres_cnt + late_cnt + abs_cnt,
+            )
+        )
+
+    present_total = sum(1 for r in records if r.status == AttendanceStatus.PRESENT)
+    late_total = sum(1 for r in records if r.status == AttendanceStatus.LATE)
+    absent_total = sum(1 for r in records if r.status == AttendanceStatus.ABSENT)
+
+    group_summary = GroupMonthlyAttendanceSummary(
+        total_lessons=len(batch_dates),
+        total_records=len(records),
+        present_count=present_total,
+        late_count=late_total,
+        absent_count=absent_total,
+    )
+
+    return GroupMonthlyAttendanceHistory(
+        group_id=group.id,
+        group_name=group.name,
+        month=month_str,
+        dates=batch_dates,
+        records=records,
+        students_summary=students_summary,
+        summary=group_summary,
+    )

@@ -21,6 +21,29 @@ compose_release() {
     --project-directory "$APP_ROOT/releases/$release" --env-file "$ENV_FILE" \
     -f "$APP_ROOT/releases/$release/compose.prod.yaml" "$@"
 }
+import_educenter() {
+  local release="$1"
+  local source_dir="${EDUCENTER_DATA_DIR:-$APP_ROOT/private/educenter_data}"
+  local state_dir="$APP_ROOT/private/educenter-state"
+  if [[ ! -d "$source_dir" ]]; then
+    [[ -z "${EDUCENTER_DATA_DIR:-}" ]] || { fail 'EDUCENTER_DATA_DIR mavjud emas.'; return 1; }
+    printf 'Educenter private data katalogi yo‘q; data import sozlanmagan.\n'
+    return 0
+  fi
+  local expected
+  [[ -f "$source_dir/plan.sha256" ]] || { fail 'Reviewed private plan.sha256 kerak.'; return 1; }
+  expected="$(cat "$source_dir/plan.sha256")"
+  [[ "$expected" =~ ^[a-f0-9]{64}$ ]] || { fail 'Import SHA256 noto‘g‘ri.'; return 1; }
+  mkdir -p "$state_dir"
+  chmod 700 "$state_dir"
+  # Existing credentials can be securely copied into state_dir before first deployment.
+  # Otherwise the CLI creates random passwords there, never in the Git release.
+  compose_release "$release" run --rm -T --no-deps --user "$(id -u):$(id -g)" \
+    -v "$source_dir:/import-source:ro" -v "$state_dir:/import-state" \
+    migrations python -m neoavlod.educenter_import --source /import-source \
+    --credentials /import-state/prepared-accounts.json --report /import-state/last-plan.json \
+    --apply --expected-plan "$expected" </dev/null
+}
 atomic_link() {
   local target="$1" link="$2"
   ln -s "$target" "$link.next.$$" || return 1

@@ -41,7 +41,8 @@ async def get_student(session: AsyncSession, student_id: uuid.UUID) -> Student:
         .where(Student.id == student_id)
         .options(
             joinedload(Student.parent),
-            joinedload(Student.group),
+            joinedload(Student.group).joinedload(Group.subject),
+            joinedload(Student.group).joinedload(Group.teacher),
         )
         .execution_options(populate_existing=True)
     )
@@ -80,7 +81,7 @@ async def list_students(
         await session.scalar(
             select(func.count())
             .select_from(Student)
-            .join(Parent, Student.parent_id == Parent.id)
+            .outerjoin(Parent, Student.parent_id == Parent.id)
             .where(*filters)
         )
         or 0
@@ -88,8 +89,12 @@ async def list_students(
 
     stmt = (
         select(Student)
-        .join(Parent, Student.parent_id == Parent.id)
-        .options(joinedload(Student.parent), joinedload(Student.group))
+        .outerjoin(Parent, Student.parent_id == Parent.id)
+        .options(
+            joinedload(Student.parent),
+            joinedload(Student.group).joinedload(Group.subject),
+            joinedload(Student.group).joinedload(Group.teacher),
+        )
         .where(*filters)
         .order_by(func.lower(Student.first_name), func.lower(Student.last_name), Student.id)
         .limit(page_size)
@@ -103,13 +108,13 @@ async def create_student(
     session: AsyncSession,
     *,
     first_name: str,
-    last_name: str,
-    phone: str,
-    age: int,
+    last_name: str | None,
+    phone: str | None,
+    age: int | None,
     group_id: uuid.UUID,
-    parent_first_name: str,
-    parent_last_name: str,
-    parent_phone: str,
+    parent_first_name: str | None,
+    parent_last_name: str | None,
+    parent_phone: str | None,
 ) -> Student:
     # Lock group row to serialize concurrent enrollments against capacity
     group_query = (
@@ -135,13 +140,15 @@ async def create_student(
     if active_count >= group.max_students:
         raise DomainError("Guruhda bo‘sh joy yo‘q", 409)
 
-    guardian = Parent(
-        first_name=parent_first_name,
-        last_name=parent_last_name,
-        phone=parent_phone,
-    )
-    session.add(guardian)
-    await session.flush()
+    guardian = None
+    if any(p is not None for p in (parent_first_name, parent_last_name, parent_phone)):
+        if not all((parent_first_name, parent_last_name, parent_phone)):
+            raise DomainError("Ota-ona ism, familiya va telefonini to‘liq kiriting", 422)
+        guardian = Parent(
+            first_name=parent_first_name, last_name=parent_last_name, phone=parent_phone
+        )
+        session.add(guardian)
+        await session.flush()
 
     learner = Student(
         first_name=first_name,
@@ -149,7 +156,7 @@ async def create_student(
         phone=phone,
         age=age,
         group_id=group_id,
-        parent_id=guardian.id,
+        parent_id=guardian.id if guardian else None,
         status=Status.ACTIVE,
     )
     session.add(learner)
@@ -186,7 +193,16 @@ async def update_student(
             .with_for_update()
             .execution_options(populate_existing=True)
         )
-        if guardian is not None:
+        if guardian is None:
+            if not all((parent_first_name, parent_last_name, parent_phone)):
+                raise DomainError("Yangi ota-ona ism, familiya va telefonini to‘liq kiriting", 422)
+            guardian = Parent(
+                first_name=parent_first_name, last_name=parent_last_name, phone=parent_phone
+            )
+            session.add(guardian)
+            await session.flush()
+            learner.parent_id = guardian.id
+        else:
             if parent_first_name is not None:
                 guardian.first_name = parent_first_name
             if parent_last_name is not None:
@@ -285,16 +301,12 @@ async def delete_student(session: AsyncSession, student_id: uuid.UUID) -> None:
     learner = await get_student_for_update(session, student_id)
     attendance_count = (
         await session.scalar(
-            select(func.count())
-            .select_from(Attendance)
-            .where(Attendance.student_id == student_id)
+            select(func.count()).select_from(Attendance).where(Attendance.student_id == student_id)
         )
         or 0
     )
     if attendance_count > 0:
-        msg = (
-            "Davomat yozuvlari mavjud bo‘lgan talabani o‘chirib bo‘lmaydi; nofaol qiling"
-        )
+        msg = "Davomat yozuvlari mavjud bo‘lgan talabani o‘chirib bo‘lmaydi; nofaol qiling"
         raise DomainError(msg, 409)
 
     await session.delete(learner)

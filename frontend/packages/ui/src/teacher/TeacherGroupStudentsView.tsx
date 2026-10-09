@@ -64,7 +64,7 @@ export const TeacherGroupStudentsView: React.FC<TeacherGroupStudentsViewProps> =
       );
       setStudents(data);
     } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : "Talabalar ro‘yxatini yuklashda xatolik yuz berdi";
+      const errMsg = err instanceof Error ? err.message : "O‘quvchilar ro‘yxatini yuklashda xatolik yuz berdi";
       if (
         errMsg.includes("403") ||
         errMsg.includes("404") ||
@@ -90,14 +90,14 @@ export const TeacherGroupStudentsView: React.FC<TeacherGroupStudentsViewProps> =
       }
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase().trim();
-        const matchesName = `${student.first_name} ${student.last_name}`
+        const matchesName = `${student.first_name} ${student.last_name ?? ""}`
           .toLowerCase()
           .includes(query);
-        const matchesPhone = student.phone.toLowerCase().includes(query);
-        const matchesParentName = `${student.parent.first_name} ${student.parent.last_name}`
+        const matchesPhone = student.phone?.toLowerCase().includes(query);
+        const matchesParentName = `${student.parent?.first_name ?? "Kiritilmagan"} ${student.parent?.last_name}`
           .toLowerCase()
           .includes(query);
-        const matchesParentPhone = student.parent.phone.toLowerCase().includes(query);
+        const matchesParentPhone = student.parent?.phone.toLowerCase().includes(query);
 
         if (!matchesName && !matchesPhone && !matchesParentName && !matchesParentPhone) {
           return false;
@@ -139,13 +139,13 @@ export const TeacherGroupStudentsView: React.FC<TeacherGroupStudentsViewProps> =
   }
 
   if (isLoading && students.length === 0) {
-    return <LoadingState message="Guruh talabalari yuklanmoqda..." />;
+    return <LoadingState message="Guruh o‘quvchilari yuklanmoqda..." />;
   }
 
   if (error && students.length === 0) {
     return (
       <ErrorState
-        title="Talabalarni yuklashda xatolik"
+        title="O‘quvchilarni yuklashda xatolik"
         message={error}
         onRetry={fetchStudents}
       />
@@ -176,7 +176,7 @@ export const TeacherGroupStudentsView: React.FC<TeacherGroupStudentsViewProps> =
               </Badge>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Guruh talabalari ro‘yxati va ota-onalar bilan aloqa ma’lumotlari
+              Guruh o‘quvchilari ro‘yxati va ota-onalar bilan aloqa ma’lumotlari
             </p>
           </div>
         </div>
@@ -229,7 +229,7 @@ export const TeacherGroupStudentsView: React.FC<TeacherGroupStudentsViewProps> =
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                Jami talabalar
+                Jami o‘quvchilar
               </p>
               <p className="text-2xl font-bold text-slate-900 mt-1">{stats.total}</p>
             </div>
@@ -243,7 +243,7 @@ export const TeacherGroupStudentsView: React.FC<TeacherGroupStudentsViewProps> =
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                Faol talabalar
+                Faol o‘quvchilar
               </p>
               <p className="text-2xl font-bold text-emerald-600 mt-1">{stats.active}</p>
             </div>
@@ -276,7 +276,7 @@ export const TeacherGroupStudentsView: React.FC<TeacherGroupStudentsViewProps> =
           <div className="flex-1 relative">
             <Input
               type="text"
-              placeholder="Talaba yoki ota-ona ismi, telefoni bo‘yicha qidirish..."
+              placeholder="O‘quvchi yoki ota-ona ismi, telefoni bo‘yicha qidirish..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               leftAddon={<Search className="w-4 h-4 text-slate-400" />}
@@ -300,11 +300,11 @@ export const TeacherGroupStudentsView: React.FC<TeacherGroupStudentsViewProps> =
       {/* Students Table */}
       {filteredStudents.length === 0 ? (
         <EmptyState
-          title="Talabalar topilmadi"
+          title="O‘quvchilar topilmadi"
           description={
             searchQuery || statusFilter !== "all"
-              ? "Qidiruv parametrlariga mos keladigan talabalar topilmadi."
-              : "Ushbu guruhda hozircha talabalar mavjud emas."
+              ? "Qidiruv parametrlariga mos keladigan o‘quvchilar topilmadi."
+              : "Ushbu guruhda hozircha o‘quvchilar mavjud emas."
           }
         />
       ) : (
@@ -312,7 +312,7 @@ export const TeacherGroupStudentsView: React.FC<TeacherGroupStudentsViewProps> =
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Talaba F.I.Sh</TableHead>
+                <TableHead>O‘quvchi F.I.Sh</TableHead>
                 <TableHead>Telefon raqami</TableHead>
                 <TableHead>Yoshi</TableHead>
                 <TableHead>Ota-onasi</TableHead>
@@ -323,50 +323,65 @@ export const TeacherGroupStudentsView: React.FC<TeacherGroupStudentsViewProps> =
             </TableHeader>
             <TableBody>
               {filteredStudents.map((student) => (
-                <TableRow key={student.id}>
+                <TableRow
+                  key={student.id}
+                  className="cursor-pointer hover:bg-slate-50/80 transition-colors"
+                  onClick={() => handleOpenDetail(student)}
+                >
                   <TableCell>
-                    <div className="font-semibold text-slate-900">
-                      {student.first_name} {student.last_name}
-                    </div>
-                    {student.telegram_connected && (
-                      <div className="text-[11px] text-emerald-600 flex items-center gap-1 mt-0.5 font-medium">
-                        <Send className="w-3 h-3" />
-                        <span>Telegram ulangan</span>
+                    <button
+                      type="button"
+                      className="text-left focus:outline-none focus:ring-2 focus:ring-emerald-500 rounded p-0.5 group"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenDetail(student);
+                      }}
+                    >
+                      <div className="font-semibold text-slate-900 group-hover:text-emerald-600 group-hover:underline">
+                        {student.first_name} {student.last_name}
                       </div>
-                    )}
+                      {student.telegram_connected && (
+                        <div className="text-[11px] text-emerald-600 flex items-center gap-1 mt-0.5 font-medium">
+                          <Send className="w-3 h-3" />
+                          <span>Telegram ulangan</span>
+                        </div>
+                      )}
+                    </button>
                   </TableCell>
 
                   <TableCell>
                     <a
-                      href={`tel:${student.phone}`}
+                      href={student.phone ? `tel:${student.phone}` : undefined}
+                      onClick={(e) => e.stopPropagation()}
                       className="text-sm font-medium text-slate-700 hover:text-emerald-600 inline-flex items-center gap-1"
                     >
                       <Phone className="w-3.5 h-3.5 text-slate-400" />
-                      {student.phone}
+                      {student.phone ?? "Kiritilmagan"}
                     </a>
                   </TableCell>
 
                   <TableCell>
-                    <span className="text-sm text-slate-700">{student.age} yosh</span>
+                    <span className="text-sm text-slate-700">{student.age == null ? (student.school_grade ?? "Yosh kiritilmagan") : `${student.age} yosh`}</span>
                   </TableCell>
 
                   <TableCell>
                     <div>
                       <div className="text-sm font-medium text-slate-900">
-                        {student.parent.first_name} {student.parent.last_name}
+                        {student.parent?.first_name ?? "Kiritilmagan"} {student.parent?.last_name}
                       </div>
                       <a
-                        href={`tel:${student.parent.phone}`}
+                        href={student.parent?.phone ? `tel:${student.parent.phone}` : undefined}
+                        onClick={(e) => e.stopPropagation()}
                         className="text-xs text-slate-500 hover:text-emerald-600 inline-flex items-center gap-1 mt-0.5"
                       >
                         <Phone className="w-3 h-3 text-slate-400" />
-                        {student.parent.phone}
+                        {student.parent?.phone ?? "Kiritilmagan"}
                       </a>
                     </div>
                   </TableCell>
 
                   <TableCell>
-                    {student.parent.telegram_connected ? (
+                    {student.parent?.telegram_connected ? (
                       <Badge variant="success" size="sm">
                         <Send className="w-3 h-3 mr-1 inline" />
                         Ulangan
@@ -387,11 +402,14 @@ export const TeacherGroupStudentsView: React.FC<TeacherGroupStudentsViewProps> =
                     </Badge>
                   </TableCell>
 
-                  <TableCell className="text-right">
+                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleOpenDetail(student)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenDetail(student);
+                      }}
                       leftIcon={<Eye className="w-3.5 h-3.5" />}
                     >
                       Batafsil

@@ -2,13 +2,15 @@ import re
 import uuid
 from datetime import UTC, datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, SecretStr
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from neoavlod.errors import DomainError
-from neoavlod.models import Parent, Staff, Student, SystemSettings
+from neoavlod.models import Parent, Role, Staff, Student, SystemSettings
 from neoavlod.models.common import Status, link_expiry
+from neoavlod.security.secrets import decrypt_token
+from neoavlod.settings import Settings
 
 LinkEntity = Staff | Parent | Student
 _models: dict[str, type[Staff] | type[Parent] | type[Student]] = {
@@ -21,8 +23,12 @@ _models: dict[str, type[Staff] | type[Parent] | type[Student]] = {
 class LinkState(BaseModel):
     connected: bool
     expired: bool
+    is_expired: bool = False
     deep_link: str | None
     expires_at: datetime | None
+
+    def model_post_init(self, context: object) -> None:
+        object.__setattr__(self, "is_expired", self.expired)
 
 
 def entity_kind(entity: LinkEntity) -> str:
@@ -41,8 +47,10 @@ async def link_state(session: AsyncSession, entity: LinkEntity) -> LinkState:
             connected=False, expired=True, deep_link=None, expires_at=entity.auth_expires_at
         )
     settings = await session.get(SystemSettings, 1)
-    if settings is None or not settings.bot_username or not settings.bot_token_encrypted:
-        raise DomainError("Telegram bot avval sozlanishi kerak", 503)
+    if settings is None or not settings.bot_username:
+        raise DomainError(
+            "Telegram bot username sozlanmagan; Bot sozlamalarida username kiriting", 503
+        )
     if re.fullmatch(r"[A-Za-z0-9_]{5,32}", settings.bot_username) is None:
         raise DomainError("Telegram bot username noto‘g‘ri sozlangan", 503)
     payload = f"{entity_kind(entity)}_{entity.auth_uuid}"
@@ -127,14 +135,21 @@ async def resolve_link(session: AsyncSession, payload: str) -> LinkEntity:
     if entity is None or entity.auth_expires_at <= datetime.now(UTC):
         raise DomainError("Havola yaroqsiz yoki muddati tugagan", 400)
     if entity.telegram_id is not None or entity.auth_used_at is not None:
-        raise DomainError("Havola allaqachon ishlatilgan", 409)
+        raise DomainError(
+            "Havola allaqachon ishlatilgan. Parolingizni unutgan bo‘lsangiz, login sahifasidagi "
+            "«Parolni unutdingizmi?» havolasidan foydalaning.",
+            409,
+        )
     if isinstance(entity, (Staff, Student)) and entity.status != Status.ACTIVE:
         raise DomainError("Hisob faol emas", 403)
     return entity
 
 
 async def link_telegram_account(
-    session: AsyncSession, payload: str, telegram_id: int
+    session: AsyncSession,
+    payload: str,
+    telegram_id: int,
+    settings: Settings | None = None,
 ) -> tuple[LinkEntity, str]:
     if telegram_id <= 0:
         raise DomainError("Telegram ID yaroqsiz", 400)
@@ -164,17 +179,58 @@ async def link_telegram_account(
     await session.flush()
 
     kind = entity_kind(entity)
+    display_name = f"{entity.first_name} {entity.last_name or ''}".strip()
     if kind == "staff":
-        msg = (
-            f"Hisobingiz muvaffaqiyatli bog‘landi, {entity.first_name} {entity.last_name}! "
-            "Endi tizimga kirishda Telegram orqali bir martalik tasdiqlash kodini olasiz."
-        )
+        assert isinstance(entity, Staff)
+        if entity.role == Role.TEACHER:
+            portal_url = settings.teacher_origin if settings else "https://teacher.eduneo.uz"
+            portal_name = "O‘qituvchi portali"
+        else:
+            portal_url = settings.admin_origin if settings else "https://admin.eduneo.uz"
+            portal_name = "Admin portali"
+
+        temp_pw: str | None = None
+        if (
+            entity.temporary_password_encrypted is not None
+            and (
+                entity.temporary_password_expires_at is None
+                or entity.temporary_password_expires_at > datetime.now(UTC)
+            )
+        ):
+            try:
+                if settings is not None:
+                    temp_pw = decrypt_token(entity.temporary_password_encrypted, settings)
+                else:
+                    test_settings = Settings(
+                        database_url=SecretStr("postgresql+asyncpg://user:pass@localhost/db"),
+                        environment="test",
+                    )
+                    temp_pw = decrypt_token(entity.temporary_password_encrypted, test_settings)
+            except Exception:
+                temp_pw = None
+
+        if temp_pw:
+            msg = (
+                f"Assalomu alaykum, {display_name}!\n"
+                f"Hisobingiz muvaffaqiyatli bog‘landi.\n\n"
+                f"{portal_name}: {portal_url}\n"
+                f"Login: {entity.username}\n"
+                f"Vaqtinchalik parol: {temp_pw}\n\n"
+                "Parolingizni yangilab qo‘ying! Tizimga kirgach parolingizni darhol yangilang."
+            )
+        else:
+            msg = (
+                f"Hisobingiz muvaffaqiyatli bog‘landi, {display_name}!\n"
+                f"{portal_name}: {portal_url}\n"
+                f"Login: {entity.username}\n\n"
+                f"Endi tizimga kirishda Telegram orqali bir martalik tasdiqlash kodini olasiz."
+            )
     elif kind == "parent":
         msg = (
-            f"Hisobingiz muvaffaqiyatli bog‘landi, {entity.first_name} {entity.last_name}! "
+            f"Hisobingiz muvaffaqiyatli bog‘landi, {display_name}!\n"
             "Farzandingiz davomati haqidagi bildirishnomalar shu yerga yuboriladi."
         )
     else:
-        msg = f"Hisobingiz muvaffaqiyatli bog‘landi, {entity.first_name} {entity.last_name}!"
+        msg = f"Hisobingiz muvaffaqiyatli bog‘landi, {display_name}!"
 
     return entity, msg

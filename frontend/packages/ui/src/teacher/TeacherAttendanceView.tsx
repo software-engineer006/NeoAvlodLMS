@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import type {
   TeacherGroupItem,
   TeacherAttendanceSheet,
@@ -32,6 +32,7 @@ import {
   Save,
   Lock,
   Calendar,
+  AlertTriangle,
 } from "lucide-react";
 
 export interface TeacherAttendanceViewProps {
@@ -69,6 +70,7 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
   const [date, setDate] = useState<string>(initialDate || todayStr);
   const [sheet, setSheet] = useState<TeacherAttendanceSheet | null>(null);
   const [entries, setEntries] = useState<Record<string, LocalEntryState>>({});
+  const [initialEntriesSnapshot, setInitialEntriesSnapshot] = useState<string>("");
 
   const [isLoadingGroups, setIsLoadingGroups] = useState<boolean>(false);
   const [isLoadingSheet, setIsLoadingSheet] = useState<boolean>(false);
@@ -79,6 +81,19 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isConfirmFinalizeOpen, setIsConfirmFinalizeOpen] = useState<boolean>(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+
+  // Unsaved changes confirmation modal
+  const [isUnsavedModalOpen, setIsUnsavedModalOpen] = useState<boolean>(false);
+  const [pendingNavigation, setPendingNavigation] = useState<{
+    type: "group" | "date";
+    value: string;
+  } | null>(null);
+
+  const isDirty = useMemo(() => {
+    if (sheet?.finalized) return false;
+    if (!initialEntriesSnapshot) return false;
+    return JSON.stringify(entries) !== initialEntriesSnapshot;
+  }, [entries, initialEntriesSnapshot, sheet?.finalized]);
 
   // Fetch groups if not provided
   const fetchGroups = async () => {
@@ -109,7 +124,7 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
   }, [initialGroups, preselectedGroupId]);
 
   // Fetch Attendance Sheet
-  const fetchAttendanceSheet = async (groupId: string, targetDate: string) => {
+  const fetchAttendanceSheet = useCallback(async (groupId: string, targetDate: string) => {
     if (!groupId || !targetDate) return;
     setIsLoadingSheet(true);
     setError(null);
@@ -127,30 +142,72 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
         localMap[item.student_id] = {
           student_id: item.student_id,
           student_first_name: item.student_first_name,
-          student_last_name: item.student_last_name,
+          student_last_name: item.student_last_name ?? "",
           status: item.status,
           note: item.note || "",
         };
       });
       setEntries(localMap);
+      setInitialEntriesSnapshot(JSON.stringify(localMap));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Davomat ma’lumotlarini yuklashda xatolik yuz berdi");
     } finally {
       setIsLoadingSheet(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (selectedGroupId && date) {
       fetchAttendanceSheet(selectedGroupId, date);
     }
-  }, [selectedGroupId, date]);
+  }, [selectedGroupId, date, fetchAttendanceSheet]);
 
-  const handleGroupSelect = (newGroupId: string) => {
+  const applyGroupChange = (newGroupId: string) => {
     setSelectedGroupId(newGroupId);
     if (onSelectGroupChange) {
       onSelectGroupChange(newGroupId);
     }
+  };
+
+  const applyDateChange = (newDate: string) => {
+    setDate(newDate);
+  };
+
+  const handleGroupSelect = (newGroupId: string) => {
+    if (newGroupId === selectedGroupId) return;
+    if (isDirty) {
+      setPendingNavigation({ type: "group", value: newGroupId });
+      setIsUnsavedModalOpen(true);
+      return;
+    }
+    applyGroupChange(newGroupId);
+  };
+
+  const handleDateChange = (newDate: string) => {
+    if (newDate === date) return;
+    if (isDirty) {
+      setPendingNavigation({ type: "date", value: newDate });
+      setIsUnsavedModalOpen(true);
+      return;
+    }
+    applyDateChange(newDate);
+  };
+
+  const handleTodayClick = () => {
+    if (date === todayStr) return;
+    handleDateChange(todayStr);
+  };
+
+  const handleDiscardAndProceed = () => {
+    if (pendingNavigation) {
+      if (pendingNavigation.type === "group") {
+        applyGroupChange(pendingNavigation.value);
+      } else {
+        applyDateChange(pendingNavigation.value);
+      }
+      setPendingNavigation(null);
+    }
+    setIsUnsavedModalOpen(false);
   };
 
   const handleStatusChange = (studentId: string, status: TeacherAttendanceStatus) => {
@@ -207,7 +264,7 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
 
   // Save Draft
   const handleSaveDraft = async () => {
-    if (!selectedGroupId || isSavingDraft || isFinalizing || sheet?.finalized) return;
+    if (!selectedGroupId || isSavingDraft || isFinalizing || sheet?.finalized) return false;
     setError(null);
     setSuccessMessage(null);
 
@@ -220,8 +277,8 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
       }));
 
     if (itemsToSave.length === 0) {
-      setError("Qoralama sifatida saqlash uchun kamida bitta talaba holatini belgilang");
-      return;
+      setError("Qoralama sifatida saqlash uchun kamida bitta o‘quvchi holatini belgilang");
+      return false;
     }
 
     setIsSavingDraft(true);
@@ -234,11 +291,27 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
         }
       );
       setSheet(updatedSheet);
+      setInitialEntriesSnapshot(JSON.stringify(entries));
       setSuccessMessage("Davomat qoralamasi muvaffaqiyatli saqlandi.");
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Qoralamani saqlashda xatolik yuz berdi");
+      return false;
     } finally {
       setIsSavingDraft(false);
+    }
+  };
+
+  const handleSaveAndProceed = async () => {
+    const saved = await handleSaveDraft();
+    if (saved && pendingNavigation) {
+      if (pendingNavigation.type === "group") {
+        applyGroupChange(pendingNavigation.value);
+      } else {
+        applyDateChange(pendingNavigation.value);
+      }
+      setPendingNavigation(null);
+      setIsUnsavedModalOpen(false);
     }
   };
 
@@ -249,7 +322,7 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
 
     if (counts.unmarked > 0) {
       setValidationError(
-        `Davomatni yakunlash uchun barcha talabalar belgilanadi (${counts.unmarked} nafar talaba belgilanmagan). Iltimos, barcha talabalarga Bor, Yo‘q yoki Kechikdi holatini belgilang.`
+        `Davomatni yakunlash uchun barcha o‘quvchilar belgilanadi (${counts.unmarked} nafar o‘quvchi belgilanmagan). Iltimos, barcha o‘quvchilarga Keldi, Kech qoldi yoki Kelmadi holatini belgilang.`
       );
     }
     setIsConfirmFinalizeOpen(true);
@@ -276,6 +349,7 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
         }
       );
       setSheet(finalizedSheet);
+      setInitialEntriesSnapshot(JSON.stringify(entries));
       setIsConfirmFinalizeOpen(false);
       setSuccessMessage(
         "Davomat muvaffaqiyatli yakunlandi! Ota-onalarga bildirishnomalar yuborish navbatiga qo‘yildi."
@@ -312,16 +386,28 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
             Davomat belgilash
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Guruh talabalarining darsdagi ishtirokini belgilash, qoralama saqlash va yakunlash
+            Guruh o‘quvchilarining darsdagi ishtirokini belgilash, qoralama saqlash va yakunlash
           </p>
         </div>
 
-        {sheet?.finalized && (
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs font-semibold">
-            <Lock className="w-4 h-4 text-emerald-600" />
-            <span>Davomat yakunlangan (Readonly)</span>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {sheet?.finalized ? (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs font-semibold">
+              <Lock className="w-4 h-4 text-emerald-600" />
+              <span>Davomat yakunlangan (Readonly)</span>
+            </div>
+          ) : isDirty ? (
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-xs font-medium">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+              <span>Saqlanmagan o‘zgarishlar bor</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-100 rounded-lg text-slate-600 text-xs font-medium">
+              <Check className="w-3.5 h-3.5 text-slate-500" />
+              <span>Saqlangan</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Group & Date Selector Card */}
@@ -344,7 +430,7 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
               type="date"
               label="Dars sanasi"
               value={date}
-              onChange={(e) => setDate(e.target.value)}
+              onChange={(e) => handleDateChange(e.target.value)}
               leftAddon={<Calendar className="w-4 h-4 text-slate-400" />}
             />
           </div>
@@ -352,7 +438,7 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
-              onClick={() => setDate(todayStr)}
+              onClick={handleTodayClick}
               disabled={date === todayStr}
             >
               Bugun
@@ -363,13 +449,13 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
 
       {/* Alerts */}
       {error && (
-        <Alert variant="danger" title="Xatolik">
+        <Alert variant="danger" title="Xatolik" onDismiss={() => setError(null)}>
           {error}
         </Alert>
       )}
 
       {successMessage && (
-        <Alert variant="success" title="Muvaffaqiyatli">
+        <Alert variant="success" title="Muvaffaqiyatli" onDismiss={() => setSuccessMessage(null)}>
           {successMessage}
         </Alert>
       )}
@@ -395,7 +481,7 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
         <Card>
           <CardContent className="p-3 text-center">
             <span className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wide">
-              Bor
+              Keldi
             </span>
             <p className="text-xl font-bold text-emerald-600 mt-0.5">{counts.present}</p>
           </CardContent>
@@ -403,19 +489,19 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
 
         <Card>
           <CardContent className="p-3 text-center">
-            <span className="text-[11px] font-semibold text-rose-700 uppercase tracking-wide">
-              Yo‘q
+            <span className="text-[11px] font-semibold text-amber-700 uppercase tracking-wide">
+              Kech qoldi
             </span>
-            <p className="text-xl font-bold text-rose-600 mt-0.5">{counts.absent}</p>
+            <p className="text-xl font-bold text-amber-600 mt-0.5">{counts.late}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="p-3 text-center">
-            <span className="text-[11px] font-semibold text-amber-700 uppercase tracking-wide">
-              Kechikdi
+            <span className="text-[11px] font-semibold text-rose-700 uppercase tracking-wide">
+              Kelmadi
             </span>
-            <p className="text-xl font-bold text-amber-600 mt-0.5">{counts.late}</p>
+            <p className="text-xl font-bold text-rose-600 mt-0.5">{counts.absent}</p>
           </CardContent>
         </Card>
 
@@ -440,36 +526,38 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
         <LoadingState message="Davomat varaqasi yuklanmoqda..." />
       ) : Object.keys(entries).length === 0 ? (
         <EmptyState
-          title="Talabalar mavjud emas"
-          description="Tanlangan guruhda faol talabalar mavjud emas."
+          title="O‘quvchilar mavjud emas"
+          description="Tanlangan guruhda faol o‘quvchilar mavjud emas."
         />
       ) : (
         <div className="space-y-4">
           {/* Quick Mark All Bar */}
           {!sheet?.finalized && (
-            <div className="flex items-center justify-between bg-slate-100/70 p-3 rounded-xl border border-slate-200">
-              <span className="text-xs text-slate-600 font-medium">
-                Tezkor amallar:
-              </span>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 p-3 sm:p-4 rounded-xl border border-slate-200">
+              <div className="text-xs text-slate-600">
+                <span className="font-semibold text-slate-800">Davomat holati: </span>
+                <span>{counts.total - counts.unmarked} / {counts.total} nafar o‘quvchi belgilangan</span>
+              </div>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleMarkAllPresent}
-                leftIcon={<Check className="w-3.5 h-3.5 text-emerald-600" />}
+                leftIcon={<Check className="w-4 h-4 text-emerald-600" />}
+                className="self-start sm:self-auto"
               >
-                Barchasini &apos;Bor&apos; qilish
+                Barchasi keldi
               </Button>
             </div>
           )}
 
-          {/* Students Attendance Table */}
-          <div className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden">
+          {/* Responsive Table View */}
+          <div className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-64">Talaba F.I.Sh</TableHead>
-                  <TableHead className="w-72">Davomat holati</TableHead>
-                  <TableHead>Izoh (Sabab yoki kechikish)</TableHead>
+                  <TableHead className="w-56 sm:w-64 whitespace-nowrap">O‘quvchi F.I.Sh</TableHead>
+                  <TableHead className="w-72 sm:w-80 whitespace-nowrap">Davomat holati</TableHead>
+                  <TableHead className="min-w-[200px]">Izoh (Sabab yoki kechikish)</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -481,56 +569,59 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
                   return (
                     <TableRow key={entry.student_id}>
                       <TableCell>
-                        <div className="font-semibold text-slate-900">
+                        <div className="font-semibold text-slate-900 whitespace-nowrap">
                           {entry.student_first_name} {entry.student_last_name}
                         </div>
                       </TableCell>
 
                       <TableCell>
-                        <div className="inline-flex items-center gap-1.5 p-1 bg-slate-100 rounded-lg">
-                          {/* Present Button */}
+                        <div className="inline-flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
+                          {/* Keldi Button */}
                           <button
                             type="button"
                             disabled={sheet?.finalized}
                             onClick={() => handleStatusChange(entry.student_id, "present")}
-                            className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1 transition-all ${
+                            title="Keldi"
+                            className={`px-3 sm:px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
                               isPresent
-                                ? "bg-emerald-600 text-white shadow-xs"
-                                : "text-slate-600 hover:text-emerald-700 hover:bg-slate-200/60"
+                                ? "bg-emerald-600 text-white shadow-xs ring-2 ring-emerald-600/30"
+                                : "text-slate-700 hover:text-emerald-700 hover:bg-slate-200/80"
                             } disabled:opacity-70 disabled:cursor-not-allowed`}
                           >
-                            <Check className="w-3.5 h-3.5" />
-                            <span>Bor</span>
+                            <Check className="w-4 h-4" />
+                            <span>Keldi</span>
                           </button>
 
-                          {/* Absent Button */}
-                          <button
-                            type="button"
-                            disabled={sheet?.finalized}
-                            onClick={() => handleStatusChange(entry.student_id, "absent")}
-                            className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1 transition-all ${
-                              isAbsent
-                                ? "bg-rose-600 text-white shadow-xs"
-                                : "text-slate-600 hover:text-rose-700 hover:bg-slate-200/60"
-                            } disabled:opacity-70 disabled:cursor-not-allowed`}
-                          >
-                            <X className="w-3.5 h-3.5" />
-                            <span>Yo‘q</span>
-                          </button>
-
-                          {/* Late Button */}
+                          {/* Kech qoldi Button */}
                           <button
                             type="button"
                             disabled={sheet?.finalized}
                             onClick={() => handleStatusChange(entry.student_id, "late")}
-                            className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1 transition-all ${
+                            title="Kech qoldi"
+                            className={`px-3 sm:px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
                               isLate
-                                ? "bg-amber-500 text-white shadow-xs"
-                                : "text-slate-600 hover:text-amber-700 hover:bg-slate-200/60"
+                                ? "bg-amber-500 text-white shadow-xs ring-2 ring-amber-500/30"
+                                : "text-slate-700 hover:text-amber-700 hover:bg-slate-200/80"
                             } disabled:opacity-70 disabled:cursor-not-allowed`}
                           >
-                            <Clock className="w-3.5 h-3.5" />
-                            <span>Kechikdi</span>
+                            <Clock className="w-4 h-4" />
+                            <span>Kech qoldi</span>
+                          </button>
+
+                          {/* Kelmadi Button */}
+                          <button
+                            type="button"
+                            disabled={sheet?.finalized}
+                            onClick={() => handleStatusChange(entry.student_id, "absent")}
+                            title="Kelmadi"
+                            className={`px-3 sm:px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                              isAbsent
+                                ? "bg-rose-600 text-white shadow-xs ring-2 ring-rose-600/30"
+                                : "text-slate-700 hover:text-rose-700 hover:bg-slate-200/80"
+                            } disabled:opacity-70 disabled:cursor-not-allowed`}
+                          >
+                            <X className="w-4 h-4" />
+                            <span>Kelmadi</span>
                           </button>
                         </div>
                       </TableCell>
@@ -566,17 +657,17 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
                 {counts.unmarked > 0 ? (
                   <span className="text-amber-600 font-semibold flex items-center gap-1">
                     <AlertCircle className="w-4 h-4" />
-                    Yakunlash uchun barcha talabalar belgilanishi shart
+                    Yakunlash uchun barcha o‘quvchilar belgilanishi shart ({counts.unmarked} nafar qoldi)
                   </span>
                 ) : (
                   <span className="text-emerald-700 font-semibold flex items-center gap-1">
                     <CheckCircle2 className="w-4 h-4" />
-                    Barcha talabalar belgilandi. Yakunlashga tayyor.
+                    Barcha o‘quvchilar belgilandi. Yakunlashga tayyor.
                   </span>
                 )}
               </div>
 
-              <div className="flex items-center gap-3 w-full sm:w-auto">
+              <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
                 <Button
                   variant="outline"
                   onClick={handleSaveDraft}
@@ -601,7 +692,7 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
         </div>
       )}
 
-      {/* Confirmation Modal */}
+      {/* Confirmation Modal for Finalize */}
       <Modal
         isOpen={isConfirmFinalizeOpen}
         onClose={() => setIsConfirmFinalizeOpen(false)}
@@ -629,7 +720,7 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
       >
         <div className="space-y-4">
           {validationError ? (
-            <Alert variant="danger" title="Belgilanmagan talabalar mavjud">
+            <Alert variant="danger" title="Belgilanmagan o‘quvchilar mavjud">
               {validationError}
             </Alert>
           ) : (
@@ -648,19 +739,75 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
               <div className="grid grid-cols-3 gap-2 text-center text-xs pt-1">
                 <div className="p-2 bg-emerald-50 rounded-lg text-emerald-800">
                   <span className="font-bold block text-sm">{counts.present}</span>
-                  <span>Bor</span>
-                </div>
-                <div className="p-2 bg-rose-50 rounded-lg text-rose-800">
-                  <span className="font-bold block text-sm">{counts.absent}</span>
-                  <span>Yo‘q</span>
+                  <span>Keldi</span>
                 </div>
                 <div className="p-2 bg-amber-50 rounded-lg text-amber-800">
                   <span className="font-bold block text-sm">{counts.late}</span>
-                  <span>Kechikdi</span>
+                  <span>Kech qoldi</span>
+                </div>
+                <div className="p-2 bg-rose-50 rounded-lg text-rose-800">
+                  <span className="font-bold block text-sm">{counts.absent}</span>
+                  <span>Kelmadi</span>
                 </div>
               </div>
             </>
           )}
+        </div>
+      </Modal>
+
+      {/* Unsaved Changes Warning Modal */}
+      <Modal
+        isOpen={isUnsavedModalOpen}
+        onClose={() => {
+          setIsUnsavedModalOpen(false);
+          setPendingNavigation(null);
+        }}
+        title="Saqlanmagan o‘zgarishlar mavjud"
+        description="Davomat varaqasidagi o‘zgarishlar hali saqlanmagan"
+        size="md"
+        footer={
+          <div className="flex flex-col sm:flex-row items-center justify-end gap-2 w-full">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setIsUnsavedModalOpen(false);
+                setPendingNavigation(null);
+              }}
+              className="w-full sm:w-auto"
+            >
+              Bekor qilish
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={handleDiscardAndProceed}
+              className="w-full sm:w-auto"
+            >
+              O‘zgarishlarni bekor qilish va o‘tish
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleSaveAndProceed}
+              isLoading={isSavingDraft}
+              className="w-full sm:w-auto"
+            >
+              Avval saqlash
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-slate-600">
+            Siz davomatga kiritgan o‘zgarishlarni qoralama sifatida saqlamadingiz yoki yakunlamadingiz. Guruh yoki sanani almashtirsangiz, ushbu o‘zgarishlar yo‘qoladi.
+          </p>
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>
+              Davom etishdan oldin o‘zgarishlarni qoralama sifatida saqlashni tavsiya qilamiz.
+            </span>
+          </div>
         </div>
       </Modal>
     </div>

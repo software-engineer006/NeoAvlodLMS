@@ -70,6 +70,23 @@ async def update_bot_token(
     return BotSettingsOut.of(record)
 
 
+class BotUsernameUpdate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+    bot_username: str = Field(min_length=1, max_length=64)
+
+
+@router.put("/bot/username", response_model=BotSettingsOut)
+async def update_bot_username(
+    body: BotUsernameUpdate,
+    superadmin: SuperadminDependency,
+    session: SessionDependency,
+) -> BotSettingsOut:
+    record = await service.set_bot_username(
+        session, body.bot_username, changed_by=superadmin.staff.id
+    )
+    return BotSettingsOut.of(record)
+
+
 @router.post("/bot/reload-status", response_model=BotSettingsOut)
 async def update_reload_status(
     body: ReloadStatusUpdate,

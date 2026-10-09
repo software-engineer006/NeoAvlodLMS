@@ -8,3 +8,5 @@ export * from "./students";
 export * from "./attendance";
 export * from "./settings";
 export * from "./teacher";
+export * from "./profile";
+export * from "./dashboard";

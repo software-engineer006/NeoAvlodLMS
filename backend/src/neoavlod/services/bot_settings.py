@@ -1,3 +1,4 @@
+import re
 import uuid
 
 import httpx
@@ -17,6 +18,40 @@ async def get_bot_settings(session: AsyncSession) -> SystemSettings:
         session.add(settings)
         await session.commit()
     return settings
+
+
+_USERNAME_PATTERN = re.compile(r"[A-Za-z][A-Za-z0-9_]{4,31}")
+
+
+def normalize_bot_username(raw: str) -> str:
+    """Accept `name`, `@name` or `https://t.me/name`; Telegram bot names end in `bot`."""
+    value = raw.strip()
+    for prefix in ("https://t.me/", "http://t.me/", "t.me/"):
+        if value.lower().startswith(prefix):
+            value = value[len(prefix) :]
+            break
+    value = value.removeprefix("@").strip()
+    if _USERNAME_PATTERN.fullmatch(value) is None or not value.lower().endswith("bot"):
+        raise DomainError(
+            "Bot username noto‘g‘ri: 5–32 ta lotin harf, raqam yoki _ bo‘lib, "
+            "'bot' bilan tugashi kerak",
+            422,
+        )
+    return value
+
+
+async def set_bot_username(
+    session: AsyncSession, username: str, *, changed_by: uuid.UUID | None = None
+) -> SystemSettings:
+    """Store the username used for staff/parent/student deep links.
+
+    The token and the polling worker are untouched, so no reload is requested.
+    """
+    sys_settings = await get_bot_settings(session)
+    sys_settings.bot_username = normalize_bot_username(username)
+    sys_settings.changed_by = changed_by
+    await session.commit()
+    return sys_settings
 
 
 async def update_bot_token(

@@ -78,7 +78,7 @@ export const StaffTable: React.FC<StaffTableProps> = ({
                   <div className="text-xs text-slate-500 font-mono">@{staff.username}</div>
                 </TableCell>
                 <TableCell>
-                  <span className="font-mono text-xs text-slate-700">{staff.phone}</span>
+                  <span className="font-mono text-xs text-slate-700">{staff.phone ?? "Kiritilmagan"}</span>
                 </TableCell>
                 <TableCell>
                   {staff.role === "superadmin" ? (

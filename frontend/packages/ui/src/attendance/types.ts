@@ -38,3 +38,40 @@ export function formatAttendanceStatus(status: AttendanceStatusType): {
       return { label: status, variant: "warning" };
   }
 }
+
+export interface MonthlyAttendanceRecord {
+  attendance_id: string;
+  student_id: string;
+  student_name: string;
+  date: string;
+  status: AttendanceStatusType;
+  note: string | null;
+}
+
+export interface StudentMonthlyAttendanceSummary {
+  student_id: string;
+  student_name: string;
+  present_count: number;
+  late_count: number;
+  absent_count: number;
+  attended_count: number;
+  total_lessons: number;
+}
+
+export interface GroupMonthlyAttendanceSummary {
+  total_lessons: number;
+  total_records: number;
+  present_count: number;
+  late_count: number;
+  absent_count: number;
+}
+
+export interface GroupMonthlyAttendanceHistoryResponse {
+  group_id: string;
+  group_name: string;
+  month: string;
+  dates: string[];
+  records: MonthlyAttendanceRecord[];
+  students_summary: StudentMonthlyAttendanceSummary[];
+  summary: GroupMonthlyAttendanceSummary;
+}

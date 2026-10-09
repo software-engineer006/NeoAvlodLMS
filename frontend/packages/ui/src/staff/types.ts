@@ -1,21 +1,24 @@
 import type { RoleType, StaffStatus } from "../api/types";
 
 export interface TelegramLinkState {
-  deep_link: string;
-  expires_at: string;
-  is_expired: boolean;
+  deep_link?: string | null;
+  expires_at?: string | null;
+  expired?: boolean;
+  is_expired?: boolean;
+  connected?: boolean;
 }
 
 export interface StaffItem {
   id: string;
   first_name: string;
-  last_name: string;
+  last_name: string | null;
   username: string;
-  phone: string;
+  phone: string | null;
   role: RoleType;
   status: StaffStatus;
   permissions: string[];
   telegram_connected: boolean;
+  must_change_password?: boolean;
   created_at: string;
 }
 
@@ -33,10 +36,10 @@ export interface StaffListResponse {
 
 export interface StaffCreateInput {
   first_name: string;
-  last_name: string;
-  phone: string;
+  last_name: string | null;
+  phone: string | null;
   username: string;
-  password: string;
+  password?: string;
   role: RoleType;
   permissions: string[];
 }

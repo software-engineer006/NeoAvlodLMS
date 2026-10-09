@@ -1,6 +1,7 @@
 import uuid
 from datetime import time
 from decimal import Decimal
+from typing import Any
 
 from sqlalchemy import BigInteger, CheckConstraint, Enum, ForeignKey, Integer, Numeric, String, Time
 from sqlalchemy.dialects.postgresql import JSONB
@@ -34,7 +35,7 @@ class Group(UUIDPrimaryKey, AuditFields, Base):
         ForeignKey("staff.id", ondelete="RESTRICT"),
         index=True,
     )
-    monthly_price: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    monthly_price: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
     max_students: Mapped[int] = mapped_column(Integer)
     status: Mapped[Status] = mapped_column(
         Enum(
@@ -49,9 +50,11 @@ class Group(UUIDPrimaryKey, AuditFields, Base):
         index=True,
     )
     days_of_week: Mapped[list[int]] = mapped_column(MutableList.as_mutable(JSONB))
-    start_time: Mapped[time] = mapped_column(Time(timezone=False))
-    end_time: Mapped[time] = mapped_column(Time(timezone=False))
-    room_number: Mapped[str] = mapped_column(String(30))
+    start_time: Mapped[time | None] = mapped_column(Time(timezone=False))
+    end_time: Mapped[time | None] = mapped_column(Time(timezone=False))
+    room_number: Mapped[str | None] = mapped_column(String(30))
+    source_key: Mapped[str | None] = mapped_column(String(150), unique=True)
+    source_data: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     subject: Mapped[Subject] = relationship(lazy="raise")
     teacher: Mapped[Staff] = relationship(lazy="raise")
 
@@ -80,14 +83,17 @@ class Student(UUIDPrimaryKey, AuditFields, TelegramLink, Base):
         CheckConstraint("telegram_id IS NULL OR telegram_id > 0", name="telegram_id_positive"),
     )
     first_name: Mapped[str] = mapped_column(String(100))
-    last_name: Mapped[str] = mapped_column(String(100))
-    phone: Mapped[str] = mapped_column(String(16))
-    age: Mapped[int] = mapped_column(Integer)
+    last_name: Mapped[str | None] = mapped_column(String(100))
+    phone: Mapped[str | None] = mapped_column(String(16))
+    age: Mapped[int | None] = mapped_column(Integer)
+    school_grade: Mapped[str | None] = mapped_column(String(100))
+    source_key: Mapped[str | None] = mapped_column(String(150), unique=True)
+    source_data: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     group_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("groups.id", ondelete="RESTRICT"),
         index=True,
     )
-    parent_id: Mapped[uuid.UUID] = mapped_column(
+    parent_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("parents.id", ondelete="RESTRICT"),
         index=True,
     )
@@ -104,5 +110,5 @@ class Student(UUIDPrimaryKey, AuditFields, TelegramLink, Base):
         server_default="active",
         index=True,
     )
-    parent: Mapped[Parent] = relationship(lazy="raise")
+    parent: Mapped[Parent | None] = relationship(lazy="raise")
     group: Mapped[Group] = relationship(lazy="raise")

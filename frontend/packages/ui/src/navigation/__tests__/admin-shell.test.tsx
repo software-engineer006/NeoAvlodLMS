@@ -93,11 +93,11 @@ describe("Admin Shell & Permission Routing (Task 028)", () => {
       );
 
       // Verify all navigation items exist for superadmin
-      expect(screen.getByRole("button", { name: /Bosh sahifa/i })).not.toBeNull();
+      expect(screen.getByRole("button", { name: /Dashboard/i })).not.toBeNull();
       expect(screen.getByRole("button", { name: /Xodimlar/i })).not.toBeNull();
       expect(screen.getByRole("button", { name: /Fanlar/i })).not.toBeNull();
       expect(screen.getByRole("button", { name: /Guruhlar/i })).not.toBeNull();
-      expect(screen.getByRole("button", { name: /Talabalar/i })).not.toBeNull();
+      expect(screen.getByRole("button", { name: /O‘quvchilar/i })).not.toBeNull();
       expect(screen.getByRole("button", { name: /Davomat tarixi/i })).not.toBeNull();
       expect(screen.getByRole("button", { name: /Bot sozlamalari/i })).not.toBeNull();
     });
@@ -117,9 +117,9 @@ describe("Admin Shell & Permission Routing (Task 028)", () => {
         </AdminShell>
       );
 
-      // Should see Dashboard and Talabalar
-      expect(screen.getByRole("button", { name: /Bosh sahifa/i })).not.toBeNull();
-      expect(screen.getByRole("button", { name: /Talabalar/i })).not.toBeNull();
+      // Should see Dashboard and O‘quvchilar
+      expect(screen.getByRole("button", { name: /Dashboard/i })).not.toBeNull();
+      expect(screen.getByRole("button", { name: /O‘quvchilar/i })).not.toBeNull();
 
       // Should NOT see unauthorized items
       expect(screen.queryByRole("button", { name: /Xodimlar/i })).toBeNull();
@@ -148,7 +148,7 @@ describe("Admin Shell & Permission Routing (Task 028)", () => {
       expect(screen.getByText(/Ushbu bo‘limga kirish cheklangan/i)).not.toBeNull();
 
       // Return to dashboard button
-      fireEvent.click(screen.getByRole("button", { name: /Bosh sahifaga qaytish/i }));
+      fireEvent.click(screen.getByRole("button", { name: /Dashboardga qaytish/i }));
       expect(onTabChange).toHaveBeenCalledWith("dashboard");
     });
 
@@ -168,6 +168,50 @@ describe("Admin Shell & Permission Routing (Task 028)", () => {
       const logoutBtns = screen.getAllByRole("button", { name: /Chiqish/i });
       fireEvent.click(logoutBtns[0]);
       expect(onLogout).toHaveBeenCalled();
+    });
+
+    it("supports collapsible desktop sidebar toggle", () => {
+      render(
+        <AdminShell
+          user={superadminUser}
+          activeTab="dashboard"
+          onTabChange={vi.fn()}
+          onLogout={vi.fn()}
+        >
+          <div>Content</div>
+        </AdminShell>
+      );
+
+      const collapseBtns = screen.getAllByRole("button", { name: /Sidebarni yig‘ish/i });
+      expect(collapseBtns.length).toBeGreaterThan(0);
+      fireEvent.click(collapseBtns[0]);
+
+      // After collapse, expand buttons should be available
+      const expandBtns = screen.getAllByRole("button", { name: /Sidebarni kengaytirish/i });
+      expect(expandBtns.length).toBeGreaterThan(0);
+    });
+
+    it("closes mobile menu on Escape key press", () => {
+      render(
+        <AdminShell
+          user={superadminUser}
+          activeTab="dashboard"
+          onTabChange={vi.fn()}
+          onLogout={vi.fn()}
+        >
+          <div>Content</div>
+        </AdminShell>
+      );
+
+      // Open mobile menu
+      const openBtn = screen.getByRole("button", { name: /Menyuni ochish/i });
+      fireEvent.click(openBtn);
+
+      const closeBtn = screen.getByRole("button", { name: /Menyuni yopish/i });
+      expect(closeBtn).not.toBeNull();
+
+      // Press Escape
+      fireEvent.keyDown(window, { key: "Escape" });
     });
   });
 });

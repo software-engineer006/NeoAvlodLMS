@@ -88,7 +88,7 @@ describe("Teacher Students & Parent Detail Flow (Task 035)", () => {
       );
 
       // Loading state check
-      expect(screen.getByText("Guruh talabalari yuklanmoqda...")).toBeDefined();
+      expect(screen.getByText("Guruh o‘quvchilari yuklanmoqda...")).toBeDefined();
 
       // Wait for data load
       await waitFor(() => {
@@ -100,7 +100,7 @@ describe("Teacher Students & Parent Detail Flow (Task 035)", () => {
       expect(screen.getByText("Python Dasturlash")).toBeDefined();
 
       // Verify stats
-      expect(screen.getAllByText("2").length).toBeGreaterThan(0); // Jami va faol talabalar
+      expect(screen.getAllByText("2").length).toBeGreaterThan(0); // Jami va faol o‘quvchilar
       expect(screen.getByText("1 / 2")).toBeDefined(); // Ota-ona Telegram: 1 ta ulangan
 
       // Check student 1 (Sherzod)
@@ -138,7 +138,7 @@ describe("Teacher Students & Parent Detail Flow (Task 035)", () => {
         expect(screen.getByText("Sherzod Bekov")).toBeDefined();
       });
 
-      const searchInput = screen.getByPlaceholderText(/Talaba yoki ota-ona ismi/i);
+      const searchInput = screen.getByPlaceholderText(/O‘quvchi yoki ota-ona ismi/i);
       fireEvent.change(searchInput, { target: { value: "Jasur" } });
 
       expect(screen.getByText("Jasur Olimov")).toBeDefined();
@@ -177,11 +177,11 @@ describe("Teacher Students & Parent Detail Flow (Task 035)", () => {
       render(<TeacherGroupStudentsView group={sampleGroup} onBack={vi.fn()} />);
 
       await waitFor(() => {
-        expect(screen.getByText("Talabalar topilmadi")).toBeDefined();
+        expect(screen.getByText("O‘quvchilar topilmadi")).toBeDefined();
       });
 
       expect(
-        screen.getByText("Ushbu guruhda hozircha talabalar mavjud emas.")
+        screen.getByText("Ushbu guruhda hozircha o‘quvchilar mavjud emas.")
       ).toBeDefined();
     });
 
@@ -191,7 +191,7 @@ describe("Teacher Students & Parent Detail Flow (Task 035)", () => {
       render(<TeacherGroupStudentsView group={sampleGroup} onBack={vi.fn()} />);
 
       await waitFor(() => {
-        expect(screen.getByText("Talabalarni yuklashda xatolik")).toBeDefined();
+        expect(screen.getByText("O‘quvchilarni yuklashda xatolik")).toBeDefined();
       });
       expect(screen.getByText("Server bilan aloqa uzildi")).toBeDefined();
 
@@ -217,10 +217,10 @@ describe("Teacher Students & Parent Detail Flow (Task 035)", () => {
         />
       );
 
-      expect(screen.getByText("Talaba ma’lumotlari")).toBeDefined();
+      expect(screen.getByText("O‘quvchi ma’lumotlari")).toBeDefined();
       expect(screen.getByText(/Sherzod Bekov bo‘yicha batafsil profil/i)).toBeDefined();
       expect(screen.getByText("16 yoshda")).toBeDefined();
-      expect(screen.getByText("Python-01")).toBeDefined();
+      expect(screen.getAllByText("Python-01").length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText("+998901111111")).toBeDefined();
 
       // Parent details
@@ -261,7 +261,7 @@ describe("Teacher Students & Parent Detail Flow (Task 035)", () => {
         />
       );
 
-      expect(screen.queryByText("Talaba ma’lumotlari")).toBeNull();
+      expect(screen.queryByText("O‘quvchi ma’lumotlari")).toBeNull();
     });
   });
 

@@ -40,6 +40,7 @@ async def test_student_parent_and_group_round_trip(model_database: Database) -> 
     async with model_database.session() as session:
         query = select(Student).options(selectinload(Student.parent), selectinload(Student.group))
         saved = (await session.scalars(query)).one()
+        assert saved.parent is not None
         assert saved.parent.phone == "+998901234567"
         assert saved.group.monthly_price == Decimal("450000.00")
         assert saved.group.days_of_week == [1, 3, 5]

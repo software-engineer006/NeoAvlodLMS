@@ -4,7 +4,6 @@ from neoavlod.models.attendance import Attendance, AttendanceBatch, AttendanceSt
 from neoavlod.models.auth import (
     AuthRateLimit,
     AuthSession,
-    OTPChallenge,
     OTPPurpose,
     Portal,
     RefreshToken,
@@ -22,7 +21,6 @@ __all__ = [
     "AuthRateLimit",
     "Group",
     "NotificationOutbox",
-    "OTPChallenge",
     "OTPPurpose",
     "OutboxStatus",
     "Parent",

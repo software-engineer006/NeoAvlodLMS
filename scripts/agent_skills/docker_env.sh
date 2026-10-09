@@ -45,7 +45,7 @@ case "$action" in
     compose up -d --wait --wait-timeout 180 backend test-database
     ;;
   exec)
-    compose up -d --wait --wait-timeout 120 test-database
+    compose up -d --wait --wait-timeout 120 test-database redis
     compose run --rm -T --no-deps tools "$@"
     ;;
   task) compose run --rm -T --no-deps tools python /workspace/scripts/agent_skills/task_manager.py "$@" ;;

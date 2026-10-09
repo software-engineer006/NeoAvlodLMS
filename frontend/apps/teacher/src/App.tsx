@@ -3,22 +3,26 @@ import {
   AuthProvider,
   ForbiddenPage,
   LoginForm,
+  NeoAvlodLogo,
   PasswordChangeModal,
   PasswordRecoveryModal,
+  UserProfileModal,
   TeacherShell,
   TeacherGroupsView,
   TeacherGroupStudentsView,
   TeacherAttendanceView,
+  MonthlyAttendanceHistoryView,
   useAuth,
 } from "@neoavlod/ui";
 import type { TeacherGroupItem } from "@neoavlod/ui";
 
 const TeacherMainApp: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, setUser } = useAuth();
   const [activeTab, setActiveTab] = useState<string>("groups");
   const [selectedGroup, setSelectedGroup] = useState<TeacherGroupItem | null>(null);
   const [viewingStudentsGroup, setViewingStudentsGroup] = useState<TeacherGroupItem | null>(null);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState<boolean>(false);
+  const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false);
 
   if (!user) {
     return null;
@@ -35,52 +39,68 @@ const TeacherMainApp: React.FC = () => {
   };
 
   return (
-    <TeacherShell
-      user={user}
-      activeTab={activeTab}
-      onTabChange={handleTabChange}
-      onLogout={logout}
-      onChangePassword={() => setIsChangePasswordOpen(true)}
-    >
-      {activeTab === "groups" && !viewingStudentsGroup && (
-        <TeacherGroupsView
-          onSelectGroupForAttendance={(group) => {
-            setSelectedGroup(group);
-            setActiveTab("attendance");
-          }}
-          onSelectGroupForStudents={(group) => {
-            setViewingStudentsGroup(group);
+    <>
+      <TeacherShell
+        user={user}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        onLogout={logout}
+        onChangePassword={() => setIsChangePasswordOpen(true)}
+        onOpenProfile={() => setIsProfileOpen(true)}
+      >
+        {activeTab === "groups" && !viewingStudentsGroup && (
+          <TeacherGroupsView
+            onSelectGroupForAttendance={(group) => {
+              setSelectedGroup(group);
+              setActiveTab("attendance");
+            }}
+            onSelectGroupForStudents={(group) => {
+              setViewingStudentsGroup(group);
+            }}
+          />
+        )}
+
+        {activeTab === "groups" && viewingStudentsGroup && (
+          <TeacherGroupStudentsView
+            group={viewingStudentsGroup}
+            onBack={() => setViewingStudentsGroup(null)}
+            onSelectGroupForAttendance={(group) => {
+              setSelectedGroup(group);
+              setActiveTab("attendance");
+            }}
+          />
+        )}
+
+        {activeTab === "attendance" && (
+          <TeacherAttendanceView
+            preselectedGroupId={selectedGroup?.id}
+          />
+        )}
+        {activeTab === "history" && (
+          <MonthlyAttendanceHistoryView portal="teacher" initialGroupId={selectedGroup?.id} currentUser={user} />
+        )}
+
+        {/* Password Change Modal */}
+        <PasswordChangeModal
+          isOpen={isChangePasswordOpen}
+          onClose={() => setIsChangePasswordOpen(false)}
+          portal="teacher"
+          onSuccess={() => {
+            setTimeout(() => logout(), 1500);
           }}
         />
-      )}
+      </TeacherShell>
 
-      {activeTab === "groups" && viewingStudentsGroup && (
-        <TeacherGroupStudentsView
-          group={viewingStudentsGroup}
-          onBack={() => setViewingStudentsGroup(null)}
-          onSelectGroupForAttendance={(group) => {
-            setSelectedGroup(group);
-            setActiveTab("attendance");
-          }}
-        />
-      )}
-
-      {activeTab === "attendance" && (
-        <TeacherAttendanceView
-          preselectedGroupId={selectedGroup?.id}
-        />
-      )}
-
-      {/* Password Change Modal */}
-      <PasswordChangeModal
-        isOpen={isChangePasswordOpen}
-        onClose={() => setIsChangePasswordOpen(false)}
+      {/* User Profile Modal */}
+      <UserProfileModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
         portal="teacher"
-        onSuccess={() => {
-          setTimeout(() => logout(), 1500);
-        }}
+        user={user}
+        onUserUpdated={(updated) => setUser(updated)}
+        onLogoutRequired={() => logout()}
       />
-    </TeacherShell>
+    </>
   );
 };
 
@@ -106,9 +126,12 @@ const TeacherAuthView: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center mb-6">
-        <div className="inline-flex w-12 h-12 rounded-xl bg-emerald-600 text-white items-center justify-center font-bold text-xl shadow-md mb-2">
-          N
-        </div>
+        <NeoAvlodLogo
+          portal="teacher"
+          variant="badge"
+          size="xl"
+          className="mx-auto mb-3 shadow-lg shadow-emerald-500/25 ring-1 ring-emerald-500/20"
+        />
         <h2 className="text-2xl font-bold text-slate-900 tracking-tight">NeoAvlod LMS</h2>
         <p className="text-sm text-slate-500 mt-1">O‘qituvchilar uchun shaxsiy kabinet</p>
       </div>

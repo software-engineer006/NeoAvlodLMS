@@ -147,7 +147,7 @@ describe("Admin Attendance History (Task 032)", () => {
         return Promise.resolve({ items: [], total: 0, page: 1, page_size: 10 });
       });
 
-      render(<AdminAttendanceView currentUser={adminUser} />);
+      render(<AdminAttendanceView currentUser={adminUser} defaultTab="list" />);
 
       await waitFor(() => {
         expect(screen.getByText("Davomat tarixi")).toBeDefined();
@@ -192,7 +192,7 @@ describe("Admin Attendance History (Task 032)", () => {
         return Promise.resolve({ items: [], total: 0, page: 1, page_size: 10 });
       });
 
-      render(<AdminAttendanceView currentUser={adminUser} />);
+      render(<AdminAttendanceView currentUser={adminUser} defaultTab="list" />);
 
       await waitFor(() => {
         expect(screen.getByText("Jasur Bekmurodov")).toBeDefined();

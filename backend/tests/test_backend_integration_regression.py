@@ -24,6 +24,7 @@ from neoavlod.services.bootstrap import BootstrapInput, bootstrap_superadmin
 from neoavlod.services.bot_settings import update_bot_token
 from neoavlod.services.bot_worker import BotWorker, process_telegram_update
 from neoavlod.services.login import begin_login, confirm_login
+from neoavlod.services.otp_store import InMemoryOTPStore
 from neoavlod.services.outbox import dispatch_pending_outbox
 from neoavlod.services.telegram import TelegramClient
 from neoavlod.settings import Settings
@@ -122,8 +123,16 @@ async def test_end_to_end_bootstrap_to_attendance_and_notification(
         sa.telegram_id = 9001
         await session.commit()
 
+        otp_store = InMemoryOTPStore()
         login_ch = await begin_login(
-            session, settings, hub, "superowner", superadmin_pass, Portal.ADMIN, "127.0.0.1"
+            session,
+            settings,
+            hub,
+            otp_store,
+            "superowner",
+            superadmin_pass,
+            Portal.ADMIN,
+            "127.0.0.1",
         )
 
     # Extract 6-digit OTP code from captured Telegram message
@@ -135,12 +144,12 @@ async def test_end_to_end_bootstrap_to_attendance_and_notification(
 
     async with model_database.session() as session:
         staff_sa, sa_tokens = await confirm_login(
-            session, settings, login_ch.id, otp_code, Portal.ADMIN
+            session, settings, otp_store, login_ch.id, otp_code, Portal.ADMIN
         )
         sa_actor = Actor(staff_sa.id, sa_tokens, Portal.ADMIN)
 
     # 4. Superadmin creates subject, teacher, group, and students via API
-    app = create_app()
+    app = create_app(otp_store=otp_store)
     app.state.telegram_transport = transport
 
     async with app.router.lifespan_context(app):
@@ -193,7 +202,14 @@ async def test_end_to_end_bootstrap_to_attendance_and_notification(
         hub.sent_messages.clear()
         async with model_database.session() as session:
             t_login_ch = await begin_login(
-                session, settings, hub, "teacher_javohir", teacher_pass, Portal.TEACHER, "127.0.0.1"
+                session,
+                settings,
+                hub,
+                otp_store,
+                "teacher_javohir",
+                teacher_pass,
+                Portal.TEACHER,
+                "127.0.0.1",
             )
         t_match = re.search(r"kodi: ([0-9]{6})", hub.sent_messages[-1][1])
         assert t_match is not None
@@ -201,7 +217,7 @@ async def test_end_to_end_bootstrap_to_attendance_and_notification(
 
         async with model_database.session() as session:
             t_staff, t_tokens = await confirm_login(
-                session, settings, t_login_ch.id, t_otp, Portal.TEACHER
+                session, settings, otp_store, t_login_ch.id, t_otp, Portal.TEACHER
             )
             teacher_actor = Actor(t_staff.id, t_tokens, Portal.TEACHER)
 

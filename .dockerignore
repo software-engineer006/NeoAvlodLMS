@@ -11,4 +11,7 @@
 **/.env.*
 !**/.env.example
 .TASKS.md.lock
-
+.private
+educenter_data
+media
+backend/media

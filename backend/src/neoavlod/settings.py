@@ -1,5 +1,6 @@
 """Environment-backed application configuration."""
 
+from pathlib import Path
 from typing import Literal, Self
 from urllib.parse import urlsplit
 
@@ -28,6 +29,17 @@ class Settings(BaseSettings):
     teacher_origin: str = "https://teacher.eduneo.uz"
     security_secret: SecretStr | None = None
     bot_encryption_key: SecretStr | None = None
+    redis_url: SecretStr | None = None
+    media_dir: Path = Field(default=Path("media"))
+
+    @field_validator("redis_url")
+    @classmethod
+    def validate_redis_url(cls, value: SecretStr | None) -> SecretStr | None:
+        if value is not None:
+            url = urlsplit(value.get_secret_value())
+            if url.scheme not in ("redis", "rediss") or not url.hostname:
+                raise ValueError("Redis URL redis:// yoki rediss:// va host bilan bo‘lsin")
+        return value
 
     @field_validator("security_secret")
     @classmethod
@@ -85,4 +97,6 @@ class Settings(BaseSettings):
             self.security_secret is None or self.bot_encryption_key is None
         ):
             raise ValueError("Production security va bot encryption secretlari kerak")
+        if self.environment == "production" and self.redis_url is None:
+            raise ValueError("Production muhitida OTP uchun Redis URL kerak")
         return self

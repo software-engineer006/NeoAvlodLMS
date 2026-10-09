@@ -111,7 +111,7 @@ export const TeacherGroupsView: React.FC<TeacherGroupsViewProps> = ({
             Mening guruhlarim
           </h2>
           <p className="text-sm text-slate-500 mt-1">
-            Sizga biriktirilgan dars guruhlari, jadvallar va to‘liq talabalar bandligi
+            Sizga biriktirilgan dars guruhlari, jadvallar va to‘liq o‘quvchilar bandligi
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -225,8 +225,8 @@ export const TeacherGroupsView: React.FC<TeacherGroupsViewProps> = ({
             </TableHeader>
             <TableBody>
               {filteredGroups.map((group) => {
-                const startTime = group.start_time ? group.start_time.slice(0, 5) : "";
-                const endTime = group.end_time ? group.end_time.slice(0, 5) : "";
+                const startTime = group.start_time ? group.start_time?.slice(0, 5) ?? "Kiritilmagan" : "";
+                const endTime = group.end_time ? group.end_time?.slice(0, 5) ?? "Kiritilmagan" : "";
 
                 return (
                   <TableRow key={group.id}>
@@ -292,7 +292,7 @@ export const TeacherGroupsView: React.FC<TeacherGroupsViewProps> = ({
                             onClick={() => onSelectGroupForStudents(group)}
                             leftIcon={<Users className="w-3.5 h-3.5" />}
                           >
-                            Talabalar
+                            O‘quvchilar
                           </Button>
                         )}
                         {onSelectGroupForAttendance && (

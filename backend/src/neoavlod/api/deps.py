@@ -7,6 +7,7 @@ from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from neoavlod.database import get_session
+from neoavlod.errors import DomainError
 from neoavlod.models import Portal
 from neoavlod.security.rbac import (
     Permission,
@@ -23,6 +24,7 @@ from neoavlod.security.sessions import (
     ensure_csrf,
     ensure_origin,
 )
+from neoavlod.services.otp_store import OTPStore
 from neoavlod.settings import Settings
 
 SessionDependency = Annotated[AsyncSession, Depends(get_session)]
@@ -35,6 +37,16 @@ async def current_identity(request: Request, session: SessionDependency) -> Iden
 
 
 IdentityDependency = Annotated[Identity, Depends(current_identity)]
+
+
+def otp_store(request: Request) -> OTPStore:
+    store = getattr(request.app.state, "otp_store", None)
+    if store is None:
+        raise DomainError("Tasdiqlash kodi xizmati sozlanmagan", 503)
+    return cast(OTPStore, store)
+
+
+OTPStoreDependency = Annotated[OTPStore, Depends(otp_store)]
 
 
 def _protect_unsafe(request: Request, identity: Identity) -> None:

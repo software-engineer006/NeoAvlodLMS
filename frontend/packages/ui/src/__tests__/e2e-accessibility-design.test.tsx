@@ -304,7 +304,7 @@ describe("Frontend E2E, Accessibility & Design Review (Task 037)", () => {
         <Drawer
           isOpen={true}
           onClose={handleClose}
-          title="Talaba profili"
+          title="O‘quvchi profili"
           description="Batafsil ma’lumot"
         >
           <div>Drawer kontenti</div>

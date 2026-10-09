@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 
 from neoavlod.api.deps import SessionDependency, require_permission
@@ -25,13 +25,15 @@ class StaffOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
     first_name: str
-    last_name: str
+    last_name: str | None
     username: str
-    phone: str
+    phone: str | None
     role: Role
     status: Status
     permissions: list[str]
     telegram_connected: bool
+    must_change_password: bool = False
+    avatar_url: str | None = None
     created_at: datetime
 
     @classmethod
@@ -46,6 +48,8 @@ class StaffOut(BaseModel):
             status=person.status,
             permissions=list(person.permissions),
             telegram_connected=person.telegram_id is not None,
+            must_change_password=person.must_change_password,
+            avatar_url=person.avatar_url,
             created_at=person.created_at,
         )
 
@@ -65,10 +69,10 @@ class StaffList(BaseModel):
 class StaffCreate(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True, hide_input_in_errors=True)
     first_name: str = NAME
-    last_name: str = NAME
-    phone: str = PHONE
+    last_name: str | None = Field(default=None, min_length=1, max_length=100)
+    phone: str | None = Field(default=None, pattern=r"^\+[1-9][0-9]{7,14}$", max_length=16)
     username: str = Field(pattern=r"^[a-z0-9_]{3,64}$", max_length=64)
-    password: SecretStr = Field(max_length=128)
+    password: SecretStr | None = Field(default=None, max_length=128)
     role: Role = Role.TEACHER
     permissions: list[str] = Field(default_factory=list, max_length=32)
 
@@ -119,8 +123,12 @@ async def list_staff(
 
 @router.post("", response_model=StaffDetail, status_code=201)
 async def create_staff(
-    body: StaffCreate, actor: StaffManager, session: SessionDependency
+    body: StaffCreate,
+    actor: StaffManager,
+    session: SessionDependency,
+    request: Request,
 ) -> StaffDetail:
+    app_settings = getattr(request.app.state, "settings", None)
     person = await service.create_staff(
         session,
         actor,
@@ -128,9 +136,10 @@ async def create_staff(
         last_name=body.last_name,
         phone=body.phone,
         username=body.username,
-        password=body.password.get_secret_value(),
+        password=body.password.get_secret_value() if body.password else None,
         role=body.role,
         permissions=body.permissions,
+        settings=app_settings,
     )
     return await detail(session, person)
 

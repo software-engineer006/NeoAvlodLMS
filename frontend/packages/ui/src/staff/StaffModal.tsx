@@ -24,9 +24,9 @@ const AVAILABLE_PERMISSIONS = [
   { key: PERMISSIONS.GROUPS_READ, label: "Guruhlarni ko‘rish" },
   { key: PERMISSIONS.GROUPS_CREATE, label: "Guruh yaratish" },
   { key: PERMISSIONS.GROUPS_EDIT, label: "Guruhlarni tahrirlash" },
-  { key: PERMISSIONS.STUDENTS_READ, label: "Talabalarni ko‘rish" },
-  { key: PERMISSIONS.STUDENTS_CREATE, label: "Talaba yaratish" },
-  { key: PERMISSIONS.STUDENTS_EDIT, label: "Talabalarni tahrirlash" },
+  { key: PERMISSIONS.STUDENTS_READ, label: "O‘quvchilarni ko‘rish" },
+  { key: PERMISSIONS.STUDENTS_CREATE, label: "O‘quvchi yaratish" },
+  { key: PERMISSIONS.STUDENTS_EDIT, label: "O‘quvchilarni tahrirlash" },
   { key: PERMISSIONS.ATTENDANCE_READ, label: "Davomat tarixini ko‘rish" },
 ];
 
@@ -44,7 +44,6 @@ export const StaffModal: React.FC<StaffModalProps> = ({
   const [lastName, setLastName] = useState<string>("");
   const [phone, setPhone] = useState<string>("");
   const [username, setUsername] = useState<string>("");
-  const [password, setPassword] = useState<string>("");
   const [role, setRole] = useState<"admin" | "teacher">("teacher");
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
 
@@ -54,10 +53,9 @@ export const StaffModal: React.FC<StaffModalProps> = ({
   useEffect(() => {
     if (staff) {
       setFirstName(staff.first_name);
-      setLastName(staff.last_name);
-      setPhone(staff.phone);
+      setLastName(staff.last_name ?? "");
+      setPhone(staff.phone ?? "");
       setUsername(staff.username);
-      setPassword("");
       setRole(staff.role === "admin" ? "admin" : "teacher");
       setSelectedPermissions(staff.permissions || []);
     } else {
@@ -65,7 +63,6 @@ export const StaffModal: React.FC<StaffModalProps> = ({
       setLastName("");
       setPhone("+998");
       setUsername("");
-      setPassword("");
       setRole("teacher");
       setSelectedPermissions([]);
     }
@@ -80,11 +77,11 @@ export const StaffModal: React.FC<StaffModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!firstName.trim() || !lastName.trim()) {
+    if (!firstName.trim()) {
       setError("Ism va familiyani kiriting");
       return;
     }
-    if (!/^\+[1-9][0-9]{7,14}$/.test(phone)) {
+    if (phone.trim() && !/^\+[1-9][0-9]{7,14}$/.test(phone)) {
       setError("Telefon raqami formati noto‘g‘ri (masalan: +998901234567)");
       return;
     }
@@ -96,24 +93,23 @@ export const StaffModal: React.FC<StaffModalProps> = ({
       if (isEditing && staff) {
         const payload: StaffUpdateInput = {
           first_name: firstName.trim(),
-          last_name: lastName.trim(),
-          phone: phone.trim(),
+          last_name: lastName.trim() || undefined,
+          phone: phone.trim() || undefined,
           permissions: isSuperadmin && role === "admin" ? selectedPermissions : undefined,
         };
         const updated = await apiClient.patch<StaffItem>(`/api/v1/admin/staff/${staff.id}`, payload);
         onSuccess(updated);
       } else {
-        if (!username.trim() || !password) {
-          setError("Foydalanuvchi nomi va parolni kiriting");
+        if (!username.trim()) {
+          setError("Foydalanuvchi nomini kiriting");
           setIsLoading(false);
           return;
         }
         const payload: StaffCreateInput = {
           first_name: firstName.trim(),
-          last_name: lastName.trim(),
-          phone: phone.trim(),
+          last_name: lastName.trim() || null,
+          phone: phone.trim() || null,
           username: username.trim().toLowerCase(),
-          password,
           role: isSuperadmin ? role : "teacher",
           permissions: isSuperadmin && role === "admin" ? selectedPermissions : [],
         };
@@ -163,8 +159,7 @@ export const StaffModal: React.FC<StaffModalProps> = ({
           <Input
             label="Familiya"
             placeholder="masalan: Navoiy"
-            required
-            value={lastName}
+                        value={lastName}
             onChange={(e) => setLastName(e.target.value)}
             disabled={isLoading}
           />
@@ -174,8 +169,7 @@ export const StaffModal: React.FC<StaffModalProps> = ({
           <Input
             label="Telefon raqami"
             placeholder="+998901234567"
-            required
-            value={phone}
+                        value={phone}
             onChange={(e) => setPhone(e.target.value)}
             disabled={isLoading}
             helperText="Xalqaro formatda (+998...)"
@@ -194,16 +188,16 @@ export const StaffModal: React.FC<StaffModalProps> = ({
         </div>
 
         {!isEditing && (
-          <Input
-            label="Boshlang‘ich parol"
-            type="password"
-            placeholder="••••••••"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            disabled={isLoading}
-            helperText="Kamida 8 belgi, harf va raqam"
-          />
+          <div className="bg-sky-50 border border-sky-200 rounded-lg p-3 text-xs text-sky-900 space-y-1">
+            <p className="font-semibold text-sky-950">
+              Vaqtinchalik parol avtomatik yaratiladi
+            </p>
+            <p className="text-sky-800 leading-relaxed">
+              Xodim uchun xavfsiz vaqtinchalik parol tizim tomonidan avtomatik generatsiya qilinadi.
+              Yaratilgach, xodimga taqdim etiladigan Telegram bot havolasi orqali /start bosilganda
+              login va vaqtinchalik parol xodimga shaxsiy xabar qilib yetkaziladi.
+            </p>
+          </div>
         )}
 
         {/* Role selection (Superadmin only) */}

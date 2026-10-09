@@ -161,7 +161,7 @@ describe("Student & Parent Management (Task 031)", () => {
       is_expired: false,
     },
     parent: {
-      ...sampleStudents[0].parent,
+      ...sampleStudents[0].parent!,
       telegram_link: {
         deep_link: "https://t.me/neoavlod_bot?start=pr_tok_222",
         expires_at: "2026-03-10T10:00:00Z",
@@ -193,7 +193,7 @@ describe("Student & Parent Management (Task 031)", () => {
       fireEvent.click(screen.getByRole("button", { name: "Ro‘yxatga olish" }));
 
       await waitFor(() => {
-        expect(screen.getByText("Talaba ism va familiyasini kiriting")).toBeDefined();
+        expect(screen.getByText("O‘quvchi ismini kiriting")).toBeDefined();
       });
     });
 
@@ -353,7 +353,7 @@ describe("Student & Parent Management (Task 031)", () => {
 
       // Rotate student telegram link
       const rotateStudentBtn = screen.getByRole("button", {
-        name: "Yangi talaba havolasini yaratish",
+        name: "Yangi o‘quvchi havolasini yaratish",
       });
       fireEvent.click(rotateStudentBtn);
 
@@ -390,8 +390,8 @@ describe("Student & Parent Management (Task 031)", () => {
         expect(screen.getByText("Jasur Bekmurodov")).toBeDefined();
       });
 
-      // "Yangi talaba" button should NOT be rendered
-      expect(screen.queryByRole("button", { name: /Yangi talaba/ })).toBeNull();
+      // "Yangi o‘quvchi" button should NOT be rendered
+      expect(screen.queryByRole("button", { name: /Yangi o‘quvchi/ })).toBeNull();
 
       // Mutating table actions should NOT be rendered
       expect(screen.queryByTitle("Guruhni ko‘chirish")).toBeNull();
@@ -406,7 +406,7 @@ describe("Student & Parent Management (Task 031)", () => {
 
       await waitFor(() => {
         expect(screen.getByText("Jasur Bekmurodov")).toBeDefined();
-        expect(screen.getByRole("button", { name: /Yangi talaba/ })).toBeDefined();
+        expect(screen.getByRole("button", { name: /Yangi o‘quvchi/ })).toBeDefined();
         expect(screen.getAllByTitle("Guruhni ko‘chirish").length).toBe(2);
         expect(screen.getAllByTitle("Tahrirlash").length).toBe(2);
       });
@@ -421,7 +421,7 @@ describe("Student & Parent Management (Task 031)", () => {
 
       await waitFor(() => {
         expect(screen.getByText("Jasur Bekmurodov")).toBeDefined();
-        expect(screen.getByRole("button", { name: /Yangi talaba/ })).toBeDefined();
+        expect(screen.getByRole("button", { name: /Yangi o‘quvchi/ })).toBeDefined();
       });
     });
   });

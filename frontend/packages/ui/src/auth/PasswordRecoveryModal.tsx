@@ -6,6 +6,7 @@ import { Modal } from "../components/Modal";
 import { Input } from "../components/Input";
 import { Button } from "../components/Button";
 import { Alert } from "../components/Alert";
+import { NeoAvlodLogo } from "../components/NeoAvlodLogo";
 import { CheckCircle2, ArrowLeft } from "lucide-react";
 
 export interface PasswordRecoveryModalProps {
@@ -155,7 +156,12 @@ export const PasswordRecoveryModal: React.FC<PasswordRecoveryModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Parolni tiklash"
+      title={
+        <span className="flex items-center gap-2">
+          <NeoAvlodLogo portal={portal} variant="badge" size="xs" />
+          <span>Parolni tiklash</span>
+        </span>
+      }
       description={
         step === "username"
           ? "Telegram orqali tasdiqlash kodini olish uchun loginni kiriting"

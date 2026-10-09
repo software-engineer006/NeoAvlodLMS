@@ -145,12 +145,12 @@ async def create_group(
     name: str,
     subject_id: uuid.UUID,
     teacher_id: uuid.UUID,
-    monthly_price: Decimal,
+    monthly_price: Decimal | None,
     max_students: int,
     days_of_week: list[int],
-    start_time: time,
-    end_time: time,
-    room_number: str,
+    start_time: time | None,
+    end_time: time | None,
+    room_number: str | None,
 ) -> GroupRow:
     await validate_subject(session, subject_id)
     await validate_teacher(session, teacher_id)
@@ -215,7 +215,7 @@ async def update_group(
     if start_time is not None or end_time is not None:
         eff_start = start_time if start_time is not None else group.start_time
         eff_end = end_time if end_time is not None else group.end_time
-        if eff_start >= eff_end:
+        if eff_start is not None and eff_end is not None and eff_start >= eff_end:
             raise DomainError("Dars boshlanish vaqti tugash vaqtidan oldin bo‘lishi kerak", 422)
         if start_time is not None:
             group.start_time = start_time

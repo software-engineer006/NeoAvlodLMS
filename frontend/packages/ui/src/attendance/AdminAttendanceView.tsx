@@ -25,12 +25,18 @@ import {
   FilterX,
   Lock,
 } from "lucide-react";
+import { MonthlyAttendanceHistoryView } from "./MonthlyAttendanceHistoryView";
 
 export interface AdminAttendanceViewProps {
   currentUser: CurrentUser;
+  defaultTab?: "matrix" | "list";
 }
 
-export const AdminAttendanceView: React.FC<AdminAttendanceViewProps> = ({ currentUser: _currentUser }) => {
+export const AdminAttendanceView: React.FC<AdminAttendanceViewProps> = ({
+  currentUser: _currentUser,
+  defaultTab = "matrix",
+}) => {
+  const [activeTab, setActiveTab] = useState<"matrix" | "list">(defaultTab);
   const [records, setRecords] = useState<AdminAttendanceItem[]>([]);
   const [total, setTotal] = useState<number>(0);
   const [page, setPage] = useState<number>(1);
@@ -155,8 +161,42 @@ export const AdminAttendanceView: React.FC<AdminAttendanceViewProps> = ({ curren
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
-      <Card className="p-4">
+      {/* View Mode Tabs */}
+      <div className="flex border-b border-slate-200">
+        <button
+          type="button"
+          onClick={() => setActiveTab("matrix")}
+          className={`py-2.5 px-4 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
+            activeTab === "matrix"
+              ? "border-indigo-600 text-indigo-600 font-semibold"
+              : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+          }`}
+        >
+          Oylik jadval (Guruh / Oy)
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("list")}
+          className={`py-2.5 px-4 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
+            activeTab === "list"
+              ? "border-indigo-600 text-indigo-600 font-semibold"
+              : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+          }`}
+        >
+          Yozuvlar ro‘yxati
+        </button>
+      </div>
+
+      {activeTab === "matrix" ? (
+        <MonthlyAttendanceHistoryView
+          portal="admin"
+          groups={groups}
+          currentUser={_currentUser}
+        />
+      ) : (
+        <>
+          {/* Filter and Search Bar */}
+          <Card className="p-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
           <div>
             <div className="flex items-center justify-between mb-1">
@@ -308,7 +348,7 @@ export const AdminAttendanceView: React.FC<AdminAttendanceViewProps> = ({ curren
             <TableHeader>
               <TableRow>
                 <TableHead>Sana</TableHead>
-                <TableHead>Talaba</TableHead>
+                <TableHead>O‘quvchi</TableHead>
                 <TableHead>Guruh</TableHead>
                 <TableHead>O‘qituvchi</TableHead>
                 <TableHead>Holati</TableHead>
@@ -409,6 +449,8 @@ export const AdminAttendanceView: React.FC<AdminAttendanceViewProps> = ({ curren
             )}
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );

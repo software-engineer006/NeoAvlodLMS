@@ -47,7 +47,8 @@ async def test_initial_migration_upgrade_downgrade_and_schema_match(
             ).scalar_one() == ScriptDirectory.from_config(
                 Config(str(ROOT / "alembic.ini"))
             ).get_current_head()
-            for name in ("staff", "groups", "students", "otp_challenges"):
+            assert "otp_challenges" not in tables
+            for name in ("staff", "groups", "students"):
                 constraints = await connection.run_sync(check_names, name)
                 expected = {
                     str(item.name)

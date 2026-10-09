@@ -6,6 +6,7 @@ import { Modal } from "../components/Modal";
 import { Input } from "../components/Input";
 import { Button } from "../components/Button";
 import { Alert } from "../components/Alert";
+import { NeoAvlodLogo } from "../components/NeoAvlodLogo";
 import { CheckCircle2 } from "lucide-react";
 
 export interface PasswordChangeModalProps {
@@ -84,7 +85,12 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Parolni o‘zgartirish"
+      title={
+        <span className="flex items-center gap-2">
+          <NeoAvlodLogo portal={portal} variant="badge" size="xs" />
+          <span>Parolni o‘zgartirish</span>
+        </span>
+      }
       description="Xavfsizlik maqsadida yangi parol o‘rnatilgach, barcha faol sessiyalar yakunlanadi"
       size="md"
     >

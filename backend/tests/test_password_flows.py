@@ -22,6 +22,8 @@ async def test_password_change_requires_old_and_revokes_all_without_otp(
     async with model_database.session() as session:
         person = await session.scalar(select(Staff).where(Staff.username == username))
         assert person
+        person.must_change_password = True
+        person.temporary_password_encrypted = "dummy_encrypted"
         tokens = await issue_session(session, person, Portal.ADMIN)
         another = await issue_session(session, person, Portal.ADMIN)
         await session.commit()
@@ -60,6 +62,9 @@ async def test_password_change_requires_old_and_revokes_all_without_otp(
     async with model_database.session() as session:
         person = await session.scalar(select(Staff).where(Staff.username == username))
         assert person and verify_password(person.hashed_password, NEW)
+        assert person.must_change_password is False
+        assert person.temporary_password_encrypted is None
+        assert person.temporary_password_expires_at is None
         for sid in (tokens.session_id, another.session_id):
             saved = await session.get(AuthSession, sid)
             assert saved and saved.revoked_at is not None
@@ -75,6 +80,8 @@ async def test_reset_is_generic_and_requires_purpose_bound_once_otp(
     async with model_database.session() as session:
         person = await session.scalar(select(Staff).where(Staff.username == username))
         assert person
+        person.must_change_password = True
+        person.temporary_password_encrypted = "dummy_encrypted"
         tokens = await issue_session(session, person, Portal.ADMIN)
         await session.commit()
     app = create_app()
@@ -114,6 +121,9 @@ async def test_reset_is_generic_and_requires_purpose_bound_once_otp(
     async with model_database.session() as session:
         person = await session.scalar(select(Staff).where(Staff.username == username))
         assert person and verify_password(person.hashed_password, NEW)
+        assert person.must_change_password is False
+        assert person.temporary_password_encrypted is None
+        assert person.temporary_password_expires_at is None
         saved = await session.get(AuthSession, tokens.session_id)
         assert saved and saved.revoked_at is not None
 

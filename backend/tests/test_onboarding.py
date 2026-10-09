@@ -68,7 +68,7 @@ async def test_missing_bot_and_invalid_payloads_are_rejected(model_database: Dat
     async with model_database.session() as session, session.begin():
         person = staff()
         session.add(person)
-        with pytest.raises(DomainError, match="sozlanishi"):
+        with pytest.raises(DomainError, match="sozlanmagan"):
             await link_state(session, person)
         for payload in ("admin_bad", "staff_bad", f"staff_{uuid.uuid4()}", "x" * 65):
             with pytest.raises(DomainError):

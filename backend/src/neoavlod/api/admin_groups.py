@@ -6,16 +6,19 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from neoavlod.api.admin_attendance import GroupMonthlyAttendanceHistoryOut
 from neoavlod.api.deps import SessionDependency, require_permission
 from neoavlod.models.common import Status
 from neoavlod.security.rbac import Permission
 from neoavlod.security.sessions import Identity
+from neoavlod.services import attendance as attendance_service
 from neoavlod.services import groups as service
 
 router = APIRouter(prefix="/api/v1/admin/groups", tags=["admin-groups"])
 GroupReader = Annotated[Identity, Depends(require_permission(Permission.GROUPS_READ))]
 GroupCreator = Annotated[Identity, Depends(require_permission(Permission.GROUPS_CREATE))]
 GroupEditor = Annotated[Identity, Depends(require_permission(Permission.GROUPS_EDIT))]
+AttendanceReader = Annotated[Identity, Depends(require_permission(Permission.ATTENDANCE_READ))]
 
 
 def _validate_days(v: list[int] | None) -> list[int] | None:
@@ -44,8 +47,8 @@ class TeacherSummary(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
     first_name: str
-    last_name: str
-    phone: str
+    last_name: str | None
+    phone: str | None
     status: Status
 
 
@@ -55,14 +58,14 @@ class GroupOut(BaseModel):
     name: str
     subject_id: uuid.UUID
     teacher_id: uuid.UUID
-    monthly_price: Decimal
+    monthly_price: Decimal | None
     max_students: int
     current_students: int
     status: Status
     days_of_week: list[int]
-    start_time: time
-    end_time: time
-    room_number: str
+    start_time: time | None
+    end_time: time | None
+    room_number: str | None
     created_at: datetime
     updated_at: datetime
     subject: SubjectSummary
@@ -103,18 +106,22 @@ class GroupCreate(BaseModel):
     name: str = Field(min_length=1, max_length=150)
     subject_id: uuid.UUID
     teacher_id: uuid.UUID
-    monthly_price: Decimal = Field(ge=0, max_digits=12, decimal_places=2)
+    monthly_price: Decimal | None = Field(default=None, ge=0, max_digits=12, decimal_places=2)
     max_students: int = Field(ge=1, le=1000)
     days_of_week: list[int]
-    start_time: time
-    end_time: time
-    room_number: str = Field(min_length=1, max_length=30)
+    start_time: time | None = None
+    end_time: time | None = None
+    room_number: str | None = Field(default=None, min_length=1, max_length=30)
 
     _days = field_validator("days_of_week")(_validate_days)
 
     @model_validator(mode="after")
     def validate_time_order(self) -> "GroupCreate":
-        if self.start_time >= self.end_time:
+        if (
+            self.start_time is not None
+            and self.end_time is not None
+            and self.start_time >= self.end_time
+        ):
             raise ValueError("Dars boshlanish vaqti tugash vaqtidan oldin bo‘lishi kerak")
         return self
 
@@ -172,9 +179,7 @@ async def list_groups(
 
 
 @router.post("", response_model=GroupOut, status_code=201)
-async def create_group(
-    body: GroupCreate, _: GroupCreator, session: SessionDependency
-) -> GroupOut:
+async def create_group(body: GroupCreate, _: GroupCreator, session: SessionDependency) -> GroupOut:
     return GroupOut.of(
         await service.create_group(
             session,
@@ -192,9 +197,7 @@ async def create_group(
 
 
 @router.get("/{group_id}", response_model=GroupOut)
-async def get_group(
-    group_id: uuid.UUID, _: GroupReader, session: SessionDependency
-) -> GroupOut:
+async def get_group(group_id: uuid.UUID, _: GroupReader, session: SessionDependency) -> GroupOut:
     return GroupOut.of(await service.get_group_row(session, group_id))
 
 
@@ -234,8 +237,20 @@ async def activate_group(
 
 
 @router.delete("/{group_id}", status_code=204)
-async def delete_group(
-    group_id: uuid.UUID, _: GroupEditor, session: SessionDependency
-) -> Response:
+async def delete_group(group_id: uuid.UUID, _: GroupEditor, session: SessionDependency) -> Response:
     await service.delete_group(session, group_id)
     return Response(status_code=204)
+
+
+@router.get("/{group_id}/attendance/history", response_model=GroupMonthlyAttendanceHistoryOut)
+async def get_group_attendance_history(
+    group_id: uuid.UUID,
+    _: AttendanceReader,
+    session: SessionDependency,
+    month: Annotated[str | None, Query(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")] = None,
+) -> GroupMonthlyAttendanceHistoryOut:
+    target_month = month or datetime.now().strftime("%Y-%m")
+    history = await attendance_service.get_group_monthly_attendance_history(
+        session, group_id, target_month
+    )
+    return GroupMonthlyAttendanceHistoryOut.model_validate(history)

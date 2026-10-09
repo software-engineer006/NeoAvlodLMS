@@ -28,8 +28,8 @@ export interface SubjectUpdateInput {
 export interface TeacherSummary {
   id: string;
   first_name: string;
-  last_name: string;
-  phone: string;
+  last_name: string | null;
+  phone: string | null;
   status: "active" | "inactive";
 }
 
@@ -44,14 +44,14 @@ export interface GroupItem {
   name: string;
   subject_id: string;
   teacher_id: string;
-  monthly_price: number | string;
+  monthly_price: number | string | null;
   max_students: number;
   current_students: number;
   status: "active" | "inactive";
   days_of_week: number[];
-  start_time: string;
-  end_time: string;
-  room_number: string;
+  start_time: string | null;
+  end_time: string | null;
+  room_number: string | null;
   created_at: string;
   updated_at: string;
   subject: SubjectSummary;
@@ -69,12 +69,12 @@ export interface GroupCreateInput {
   name: string;
   subject_id: string;
   teacher_id: string;
-  monthly_price: number;
+  monthly_price: number | null;
   max_students: number;
   days_of_week: number[];
-  start_time: string;
-  end_time: string;
-  room_number: string;
+  start_time: string | null;
+  end_time: string | null;
+  room_number: string | null;
 }
 
 export interface GroupUpdateInput {
@@ -112,7 +112,8 @@ export function formatDaysOfWeek(days: number[]): string {
     .join(", ");
 }
 
-export function formatPrice(price: number | string): string {
+export function formatPrice(price: number | string | null | undefined): string {
+  if (price == null) return "Kiritilmagan";
   const num = typeof price === "string" ? parseFloat(price) : price;
   if (isNaN(num)) return "0 so‘m";
   return new Intl.NumberFormat("uz-UZ").format(num) + " so‘m";

@@ -75,14 +75,14 @@ export const StudentModal: React.FC<StudentModalProps> = ({
   useEffect(() => {
     if (student) {
       setFirstName(student.first_name);
-      setLastName(student.last_name);
-      setPhone(student.phone);
-      setAge(String(student.age));
+      setLastName(student.last_name ?? "");
+      setPhone(student.phone ?? "");
+      setAge(student.age == null ? "" : String(student.age));
       setGroupId(student.group_id);
 
-      setParentFirstName(student.parent.first_name);
-      setParentLastName(student.parent.last_name);
-      setParentPhone(student.parent.phone);
+      setParentFirstName(student.parent?.first_name ?? "");
+      setParentLastName(student.parent?.last_name ?? "");
+      setParentPhone(student.parent?.phone ?? "");
     } else {
       setFirstName("");
       setLastName("");
@@ -100,17 +100,17 @@ export const StudentModal: React.FC<StudentModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!firstName.trim() || !lastName.trim()) {
-      setError("Talaba ism va familiyasini kiriting");
+    if (!firstName.trim()) {
+      setError("O‘quvchi ismini kiriting");
       return;
     }
-    if (!/^\+[1-9][0-9]{7,14}$/.test(phone.trim())) {
-      setError("Talaba telefon raqami formati noto‘g‘ri (masalan: +998901234567)");
+    if (phone.trim() && !/^\+[1-9][0-9]{7,14}$/.test(phone.trim())) {
+      setError("O‘quvchi telefon raqami formati noto‘g‘ri (masalan: +998901234567)");
       return;
     }
     const ageNum = parseInt(age, 10);
-    if (isNaN(ageNum) || ageNum < 3 || ageNum > 100) {
-      setError("Talaba yoshi 3 va 100 oralig‘ida bo‘lishi kerak");
+    if (age.trim() && (isNaN(ageNum) || ageNum < 3 || ageNum > 100)) {
+      setError("O‘quvchi yoshi 3 va 100 oralig‘ida bo‘lishi kerak");
       return;
     }
     if (!isEditing && !groupId) {
@@ -119,11 +119,12 @@ export const StudentModal: React.FC<StudentModalProps> = ({
     }
 
     // Parent validation
-    if (!parentFirstName.trim() || !parentLastName.trim()) {
+    const hasParent = !!(parentFirstName.trim() || parentLastName.trim() || parentPhone.trim());
+    if (hasParent && (!parentFirstName.trim() || !parentLastName.trim())) {
       setError("Ota-ona ism va familiyasini kiriting");
       return;
     }
-    if (!/^\+[1-9][0-9]{7,14}$/.test(parentPhone.trim())) {
+    if (hasParent && !/^\+[1-9][0-9]{7,14}$/.test(parentPhone.trim())) {
       setError("Ota-ona telefon raqami formati noto‘g‘ri (masalan: +998901234567)");
       return;
     }
@@ -135,14 +136,14 @@ export const StudentModal: React.FC<StudentModalProps> = ({
       if (isEditing && student) {
         const payload: StudentUpdateInput = {
           first_name: firstName.trim(),
-          last_name: lastName.trim(),
-          phone: phone.trim(),
-          age: ageNum,
-          parent: {
+          last_name: lastName.trim() || undefined,
+          phone: phone.trim() || undefined,
+          age: age.trim() ? ageNum : undefined,
+          parent: hasParent ? {
             first_name: parentFirstName.trim(),
             last_name: parentLastName.trim(),
             phone: parentPhone.trim(),
-          },
+          } : undefined,
         };
         const updated = await apiClient.patch<StudentDetailItem>(
           `/api/v1/admin/students/${student.id}`,
@@ -152,15 +153,15 @@ export const StudentModal: React.FC<StudentModalProps> = ({
       } else {
         const payload: StudentCreateInput = {
           first_name: firstName.trim(),
-          last_name: lastName.trim(),
-          phone: phone.trim(),
-          age: ageNum,
+          last_name: lastName.trim() || null,
+          phone: phone.trim() || null,
+          age: age.trim() ? ageNum : null,
           group_id: groupId,
-          parent: {
+          parent: hasParent ? {
             first_name: parentFirstName.trim(),
             last_name: parentLastName.trim(),
             phone: parentPhone.trim(),
-          },
+          } : null,
         };
         const created = await apiClient.post<StudentDetailItem>("/api/v1/admin/students", payload);
         onSuccess(created);
@@ -170,7 +171,7 @@ export const StudentModal: React.FC<StudentModalProps> = ({
       if (err instanceof ApiError) {
         setError(err.detail);
       } else {
-        setError("Talabani saqlashda xatolik yuz berdi");
+        setError("O‘quvchini saqlashda xatolik yuz berdi");
       }
     } finally {
       setIsLoading(false);
@@ -181,11 +182,11 @@ export const StudentModal: React.FC<StudentModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={isEditing ? "Talaba ma’lumotlarini tahrirlash" : "Yangi talaba va ota-onani ro‘yxatga olish"}
+      title={isEditing ? "O‘quvchi ma’lumotlarini tahrirlash" : "Yangi o‘quvchi va ota-onani ro‘yxatga olish"}
       description={
         isEditing
-          ? `${student?.first_name} ${student?.last_name} profilini tahrirlash`
-          : "Talaba va uning ota-onasini yagona forma orqali tizimga kiritish"
+          ? `${student?.first_name} ${student?.last_name ?? ""} profilini tahrirlash`
+          : "O‘quvchi va uning ota-onasini yagona forma orqali tizimga kiritish"
       }
       size="lg"
     >
@@ -200,7 +201,7 @@ export const StudentModal: React.FC<StudentModalProps> = ({
         <div className="space-y-3">
           <div className="flex items-center gap-2 pb-2 border-b border-slate-100 text-slate-800 font-semibold text-sm">
             <User className="w-4 h-4 text-blue-600" />
-            <span>Talaba ma’lumotlari</span>
+            <span>O‘quvchi ma’lumotlari</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -215,8 +216,7 @@ export const StudentModal: React.FC<StudentModalProps> = ({
             <Input
               label="Familiya"
               placeholder="masalan: Bekmurodov"
-              required
-              value={lastName}
+                            value={lastName}
               onChange={(e) => setLastName(e.target.value)}
               disabled={isLoading}
             />
@@ -226,8 +226,7 @@ export const StudentModal: React.FC<StudentModalProps> = ({
             <Input
               label="Telefon raqami"
               placeholder="+998901234567"
-              required
-              value={phone}
+                            value={phone}
               onChange={(e) => setPhone(e.target.value)}
               disabled={isLoading}
               helperText="Xalqaro formatda (+998...)"
@@ -237,8 +236,7 @@ export const StudentModal: React.FC<StudentModalProps> = ({
               type="number"
               min="3"
               max="100"
-              required
-              value={age}
+                            value={age}
               onChange={(e) => setAge(e.target.value)}
               disabled={isLoading}
             />
@@ -257,7 +255,7 @@ export const StudentModal: React.FC<StudentModalProps> = ({
                   const isFull = g.current_students >= g.max_students;
                   return {
                     value: g.id,
-                    label: `${g.name} (${g.current_students}/${g.max_students} talaba)${
+                    label: `${g.name} (${g.current_students}/${g.max_students} o‘quvchi)${
                       isFull ? " — [TO‘LGAN]" : ""
                     }`,
                   };
@@ -279,16 +277,14 @@ export const StudentModal: React.FC<StudentModalProps> = ({
             <Input
               label="Ota-ona ismi"
               placeholder="masalan: Otabek"
-              required
-              value={parentFirstName}
+                            value={parentFirstName}
               onChange={(e) => setParentFirstName(e.target.value)}
               disabled={isLoading}
             />
             <Input
               label="Ota-ona familiyasi"
               placeholder="masalan: Bekmurodov"
-              required
-              value={parentLastName}
+                            value={parentLastName}
               onChange={(e) => setParentLastName(e.target.value)}
               disabled={isLoading}
             />
@@ -297,8 +293,7 @@ export const StudentModal: React.FC<StudentModalProps> = ({
           <Input
             label="Ota-ona telefon raqami"
             placeholder="+998909876543"
-            required
-            value={parentPhone}
+                        value={parentPhone}
             onChange={(e) => setParentPhone(e.target.value)}
             disabled={isLoading}
             helperText="Telegram bot bildirishnomalari ushbu raqamga bog‘lanadi"

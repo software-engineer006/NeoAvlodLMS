@@ -10,12 +10,14 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  DashboardStatsCards,
   ErrorState,
   ForbiddenPage,
   LoginForm,
-  Modal,
+  NeoAvlodLogo,
   PasswordChangeModal,
   PasswordRecoveryModal,
+  UserProfileModal,
   StaffManagementView,
   SubjectsManagementView,
   GroupsManagementView,
@@ -43,12 +45,14 @@ interface HealthStatus {
   database: string;
 }
 
-const AdminContent: React.FC<{ activeTab: string }> = ({ activeTab }) => {
+const AdminContent: React.FC<{ activeTab: string; onNavigate?: (tab: string) => void }> = ({
+  activeTab,
+  onNavigate,
+}) => {
   const { user, fetchMe } = useAuth();
   const [health, setHealth] = useState<HealthStatus | null>(null);
   const [isLoadingHealth, setIsLoadingHealth] = useState<boolean>(false);
   const [healthError, setHealthError] = useState<string | null>(null);
-  const [isSampleModalOpen, setIsSampleModalOpen] = useState<boolean>(false);
 
   const checkHealth = async () => {
     setIsLoadingHealth(true);
@@ -72,8 +76,11 @@ const AdminContent: React.FC<{ activeTab: string }> = ({ activeTab }) => {
       <div className="space-y-6 max-w-7xl mx-auto">
         <Alert variant="info" title="Xush kelibsiz">
           Siz tizimga <strong>{user?.username}</strong> ({user?.role === "superadmin" ? "Superadmin" : "Admin"}) sifatida kirdingiz.
-          Admin shell va navigatsiya orqali ruxsat berilgan bo‘limlarni boshqarishingiz mumkin.
+          Admin boshqaruv paneli orqali ruxsat berilgan bo‘limlarni boshqarishingiz mumkin.
         </Alert>
+
+        {/* Real Statistics Cards */}
+        <DashboardStatsCards onNavigate={onNavigate} />
 
         {/* Status Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -128,16 +135,13 @@ const AdminContent: React.FC<{ activeTab: string }> = ({ activeTab }) => {
         {/* Dashboard Actions */}
         <Card>
           <CardHeader>
-            <CardTitle>Boshqaruv paneli holati</CardTitle>
+            <CardTitle>Boshqaruv paneli</CardTitle>
             <CardDescription>
-              Tizim ma’lumotlari va joriy foydalanuvchi ma’lumotlari
+              Tizim holati va joriy hisob ma’lumotlari
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex flex-wrap items-center gap-3">
-              <Button variant="primary" onClick={() => setIsSampleModalOpen(true)}>
-                Namuna modal
-              </Button>
               <Button variant="secondary" onClick={checkHealth} isLoading={isLoadingHealth}>
                 Statusni yangilash
               </Button>
@@ -196,22 +200,6 @@ const AdminContent: React.FC<{ activeTab: string }> = ({ activeTab }) => {
             </CardContent>
           </Card>
         )}
-
-        <Modal
-          isOpen={isSampleModalOpen}
-          onClose={() => setIsSampleModalOpen(false)}
-          title="Ma’muriy amal tasdig‘i"
-          description="Amalni bajarishga ishonchingiz komilmi?"
-          footer={
-            <Button variant="primary" onClick={() => setIsSampleModalOpen(false)}>
-              Tushundim
-            </Button>
-          }
-        >
-          <p className="text-sm text-slate-600">
-            Ushbu amal barcha tizim loglariga kiritiladi va audit qaydlarida aks etadi.
-          </p>
-        </Modal>
       </div>
     );
   }
@@ -261,9 +249,10 @@ const AdminContent: React.FC<{ activeTab: string }> = ({ activeTab }) => {
 };
 
 const AdminShellContainer: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, setUser } = useAuth();
   const [activeTab, setActiveTab] = useState<string>("dashboard");
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState<boolean>(false);
+  const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false);
 
   if (!user) {
     return null;
@@ -282,9 +271,19 @@ const AdminShellContainer: React.FC = () => {
         onTabChange={setActiveTab}
         onLogout={logout}
         onChangePassword={() => setIsChangePasswordOpen(true)}
+        onOpenProfile={() => setIsProfileOpen(true)}
       >
-        <AdminContent activeTab={activeTab} />
+        <AdminContent activeTab={activeTab} onNavigate={setActiveTab} />
       </AdminShell>
+
+      <UserProfileModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        portal="admin"
+        user={user}
+        onUserUpdated={(updated) => setUser(updated)}
+        onLogoutRequired={() => logout()}
+      />
 
       <PasswordChangeModal
         isOpen={isChangePasswordOpen}
@@ -320,9 +319,12 @@ const AdminAuthView: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center mb-6">
-        <div className="inline-flex w-12 h-12 rounded-xl bg-blue-600 text-white items-center justify-center font-bold text-xl shadow-md mb-2">
-          N
-        </div>
+        <NeoAvlodLogo
+          portal="admin"
+          variant="badge"
+          size="xl"
+          className="mx-auto mb-3 shadow-lg shadow-blue-500/25 ring-1 ring-blue-500/20"
+        />
         <h2 className="text-2xl font-bold text-slate-900 tracking-tight">NeoAvlod LMS</h2>
         <p className="text-sm text-slate-500 mt-1">Admin va boshqaruv xodimlari portali</p>
       </div>

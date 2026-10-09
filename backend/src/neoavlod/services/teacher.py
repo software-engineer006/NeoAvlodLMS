@@ -91,7 +91,11 @@ async def list_group_students(
     stmt = (
         select(Student)
         .where(*filters)
-        .options(joinedload(Student.parent), joinedload(Student.group))
+        .options(
+            joinedload(Student.parent),
+            joinedload(Student.group).joinedload(Group.subject),
+            joinedload(Student.group).joinedload(Group.teacher),
+        )
         .order_by(Student.status, func.lower(Student.first_name), func.lower(Student.last_name))
     )
     return list((await session.scalars(stmt)).all())
@@ -109,6 +113,7 @@ async def get_teacher_student(
         .options(
             joinedload(Student.parent),
             joinedload(Student.group).joinedload(Group.subject),
+            joinedload(Student.group).joinedload(Group.teacher),
         )
     )
     learner = await session.scalar(stmt)

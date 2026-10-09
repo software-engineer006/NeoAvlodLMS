@@ -6,6 +6,7 @@ from typing import Annotated
 from fastapi import APIRouter, BackgroundTasks, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
+from neoavlod.api.admin_attendance import GroupMonthlyAttendanceHistoryOut
 from neoavlod.api.deps import SessionDependency, TeacherDependency
 from neoavlod.models import AttendanceStatus, Student
 from neoavlod.models.common import Status
@@ -27,14 +28,14 @@ class TeacherGroupOut(BaseModel):
     name: str
     subject_id: uuid.UUID
     subject: TeacherSubjectSummary
-    monthly_price: Decimal
+    monthly_price: Decimal | None
     max_students: int
     current_students: int
     status: Status
     days_of_week: list[int]
-    start_time: time
-    end_time: time
-    room_number: str
+    start_time: time | None
+    end_time: time | None
+    room_number: str | None
     created_at: datetime
 
     @classmethod
@@ -66,28 +67,61 @@ class TeacherParentOut(BaseModel):
     telegram_connected: bool
 
 
+class StudentAttendanceStatsOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    month: str
+    present_count: int
+    late_count: int
+    absent_count: int
+    attended_count: int
+    total_lessons: int
+
+
 class TeacherStudentOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
     first_name: str
-    last_name: str
-    phone: str
-    age: int
+    last_name: str | None
+    phone: str | None
+    age: int | None
+    school_grade: str | None = None
+    import_notes: list[str] = Field(default_factory=list)
     status: Status
     group_id: uuid.UUID
     group_name: str
     telegram_connected: bool
-    parent: TeacherParentOut
+    parent: TeacherParentOut | None
     created_at: datetime
+    subject_name: str | None = None
+    teacher_name: str | None = None
+    days_of_week: list[int] | None = None
+    start_time: time | None = None
+    end_time: time | None = None
+    room_number: str | None = None
+    monthly_price: Decimal | None = None
+    attendance_stats: StudentAttendanceStatsOut | None = None
 
     @classmethod
-    def of(cls, learner: Student) -> "TeacherStudentOut":
+    def of(
+        cls, learner: Student, stats: StudentAttendanceStatsOut | None = None
+    ) -> "TeacherStudentOut":
+        sub_name = (
+            learner.group.subject.name
+            if getattr(learner.group, "subject", None) is not None
+            else None
+        )
+        tch_name = None
+        if getattr(learner.group, "teacher", None) is not None:
+            teacher = learner.group.teacher
+            tch_name = f"{teacher.first_name} {teacher.last_name or ''}".strip()
         return cls(
             id=learner.id,
             first_name=learner.first_name,
             last_name=learner.last_name,
             phone=learner.phone,
             age=learner.age,
+            school_grade=learner.school_grade,
+            import_notes=(learner.source_data or {}).get("notes", []),
             status=learner.status,
             group_id=learner.group_id,
             group_name=learner.group.name,
@@ -98,8 +132,20 @@ class TeacherStudentOut(BaseModel):
                 last_name=learner.parent.last_name,
                 phone=learner.parent.phone,
                 telegram_connected=learner.parent.telegram_id is not None,
-            ),
+            )
+            if learner.parent is not None
+            else None,
             created_at=learner.created_at,
+            subject_name=sub_name,
+            teacher_name=tch_name,
+            days_of_week=list(learner.group.days_of_week)
+            if learner.group.days_of_week is not None
+            else None,
+            start_time=learner.group.start_time,
+            end_time=learner.group.end_time,
+            room_number=learner.group.room_number,
+            monthly_price=learner.group.monthly_price,
+            attendance_stats=stats,
         )
 
 
@@ -107,7 +153,7 @@ class AttendanceEntryOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     student_id: uuid.UUID
     student_first_name: str
-    student_last_name: str
+    student_last_name: str | None
     status: AttendanceStatus | None = None
     note: str | None = None
     marked_at: datetime | None = None
@@ -170,9 +216,14 @@ async def get_student(
     student_id: uuid.UUID,
     teacher: TeacherDependency,
     session: SessionDependency,
+    month: Annotated[str | None, Query(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")] = None,
 ) -> TeacherStudentOut:
     item = await service.get_teacher_student(session, teacher, student_id)
-    return TeacherStudentOut.of(item)
+    target_month = month or datetime.now().strftime("%Y-%m")
+    stats = await attendance_service.get_student_monthly_attendance_stats(
+        session, item.id, target_month
+    )
+    return TeacherStudentOut.of(item, stats=StudentAttendanceStatsOut.model_validate(stats))
 
 
 @router.get("/groups/{group_id}/attendance", response_model=AttendanceSheetOut)
@@ -182,9 +233,7 @@ async def get_group_attendance(
     session: SessionDependency,
     target_date: Annotated[date, Query(alias="date")],
 ) -> AttendanceSheetOut:
-    sheet = await attendance_service.get_attendance_sheet(
-        session, teacher, group_id, target_date
-    )
+    sheet = await attendance_service.get_attendance_sheet(session, teacher, group_id, target_date)
     return AttendanceSheetOut(
         group_id=sheet.group_id,
         date=sheet.date,
@@ -290,3 +339,34 @@ async def finalize_group_attendance(
             for item in sheet.items
         ],
     )
+
+
+@router.get(
+    "/groups/{group_id}/attendance/history",
+    response_model=GroupMonthlyAttendanceHistoryOut,
+)
+async def get_teacher_group_attendance_history(
+    group_id: uuid.UUID,
+    teacher: TeacherDependency,
+    session: SessionDependency,
+    month: Annotated[str | None, Query(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")] = None,
+) -> GroupMonthlyAttendanceHistoryOut:
+    target_month = month or datetime.now().strftime("%Y-%m")
+    history = await attendance_service.get_group_monthly_attendance_history(
+        session, group_id, target_month, teacher=teacher
+    )
+    return GroupMonthlyAttendanceHistoryOut.model_validate(history)
+
+
+@router.get("/attendance/history", response_model=GroupMonthlyAttendanceHistoryOut)
+async def get_teacher_attendance_history(
+    teacher: TeacherDependency,
+    session: SessionDependency,
+    group_id: Annotated[uuid.UUID, Query()],
+    month: Annotated[str | None, Query(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")] = None,
+) -> GroupMonthlyAttendanceHistoryOut:
+    target_month = month or datetime.now().strftime("%Y-%m")
+    history = await attendance_service.get_group_monthly_attendance_history(
+        session, group_id, target_month, teacher=teacher
+    )
+    return GroupMonthlyAttendanceHistoryOut.model_validate(history)

@@ -1,7 +1,10 @@
 import uuid
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import anyio
+from pydantic import SecretStr
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,10 +12,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from neoavlod.errors import DomainError
 from neoavlod.models import Role, Staff
 from neoavlod.models.common import Status
-from neoavlod.security.passwords import hash_password, validate_password
+from neoavlod.security.passwords import (
+    generate_temporary_password,
+    hash_password,
+    validate_password,
+)
 from neoavlod.security.rbac import validate_permissions
+from neoavlod.security.secrets import encrypt_token
 from neoavlod.security.sessions import Identity
 from neoavlod.services.passwords import revoke_account
+from neoavlod.settings import Settings
 
 FORBIDDEN = "Bu amal uchun ruxsat yo‘q"
 DUPLICATE = "Username yoki telefon boshqa xodimga tegishli"
@@ -96,22 +105,45 @@ async def create_staff(
     actor: Identity,
     *,
     first_name: str,
-    last_name: str,
-    phone: str,
+    last_name: str | None,
+    phone: str | None,
     username: str,
-    password: str,
+    password: str | None = None,
     role: Role,
     permissions: list[str] | None,
+    settings: Settings | None = None,
 ) -> Staff:
     if role not in CREATABLE_ROLES:
         raise DomainError("Bu rolda xodim yaratib bo‘lmaydi", 422)
     ensure_can_manage(actor, role)
     granted = _permissions_for(role, permissions, actor)
-    try:
-        validate_password(password)
-    except ValueError as error:
-        raise DomainError(str(error), 422) from None
-    encoded = await anyio.to_thread.run_sync(hash_password, password)
+
+    if password:
+        try:
+            validate_password(password)
+        except ValueError as error:
+            raise DomainError(str(error), 422) from None
+        plain_password = password
+        must_change_password = False
+        encrypted_temp = None
+        temp_expires_at = None
+    else:
+        plain_password = generate_temporary_password()
+        must_change_password = True
+        temp_expires_at = datetime.now(UTC) + timedelta(days=3)
+        if settings is not None:
+            encrypted_temp = encrypt_token(plain_password, settings)
+        else:
+            try:
+                test_settings = Settings(
+                    database_url=SecretStr("postgresql+asyncpg://user:pass@localhost/db"),
+                    environment="test",
+                )
+                encrypted_temp = encrypt_token(plain_password, test_settings)
+            except Exception:
+                encrypted_temp = None
+
+    encoded = await anyio.to_thread.run_sync(hash_password, plain_password)
     person = Staff(
         first_name=first_name,
         last_name=last_name,
@@ -120,6 +152,9 @@ async def create_staff(
         hashed_password=encoded,
         role=role,
         permissions=granted,
+        must_change_password=must_change_password,
+        temporary_password_encrypted=encrypted_temp,
+        temporary_password_expires_at=temp_expires_at,
     )
     session.add(person)
     try:
@@ -190,4 +225,112 @@ async def set_active(
     person.status = Status.INACTIVE
     await revoke_account(session, person.id)
     await session.commit()
+    return person
+
+
+async def update_profile(
+    session: AsyncSession,
+    identity: Identity,
+    *,
+    first_name: str | None = None,
+    last_name: str | None = None,
+    phone: str | None = None,
+    username: str | None = None,
+) -> Staff:
+    person = await get_staff(session, identity.staff.id, lock=True)
+    if person.status != Status.ACTIVE:
+        raise DomainError("Hisob faol emas", 403)
+    if first_name is not None:
+        person.first_name = first_name
+    if last_name is not None:
+        person.last_name = last_name
+    if phone is not None:
+        person.phone = phone
+    if username is not None:
+        person.username = username
+    try:
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        raise DomainError(DUPLICATE, 409) from None
+    await session.refresh(person)
+    return person
+
+
+MAX_AVATAR_BYTES = 5 * 1024 * 1024  # 5 MB
+
+
+def detect_image_type(content: bytes) -> tuple[str, str]:
+    if content.startswith(b"\x89PNG\r\n\x1a\n"):
+        return ".png", "image/png"
+    if content.startswith(b"\xff\xd8\xff"):
+        return ".jpg", "image/jpeg"
+    if content.startswith(b"RIFF") and len(content) >= 12 and content[8:12] == b"WEBP":
+        return ".webp", "image/webp"
+    raise DomainError("Faqat PNG, JPEG yoki WebP formatdagi rasmlar qabul qilinadi", 422)
+
+
+def remove_avatar_file(avatar_url: str | None, media_dir: Path) -> None:
+    if not avatar_url or not avatar_url.startswith("/media/avatars/"):
+        return
+    filename = Path(avatar_url).name
+    avatars_dir = media_dir.resolve() / "avatars"
+    target = (avatars_dir / filename).resolve()
+    if target.is_relative_to(avatars_dir) and target.is_file():
+        try:
+            target.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
+async def save_avatar(
+    session: AsyncSession,
+    identity: Identity,
+    content: bytes,
+    media_dir: Path,
+) -> Staff:
+    if len(content) == 0:
+        raise DomainError("Fayl bo‘sh bo‘lishi mumkin emas", 422)
+    if len(content) > MAX_AVATAR_BYTES:
+        raise DomainError("Fayl hajmi 5 MB dan oshmasligi kerak", 413)
+
+    ext, _ = detect_image_type(content)
+    person = await get_staff(session, identity.staff.id, lock=True)
+    if person.status != Status.ACTIVE:
+        raise DomainError("Hisob faol emas", 403)
+
+    avatars_dir = media_dir.resolve() / "avatars"
+    avatars_dir.mkdir(parents=True, exist_ok=True)
+
+    old_url = person.avatar_url
+    new_filename = f"avatar_{uuid.uuid4().hex}{ext}"
+    target_path = avatars_dir / new_filename
+    temp_path = avatars_dir / f".tmp_{new_filename}"
+
+    temp_path.write_bytes(content)
+    temp_path.replace(target_path)
+
+    remove_avatar_file(old_url, media_dir)
+
+    person.avatar_url = f"/media/avatars/{new_filename}"
+    await session.commit()
+    await session.refresh(person)
+    return person
+
+
+async def delete_avatar(
+    session: AsyncSession,
+    identity: Identity,
+    media_dir: Path,
+) -> Staff:
+    person = await get_staff(session, identity.staff.id, lock=True)
+    if person.status != Status.ACTIVE:
+        raise DomainError("Hisob faol emas", 403)
+
+    old_url = person.avatar_url
+    remove_avatar_file(old_url, media_dir)
+
+    person.avatar_url = None
+    await session.commit()
+    await session.refresh(person)
     return person

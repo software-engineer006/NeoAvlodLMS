@@ -9,7 +9,7 @@ from fastapi import Request, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from neoavlod.errors import DomainError
+from neoavlod.errors import DomainError, telegram_not_linked
 from neoavlod.models import AuthSession, Portal, RefreshToken, Role, Staff
 from neoavlod.models.common import Status
 from neoavlod.settings import Settings
@@ -54,7 +54,7 @@ def ensure_portal(person: Staff, portal: Portal) -> None:
 async def issue_session(session: AsyncSession, person: Staff, portal: Portal) -> Tokens:
     ensure_portal(person, portal)
     if person.telegram_id is None:
-        raise DomainError("Telegram hisob ulanmagan", 403)
+        raise telegram_not_linked()
     now = datetime.now(UTC)
     access, refresh, csrf = (secrets.token_urlsafe(32) for _ in range(3))
     auth = AuthSession(
@@ -106,9 +106,10 @@ def ensure_origin(request: Request, settings: Settings, portal: Portal) -> None:
     expected = settings.admin_origin if portal == Portal.ADMIN else settings.teacher_origin
     allowed = {expected.rstrip("/")}
     if settings.environment != "production":
-        port = 5173 if portal == Portal.ADMIN else 5174
-        allowed.add(f"http://localhost:{port}")
-        allowed.add(f"http://127.0.0.1:{port}")
+        ports = (3000, 5173) if portal == Portal.ADMIN else (3001, 5174)
+        for port in ports:
+            allowed.add(f"http://localhost:{port}")
+            allowed.add(f"http://127.0.0.1:{port}")
     if origin not in allowed:
         raise DomainError("So‘rov Origin ruxsati yo‘q", 403)
 

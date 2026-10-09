@@ -25,5 +25,9 @@ htmlcov/
 *.tsbuildinfo
 # Screenshots generated while verifying the local demo.
 /artifacts/local-demo/
+media/
+backend/media/
 
-
+# Private source rosters, import audits, backups and one-time credentials.
+/.private/
+/educenter_data/

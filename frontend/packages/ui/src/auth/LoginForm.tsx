@@ -6,7 +6,8 @@ import { Button } from "../components/Button";
 import { Input } from "../components/Input";
 import { Alert } from "../components/Alert";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/Card";
-import { Shield, KeyRound, ArrowLeft, Send } from "lucide-react";
+import { NeoAvlodLogo } from "../components/NeoAvlodLogo";
+import { ArrowLeft, Send } from "lucide-react";
 
 export interface LoginFormProps {
   portal: PortalType;
@@ -26,7 +27,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   onSuccess,
   onForgotPassword,
   className = "",
-  localDemo = false,
+  localDemo: _localDemo = false,
 }) => {
   // Step 1: Credentials, Step 2: Telegram OTP
   const [step, setStep] = useState<"credentials" | "otp">("credentials");
@@ -38,7 +39,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   // Step 2 fields
   const [challenge, setChallenge] = useState<LoginChallenge | null>(null);
   const [otpCode, setOtpCode] = useState<string>("");
-  const [localCode, setLocalCode] = useState<string>("");
   const [secondsRemaining, setSecondsRemaining] = useState<number>(300);
 
   // States
@@ -80,11 +80,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       setChallenge(res);
       setStep("otp");
       setOtpCode("");
-      setLocalCode("");
-      if (localDemo) {
-        const demo = await apiClient.get<{ code: string }>(`/api/v1/local-demo/${portal}/otp/${res.challenge_id}`);
-        setLocalCode(demo.code);
-      }
       const initialSeconds = Math.max(0, Math.floor((new Date(res.expires_at).getTime() - Date.now()) / 1000));
       setSecondsRemaining(initialSeconds > 0 ? initialSeconds : 300);
     } catch (err) {
@@ -135,7 +130,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     setStep("credentials");
     setChallenge(null);
     setOtpCode("");
-    setLocalCode("");
     setError(null);
   };
 
@@ -148,8 +142,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   return (
     <Card className={`w-full max-w-md mx-auto shadow-md ${className}`}>
       <CardHeader className="text-center pb-2">
-        <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center mx-auto mb-3">
-          {step === "credentials" ? <Shield className="w-6 h-6" /> : <KeyRound className="w-6 h-6" />}
+        <div className="mx-auto mb-3 flex items-center justify-center">
+          <NeoAvlodLogo portal={portal} variant="badge" size="lg" />
         </div>
         <CardTitle className="text-xl">
           {portal === "admin" ? "Admin tizimiga kirish" : "O‘qituvchi tizimiga kirish"}
@@ -157,21 +151,18 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         <CardDescription>
           {step === "credentials"
             ? "Hisobingizga kirish uchun ma’lumotlarni kiriting"
-            : localDemo
-              ? "Quyida ko‘rsatilgan local sinov kodini kiriting"
-              : "Telegram botingizga yuborilgan 6 xonali tasdiqlash kodini kiriting"}
+            : "Telegram botingizga yuborilgan 6 xonali tasdiqlash kodini kiriting"}
         </CardDescription>
       </CardHeader>
 
       <CardContent>
-        {localDemo && (
-          <Alert variant="info" className="mb-4">
-            Local sinov: login <strong>{portal === "admin" ? "superadmin" : "teacher"}</strong>.
-            {localCode && <> Tasdiqlash kodi: <strong>{localCode}</strong></>}
-          </Alert>
-        )}
         {error && (
-          <Alert variant="danger" className="mb-4" onDismiss={() => setError(null)}>
+          <Alert
+            variant={error.toLowerCase().includes("telegram botga hali ulanmagan") ? "warning" : "danger"}
+            title={error.toLowerCase().includes("telegram botga hali ulanmagan") ? "Telegram botga ulanmagan" : undefined}
+            className="mb-4"
+            onDismiss={() => setError(null)}
+          >
             {error}
           </Alert>
         )}

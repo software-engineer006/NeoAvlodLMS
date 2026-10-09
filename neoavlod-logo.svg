@@ -1,0 +1,16 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 160 310"
+  fill="none"
+  role="img"
+  aria-labelledby="neoavlod-logo-title"
+>
+  <title id="neoavlod-logo-title">NeoAvlod</title>
+  <path
+    d="M8 302V102L80 8l72 94v200l-72-97L8 302ZM8 102l72 103V8"
+    stroke="currentColor"
+    stroke-width="14"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>

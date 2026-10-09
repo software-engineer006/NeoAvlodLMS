@@ -110,9 +110,9 @@ describe("Teacher Attendance Flow (Task 036)", () => {
       expect(screen.getByText("Jasur Olimov")).toBeDefined();
 
       // Check Bor, Yo‘q, Kechikdi buttons exist
-      const borButtons = screen.getAllByRole("button", { name: /^Bor$/i });
-      const yoqButtons = screen.getAllByRole("button", { name: /Yo‘q/i });
-      const kechikdiButtons = screen.getAllByRole("button", { name: /Kechikdi/i });
+      const borButtons = screen.getAllByRole("button", { name: /^(Keldi|Bor)$/i });
+      const yoqButtons = screen.getAllByRole("button", { name: /Kelmadi|Yo‘q/i });
+      const kechikdiButtons = screen.getAllByRole("button", { name: /Kech qoldi|Kechikdi/i });
 
       expect(borButtons.length).toBe(2);
       expect(yoqButtons.length).toBe(2);
@@ -150,12 +150,12 @@ describe("Teacher Attendance Flow (Task 036)", () => {
         expect(screen.getByText("Sherzod Bekov")).toBeDefined();
       });
 
-      // Click "Barchasini 'Bor' qilish"
-      const markAllBtn = screen.getByRole("button", { name: /Barchasini 'Bor' qilish/i });
+      // Click "Barchasi keldi"
+      const markAllBtn = screen.getByRole("button", { name: /Barchasi keldi|Barchasini 'Bor' qilish/i });
       fireEvent.click(markAllBtn);
 
       // Unmarked should become 0 and Both should have Bor selected
-      expect(screen.getByText(/Barcha talabalar belgilandi/i)).toBeDefined();
+      expect(screen.getByText(/Barcha o‘quvchilar belgilandi/i)).toBeDefined();
     });
   });
 
@@ -187,7 +187,7 @@ describe("Teacher Attendance Flow (Task 036)", () => {
       });
 
       // Mark student 1 as present
-      const borButtons = screen.getAllByRole("button", { name: /^Bor$/i });
+      const borButtons = screen.getAllByRole("button", { name: /^(Keldi|Bor)$/i });
       fireEvent.click(borButtons[0]);
 
       // Click "Qoralama saqlash"
@@ -231,7 +231,7 @@ describe("Teacher Attendance Flow (Task 036)", () => {
       });
 
       // Student 1 marked, student 2 unmarked
-      const borButtons = screen.getAllByRole("button", { name: /^Bor$/i });
+      const borButtons = screen.getAllByRole("button", { name: /^(Keldi|Bor)$/i });
       fireEvent.click(borButtons[0]);
 
       // Click "Davomatni yakunlash"
@@ -239,9 +239,9 @@ describe("Teacher Attendance Flow (Task 036)", () => {
       fireEvent.click(finalizeBtn);
 
       // Modal opens with validation error
-      expect(screen.getByText(/Belgilanmagan talabalar mavjud/i)).toBeDefined();
+      expect(screen.getByText(/Belgilanmagan o‘quvchilar mavjud/i)).toBeDefined();
       expect(
-        screen.getByText(/Davomatni yakunlash uchun barcha talabalar belgilanadi/i)
+        screen.getByText(/Davomatni yakunlash uchun barcha o‘quvchilar belgilanadi/i)
       ).toBeDefined();
 
       // Submit button inside modal is disabled
@@ -266,7 +266,7 @@ describe("Teacher Attendance Flow (Task 036)", () => {
       });
 
       // Mark all students present via shortcut
-      const markAllBtn = screen.getByRole("button", { name: /Barchasini 'Bor' qilish/i });
+      const markAllBtn = screen.getByRole("button", { name: /Barchasi keldi|Barchasini 'Bor' qilish/i });
       fireEvent.click(markAllBtn);
 
       // Click "Davomatni yakunlash"
@@ -316,7 +316,7 @@ describe("Teacher Attendance Flow (Task 036)", () => {
       ).toBeDefined();
 
       // Status buttons are disabled
-      const borButtons = screen.getAllByRole("button", { name: /^Bor$/i });
+      const borButtons = screen.getAllByRole("button", { name: /^(Keldi|Bor)$/i });
       borButtons.forEach((btn) => {
         expect(btn.getAttribute("disabled")).not.toBeNull();
       });
@@ -352,7 +352,7 @@ describe("Teacher Attendance Flow (Task 036)", () => {
       });
 
       // Mark one student
-      const borButtons = screen.getAllByRole("button", { name: /^Bor$/i });
+      const borButtons = screen.getAllByRole("button", { name: /^(Keldi|Bor)$/i });
       fireEvent.click(borButtons[0]);
 
       // Click save draft
@@ -373,6 +373,115 @@ describe("Teacher Attendance Flow (Task 036)", () => {
       expect(localStorage.getItem("access_token")).toBeNull();
       expect(sessionStorage.getItem("token")).toBeNull();
       expect(sessionStorage.getItem("access_token")).toBeNull();
+    });
+  });
+
+  describe("Unsaved Changes Warning & Protection (Task 058)", () => {
+    const twoGroups: TeacherGroupItem[] = [
+      sampleGroups[0],
+      {
+        id: "grp-2",
+        name: "Python-02",
+        subject_id: "sub-1",
+        subject: { id: "sub-1", name: "Python Dasturlash" },
+        monthly_price: 600000,
+        max_students: 12,
+        current_students: 1,
+        status: "active",
+        days_of_week: [2, 4, 6],
+        start_time: "10:00:00",
+        end_time: "12:00:00",
+        room_number: "202-xona",
+        created_at: "2026-03-01T10:00:00Z",
+      },
+    ];
+
+    it("displays warning modal when switching group with unsaved changes", async () => {
+      vi.spyOn(apiClient, "get").mockImplementation((url) => {
+        if (url.includes("/attendance")) {
+          return Promise.resolve(sampleSheetDraft);
+        }
+        return Promise.resolve(twoGroups);
+      });
+
+      render(
+        <TeacherAttendanceView
+          preselectedGroupId="grp-1"
+          initialDate="2026-03-15"
+          groups={twoGroups}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText("Sherzod Bekov")).toBeDefined();
+      });
+
+      // Modify attendance (mark student 1 as Keldi)
+      const keldiButtons = screen.getAllByRole("button", { name: /^(Keldi|Bor)$/i });
+      fireEvent.click(keldiButtons[0]);
+
+      // Unsaved changes indicator appears
+      expect(screen.getByText("Saqlanmagan o‘zgarishlar bor")).toBeDefined();
+
+      // Attempt to switch group in the Select dropdown
+      const select = screen.getByLabelText(/Guruhni tanlang/i);
+      fireEvent.change(select, { target: { value: "grp-2" } });
+
+      // Warning modal must be displayed!
+      expect(screen.getByText("Saqlanmagan o‘zgarishlar mavjud")).toBeDefined();
+      expect(
+        screen.getByText(/Guruh yoki sanani almashtirsangiz, ushbu o‘zgarishlar yo‘qoladi/i)
+      ).toBeDefined();
+
+      // Clicking Bekor qilish cancels the switch and keeps grp-1
+      const cancelBtn = screen.getByRole("button", { name: "Bekor qilish" });
+      fireEvent.click(cancelBtn);
+
+      expect(screen.queryByText("Saqlanmagan o‘zgarishlar mavjud")).toBeNull();
+      expect((select as HTMLSelectElement).value).toBe("grp-1");
+    });
+
+    it("allows discarding unsaved changes and navigating to the new date", async () => {
+      const getSpy = vi.spyOn(apiClient, "get").mockImplementation((url) => {
+        if (url.includes("/attendance")) {
+          return Promise.resolve(sampleSheetDraft);
+        }
+        return Promise.resolve(sampleGroups);
+      });
+
+      render(
+        <TeacherAttendanceView
+          preselectedGroupId="grp-1"
+          initialDate="2026-03-15"
+          groups={sampleGroups}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText("Sherzod Bekov")).toBeDefined();
+      });
+
+      // Modify attendance
+      const keldiButtons = screen.getAllByRole("button", { name: /^(Keldi|Bor)$/i });
+      fireEvent.click(keldiButtons[0]);
+
+      // Change date
+      const dateInput = screen.getByLabelText(/Dars sanasi/i);
+      fireEvent.change(dateInput, { target: { value: "2026-03-16" } });
+
+      // Warning modal appears
+      expect(screen.getByText("Saqlanmagan o‘zgarishlar mavjud")).toBeDefined();
+
+      // Discard and proceed
+      const discardBtn = screen.getByRole("button", {
+        name: "O‘zgarishlarni bekor qilish va o‘tish",
+      });
+      fireEvent.click(discardBtn);
+
+      // Warning modal closes and date is updated
+      expect(screen.queryByText("Saqlanmagan o‘zgarishlar mavjud")).toBeNull();
+      expect((dateInput as HTMLInputElement).value).toBe("2026-03-16");
+      expect(getSpy).toHaveBeenCalledWith(expect.stringContaining("date=2026-03-16"));
     });
   });
 });

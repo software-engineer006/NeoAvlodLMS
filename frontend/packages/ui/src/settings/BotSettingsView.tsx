@@ -20,6 +20,7 @@ import {
   ShieldAlert,
   Save,
   Key,
+  AtSign,
 } from "lucide-react";
 
 export interface BotSettingsViewProps {
@@ -50,12 +51,19 @@ export const BotSettingsView: React.FC<BotSettingsViewProps> = ({ currentUser })
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState<boolean>(false);
   const [isUpdatingToken, setIsUpdatingToken] = useState<boolean>(false);
 
+  // Username update form states
+  const [botUsernameInput, setBotUsernameInput] = useState<string>("");
+  const [isUpdatingUsername, setIsUpdatingUsername] = useState<boolean>(false);
+
   const loadSettings = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
       const data = await apiClient.get<BotSettingsItem>("/api/v1/admin/settings/bot");
       setSettings(data);
+      if (data.bot_username) {
+        setBotUsernameInput(data.bot_username);
+      }
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.detail);
@@ -104,6 +112,33 @@ export const BotSettingsView: React.FC<BotSettingsViewProps> = ({ currentUser })
       setIsConfirmModalOpen(false);
     } finally {
       setIsUpdatingToken(false);
+    }
+  };
+
+  const handleUpdateUsername = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!botUsernameInput.trim()) {
+      setError("Iltimos, bot foydalanuvchi nomini kiriting");
+      return;
+    }
+    setIsUpdatingUsername(true);
+    setError(null);
+    setSuccessMessage(null);
+    try {
+      const updated = await apiClient.put<BotSettingsItem>(
+        "/api/v1/admin/settings/bot/username",
+        { bot_username: botUsernameInput.trim() }
+      );
+      setSettings(updated);
+      setSuccessMessage("Bot foydalanuvchi nomi muvaffaqiyatli saqlandi!");
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.detail);
+      } else {
+        setError("Bot nomini saqlashda xatolik yuz berdi");
+      }
+    } finally {
+      setIsUpdatingUsername(false);
     }
   };
 
@@ -217,6 +252,45 @@ export const BotSettingsView: React.FC<BotSettingsViewProps> = ({ currentUser })
                   <p className="text-xs font-mono text-rose-700 break-all">{settings.last_error}</p>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Bot Username Management Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <AtSign className="w-5 h-5 text-blue-600" />
+                <span>Telegram Bot foydalanuvchi nomi (Username)</span>
+              </CardTitle>
+              <CardDescription>
+                Xodimlar, o‘qituvchilar va ota-onalar hisoblarini Telegramga ulash uchun ushbu bot nomidan havola shakllanadi (masalan, eduneo_admin_bot).
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleUpdateUsername} noValidate className="space-y-4">
+                <Input
+                  label="Bot Username"
+                  type="text"
+                  placeholder="masalan: eduneo_admin_bot"
+                  required
+                  value={botUsernameInput}
+                  onChange={(e) => setBotUsernameInput(e.target.value)}
+                  disabled={isUpdatingUsername}
+                  helperText="BotFather da yaratilgan bot nomi (@ belgisi bilan yoki belgisisiz)"
+                />
+
+                <div className="flex items-center justify-end pt-2">
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    disabled={!botUsernameInput.trim() || isUpdatingUsername}
+                    isLoading={isUpdatingUsername}
+                    leftIcon={<Save className="w-4 h-4" />}
+                  >
+                    Bot nomini saqlash
+                  </Button>
+                </div>
+              </form>
             </CardContent>
           </Card>
 

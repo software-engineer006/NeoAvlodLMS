@@ -56,7 +56,7 @@ mkdir -p "$WEB_RELEASE"
 cp -a "$RELEASE_DIR/frontend/release/admin" "$RELEASE_DIR/frontend/release/teacher" "$WEB_RELEASE/"
 for portal in admin teacher; do printf '%s\n' "$RELEASE_ID" > "$WEB_RELEASE/$portal/release.txt"; done
 chmod -R a+rX "$WEB_RELEASE"
-compose_release "$RELEASE_ID" up -d --wait --wait-timeout 120 database
+compose_release "$RELEASE_ID" up -d --wait --wait-timeout 120 database redis
 # Always back up before applying migrations. Failed pg_dump leaves no usable backup.
 BACKUP="$BACKUP_ROOT/pre-$RELEASE_ID-$(date -u +%Y%m%dT%H%M%SZ).dump"
 umask 077
@@ -67,6 +67,7 @@ mv "$BACKUP.partial" "$BACKUP"
 RUNTIME_TOUCHED=1
 compose_release "$RELEASE_ID" stop api worker
 compose_release "$RELEASE_ID" run --rm -T --no-deps migrations </dev/null
+import_educenter "$RELEASE_ID"
 compose_release "$RELEASE_ID" up -d --no-deps --no-build --force-recreate --wait --wait-timeout 120 api worker
 activate_links "$RELEASE_ID"
 install_nginx "$RELEASE_ID"

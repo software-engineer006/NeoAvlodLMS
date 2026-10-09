@@ -218,9 +218,9 @@ describe("Teacher Portal Shell & Groups Flow (Task 034)", () => {
       fireEvent.click(davomatButtons[0]);
       expect(onSelectAttendance).toHaveBeenCalledWith(sampleGroups[0]);
 
-      // Click Talabalar for Python-01
-      const talabalarButtons = screen.getAllByRole("button", { name: /Talabalar/i });
-      fireEvent.click(talabalarButtons[0]);
+      // Click O‘quvchilar for Python-01
+      const oquvchilarButtons = screen.getAllByRole("button", { name: /O‘quvchilar/i });
+      fireEvent.click(oquvchilarButtons[0]);
       expect(onSelectStudents).toHaveBeenCalledWith(sampleGroups[0]);
     });
 

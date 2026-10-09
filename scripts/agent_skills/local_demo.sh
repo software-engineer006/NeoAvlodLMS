@@ -12,14 +12,13 @@ case "${1:-up}" in
     compose_local build backend
     compose_local up -d --wait --wait-timeout 120 demo-database
     compose_local run --rm -T --no-deps migrations
-    compose_local run --rm -T --no-deps migrations python -m neoavlod.local_demo
     compose_local run --rm -T --no-deps node npm ci
-    compose_local up -d --wait --wait-timeout 120 backend admin teacher
+    compose_local up -d --wait --wait-timeout 120 backend admin teacher worker
     printf 'Admin: http://localhost:3000\nTeacher: http://127.0.0.1:3001\n'
     ;;
-  restart) compose_local up -d --no-build --wait --wait-timeout 120 backend admin teacher ;;
+  restart) compose_local up -d --no-build --wait --wait-timeout 120 backend admin teacher worker ;;
   status) compose_local ps ;;
   smoke) compose_local exec -T backend python /workspace/scripts/agent_skills/smoke_local_demo.py ;;
-  stop) compose_local stop admin teacher backend demo-database ;;
+  stop) compose_local stop admin teacher worker backend demo-database ;;
   *) fail 'Buyruqlar: up, restart, status, smoke, stop' ;;
 esac

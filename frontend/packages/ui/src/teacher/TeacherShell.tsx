@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import type { CurrentUser } from "../api/types";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
+import { NeoAvlodLogo } from "../components/NeoAvlodLogo";
 import {
   Layers,
   CalendarCheck,
@@ -29,6 +30,7 @@ export const TEACHER_NAV_ITEMS: TeacherNavItemConfig[] = [
     label: "Davomat olish",
     icon: CalendarCheck,
   },
+  { id: "history", label: "Davomat tarixi", icon: CalendarCheck },
 ];
 
 export interface TeacherShellProps {
@@ -37,6 +39,7 @@ export interface TeacherShellProps {
   onTabChange: (tabId: string) => void;
   onLogout: () => void;
   onChangePassword?: () => void;
+  onOpenProfile?: () => void;
   children: React.ReactNode;
 }
 
@@ -46,6 +49,7 @@ export const TeacherShell: React.FC<TeacherShellProps> = ({
   onTabChange,
   onLogout,
   onChangePassword,
+  onOpenProfile,
   children,
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
@@ -56,6 +60,8 @@ export const TeacherShell: React.FC<TeacherShellProps> = ({
     onTabChange(tabId);
     setIsMobileMenuOpen(false);
   };
+
+  const initials = `${user.first_name[0] || ""}${user.last_name?.[0] || ""}`.toUpperCase();
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
@@ -76,9 +82,7 @@ export const TeacherShell: React.FC<TeacherShellProps> = ({
         {/* Brand header */}
         <div className="h-16 px-6 flex items-center justify-between border-b border-slate-800">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-base shadow-sm">
-              N
-            </div>
+            <NeoAvlodLogo portal="teacher" variant="badge" size="sm" />
             <div>
               <span className="font-bold text-white tracking-tight text-sm">NeoAvlod LMS</span>
               <span className="block text-[10px] text-emerald-400 uppercase tracking-widest font-semibold">
@@ -122,10 +126,24 @@ export const TeacherShell: React.FC<TeacherShellProps> = ({
 
         {/* User preview inside sidebar */}
         <div className="p-4 border-t border-slate-800 bg-slate-950/50">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-emerald-400">
-              <UserCheck className="w-5 h-5" />
-            </div>
+          <div
+            onClick={onOpenProfile}
+            role={onOpenProfile ? "button" : undefined}
+            tabIndex={onOpenProfile ? 0 : undefined}
+            className={`flex items-center gap-3 mb-3 ${onOpenProfile ? "cursor-pointer hover:opacity-90 transition-opacity" : ""}`}
+            title="Profilimni ko‘rish"
+          >
+            {user.avatar_url ? (
+              <img
+                src={user.avatar_url}
+                alt={`${user.first_name} ${user.last_name ?? ""}`}
+                className="w-9 h-9 rounded-full object-cover border border-slate-700 shrink-0"
+              />
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-emerald-400 font-bold text-xs shrink-0">
+                {initials || <UserCheck className="w-5 h-5" />}
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-white truncate">
                 {user.first_name} {user.last_name}
@@ -161,16 +179,60 @@ export const TeacherShell: React.FC<TeacherShellProps> = ({
             >
               <Menu className="w-6 h-6" />
             </button>
-            <h1 className="text-lg font-bold text-slate-900 tracking-tight">
-              {currentItem?.label || "O‘qituvchi boshqaruvi"}
-            </h1>
+            <div className="flex items-center gap-2">
+              <NeoAvlodLogo portal="teacher" variant="badge" size="xs" className="lg:hidden" />
+              <h1 className="text-lg font-bold text-slate-900 tracking-tight">
+                {currentItem?.label || "O‘qituvchi boshqaruvi"}
+              </h1>
+            </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <div className="hidden sm:flex items-center gap-2">
-              <span className="text-xs text-slate-500 font-medium">{user.phone}</span>
+              <span className="text-xs text-slate-500 font-medium">{user.phone ?? "Kiritilmagan"}</span>
               <div className="h-3.5 w-px bg-slate-200" />
             </div>
+
+            {/* Temporary password alert badge */}
+            {user.must_change_password && (
+              <button
+                type="button"
+                onClick={onOpenProfile || onChangePassword}
+                className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200 transition-colors animate-pulse"
+                title="Vaqtinchalik parol: yangilash lozim"
+              >
+                Parolni yangilang
+              </button>
+            )}
+
+            {/* Profile trigger with avatar */}
+            {onOpenProfile && (
+              <button
+                type="button"
+                onClick={onOpenProfile}
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors text-left"
+                title="Shaxsiy profil va rasm"
+              >
+                {user.avatar_url ? (
+                  <img
+                    src={user.avatar_url}
+                    alt={`${user.first_name} ${user.last_name ?? ""}`}
+                    className="w-7 h-7 rounded-full object-cover ring-1 ring-slate-300 shrink-0"
+                  />
+                ) : (
+                  <div className="w-7 h-7 rounded-full bg-slate-800 text-emerald-400 flex items-center justify-center font-bold text-[10px] ring-1 ring-slate-300 shrink-0">
+                    {initials || <UserCheck className="w-4 h-4" />}
+                  </div>
+                )}
+                <div className="hidden sm:block">
+                  <span className="block text-xs font-semibold text-slate-800 leading-tight">
+                    {user.first_name} {user.last_name}
+                  </span>
+                  <span className="block text-[10px] text-slate-500 font-medium">Profilim</span>
+                </div>
+                <span className="sm:hidden text-xs font-semibold text-slate-700">Profilim</span>
+              </button>
+            )}
 
             {onChangePassword && (
               <Button
@@ -178,6 +240,7 @@ export const TeacherShell: React.FC<TeacherShellProps> = ({
                 size="sm"
                 onClick={onChangePassword}
                 leftIcon={<KeyRound className="w-3.5 h-3.5" />}
+                className="hidden sm:inline-flex"
               >
                 Parol
               </Button>

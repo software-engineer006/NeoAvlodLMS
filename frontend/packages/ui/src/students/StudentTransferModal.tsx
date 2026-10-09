@@ -89,7 +89,7 @@ export const StudentTransferModal: React.FC<StudentTransferModalProps> = ({
       if (err instanceof ApiError) {
         setError(err.detail);
       } else {
-        setError("Talabani yangi guruhga ko‘chirishda xatolik yuz berdi");
+        setError("O‘quvchini yangi guruhga ko‘chirishda xatolik yuz berdi");
       }
     } finally {
       setIsLoading(false);
@@ -100,8 +100,8 @@ export const StudentTransferModal: React.FC<StudentTransferModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Talabani boshqa guruhga ko‘chirish"
-      description={`${student.first_name} ${student.last_name} ni boshqa guruhga o‘tkazish`}
+      title="O‘quvchini boshqa guruhga ko‘chirish"
+      description={`${student.first_name} ${student.last_name ?? ""} ni boshqa guruhga o‘tkazish`}
       size="md"
     >
       {error && (
@@ -128,7 +128,7 @@ export const StudentTransferModal: React.FC<StudentTransferModalProps> = ({
               const full = g.current_students >= g.max_students;
               return {
                 value: g.id,
-                label: `${g.name} (${g.current_students}/${g.max_students} talaba)${
+                label: `${g.name} (${g.current_students}/${g.max_students} o‘quvchi)${
                   full ? " — [TO‘LGAN]" : ""
                 }`,
               };

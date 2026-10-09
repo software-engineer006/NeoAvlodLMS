@@ -14,8 +14,6 @@ from neoavlod.models import (
     AttendanceStatus,
     AuthSession,
     NotificationOutbox,
-    OTPChallenge,
-    OTPPurpose,
     Portal,
     RefreshToken,
     Student,
@@ -89,29 +87,6 @@ async def test_settings_singleton_and_version_constraints(model_database: Databa
             await session.execute(cast(Table, SystemSettings.__table__).update().values(version=-1))
 
 
-async def test_otp_hash_attempts_and_expiry(model_database: Database) -> None:
-    async with model_database.session() as session:
-        person = staff()
-        session.add(person)
-        await session.commit()
-    now = datetime.now(UTC)
-    valid = {
-        "staff_id": person.id,
-        "portal": Portal.TEACHER,
-        "purpose": OTPPurpose.LOGIN,
-        "code_hash": "a" * 64,
-        "expires_at": now + timedelta(minutes=5),
-    }
-    for invalid in (
-        {"attempts": 6},
-        {"code_hash": "123456"},
-        {"expires_at": now - timedelta(days=1)},
-    ):
-        with pytest.raises(IntegrityError):
-            async with model_database.session() as session:
-                await session.execute(
-                    cast(Table, OTPChallenge.__table__).insert().values(**(valid | invalid))
-                )
 
 
 async def test_session_refresh_uniqueness_and_revocation_storage(model_database: Database) -> None:

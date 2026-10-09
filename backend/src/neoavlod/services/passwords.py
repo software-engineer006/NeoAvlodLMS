@@ -3,16 +3,17 @@ import uuid
 from datetime import UTC, datetime
 
 import anyio
-from sqlalchemy import select, update
+from sqlalchemy import or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from neoavlod.database import Database
 from neoavlod.errors import DomainError
-from neoavlod.models import AuthSession, OTPChallenge, OTPPurpose, Portal, Staff
+from neoavlod.models import AuthSession, OTPPurpose, Portal, Staff
 from neoavlod.models.common import Status
 from neoavlod.security.passwords import hash_password, verify_password
 from neoavlod.security.sessions import Identity, ensure_portal
 from neoavlod.services.login import deliver_challenge, verify_challenge
+from neoavlod.services.otp_store import OTPStore
 from neoavlod.services.telegram import DatabaseTelegramSender, TelegramSender
 from neoavlod.settings import Settings
 
@@ -29,14 +30,6 @@ async def revoke_account(session: AsyncSession, staff_id: uuid.UUID) -> None:
         )
         .values(revoked_at=now)
     )
-    await session.execute(
-        update(OTPChallenge)
-        .where(
-            OTPChallenge.staff_id == staff_id,
-            OTPChallenge.consumed_at.is_(None),
-        )
-        .values(consumed_at=now)
-    )
 
 
 async def change_password(
@@ -45,6 +38,7 @@ async def change_password(
     old: str,
     new: str,
     portal: Portal,
+    store: OTPStore,
 ) -> None:
     new_hash = await anyio.to_thread.run_sync(hash_password, new)
     person = await session.scalar(
@@ -66,13 +60,18 @@ async def change_password(
     if not valid:
         raise DomainError("Eski parol noto‘g‘ri", 401)
     person.hashed_password = new_hash
+    person.must_change_password = False
+    person.temporary_password_encrypted = None
+    person.temporary_password_expires_at = None
     await revoke_account(session, person.id)
     await session.commit()
+    await store.revoke_staff(person.id)
 
 
 async def send_reset(
     database: Database,
     settings: Settings,
+    store: OTPStore,
     username: str,
     portal: Portal,
     challenge_id: uuid.UUID,
@@ -83,7 +82,17 @@ async def send_reset(
     # existence or external delivery timing is exposed in that response.
     try:
         async with database.session() as session:
-            person = await session.scalar(select(Staff).where(Staff.username == username))
+            clean_username = username.strip().lower()
+            clean_phone = username.strip()
+            person = await session.scalar(
+                select(Staff).where(
+                    or_(
+                        Staff.username == clean_username,
+                        Staff.phone == clean_phone,
+                        Staff.phone == f"+{clean_phone.lstrip('+')}",
+                    )
+                )
+            )
             if person is None or person.status != Status.ACTIVE or person.telegram_id is None:
                 return
             sender = override or DatabaseTelegramSender(session, settings)
@@ -94,6 +103,7 @@ async def send_reset(
                 OTPPurpose.RESET,
                 settings,
                 sender,
+                store,
                 challenge_id,
                 expires_at,
             )
@@ -104,16 +114,20 @@ async def send_reset(
 async def reset_password(
     session: AsyncSession,
     settings: Settings,
+    store: OTPStore,
     challenge_id: uuid.UUID,
     code: str,
     portal: Portal,
     new: str,
 ) -> None:
     new_hash = await anyio.to_thread.run_sync(hash_password, new)
-    challenge, person = await verify_challenge(
-        session, settings, challenge_id, code, portal, OTPPurpose.RESET
+    person = await verify_challenge(
+        session, settings, store, challenge_id, code, portal, OTPPurpose.RESET
     )
-    challenge.consumed_at = datetime.now(UTC)
     person.hashed_password = new_hash
+    person.must_change_password = False
+    person.temporary_password_encrypted = None
+    person.temporary_password_expires_at = None
     await revoke_account(session, person.id)
     await session.commit()
+    await store.revoke_staff(person.id)

@@ -8,12 +8,14 @@ export interface CurrentUser {
   id: string;
   username: string;
   first_name: string;
-  last_name: string;
-  phone: string;
+  last_name: string | null;
+  phone: string | null;
   role: RoleType;
   status: StaffStatus;
   permissions: string[];
   telegram_id?: number | null;
+  must_change_password?: boolean;
+  avatar_url?: string | null;
 }
 
 export interface ApiValidationError {
@@ -36,4 +38,17 @@ export interface PaginatedResult<T> {
   total: number;
   page: number;
   page_size: number;
+}
+
+export interface DashboardStaffBreakdown {
+  teachers: number;
+  admins: number;
+  superadmins: number;
+}
+
+export interface DashboardStats {
+  groups_count: number | null;
+  students_count: number | null;
+  staff_count: number | null;
+  staff_breakdown: DashboardStaffBreakdown | null;
 }

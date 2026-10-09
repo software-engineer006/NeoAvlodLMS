@@ -30,6 +30,7 @@ services:
     environment:
       NEOAVLOD_ENVIRONMENT: production
       NEOAVLOD_DATABASE_URL: ${NEOAVLOD_DATABASE_URL:?NEOAVLOD_DATABASE_URL must be set}
+      NEOAVLOD_REDIS_URL: ${NEOAVLOD_REDIS_URL:-redis://redis:6379/0}
       NEOAVLOD_SECURITY_SECRET: ${NEOAVLOD_SECURITY_SECRET:?NEOAVLOD_SECURITY_SECRET must be set}
       NEOAVLOD_BOT_ENCRYPTION_KEY: ${NEOAVLOD_BOT_ENCRYPTION_KEY:?NEOAVLOD_BOT_ENCRYPTION_KEY must be set}
       NEOAVLOD_ADMIN_ORIGIN: ${NEOAVLOD_ADMIN_ORIGIN:-https://admin.eduneo.uz}
@@ -38,6 +39,18 @@ services:
     depends_on:
       database:
         condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
 
   api:
     image: neoavlod-backend:${NEOAVLOD_RELEASE_ID:-production}
@@ -49,9 +62,13 @@ services:
     user: "1000:1000"
     ports:
       - "127.0.0.1:${API_PORT:-8000}:8000"
+    volumes:
+      - media-data:/app/media
     environment:
       NEOAVLOD_ENVIRONMENT: production
+      NEOAVLOD_MEDIA_DIR: /app/media
       NEOAVLOD_DATABASE_URL: ${NEOAVLOD_DATABASE_URL:?NEOAVLOD_DATABASE_URL must be set}
+      NEOAVLOD_REDIS_URL: ${NEOAVLOD_REDIS_URL:-redis://redis:6379/0}
       NEOAVLOD_SECURITY_SECRET: ${NEOAVLOD_SECURITY_SECRET:?NEOAVLOD_SECURITY_SECRET must be set}
       NEOAVLOD_BOT_ENCRYPTION_KEY: ${NEOAVLOD_BOT_ENCRYPTION_KEY:?NEOAVLOD_BOT_ENCRYPTION_KEY must be set}
       NEOAVLOD_ADMIN_ORIGIN: ${NEOAVLOD_ADMIN_ORIGIN:-https://admin.eduneo.uz}
@@ -64,6 +81,8 @@ services:
       start_period: 10s
     depends_on:
       database:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       migrations:
         condition: service_completed_successfully
@@ -83,6 +102,7 @@ services:
     environment:
       NEOAVLOD_ENVIRONMENT: production
       NEOAVLOD_DATABASE_URL: ${NEOAVLOD_DATABASE_URL:?NEOAVLOD_DATABASE_URL must be set}
+      NEOAVLOD_REDIS_URL: ${NEOAVLOD_REDIS_URL:-redis://redis:6379/0}
       NEOAVLOD_SECURITY_SECRET: ${NEOAVLOD_SECURITY_SECRET:?NEOAVLOD_SECURITY_SECRET must be set}
       NEOAVLOD_BOT_ENCRYPTION_KEY: ${NEOAVLOD_BOT_ENCRYPTION_KEY:?NEOAVLOD_BOT_ENCRYPTION_KEY must be set}
       NEOAVLOD_ADMIN_ORIGIN: ${NEOAVLOD_ADMIN_ORIGIN:-https://admin.eduneo.uz}
@@ -91,8 +111,12 @@ services:
     depends_on:
       database:
         condition: service_healthy
+      redis:
+        condition: service_healthy
       migrations:
         condition: service_completed_successfully
 
 volumes:
   postgres-data:
+  redis-data:
+  media-data:

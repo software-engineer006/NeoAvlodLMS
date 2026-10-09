@@ -87,10 +87,10 @@ export const GroupModal: React.FC<GroupModalProps> = ({
       setTeacherId(group.teacher_id);
       setDaysOfWeek(group.days_of_week || []);
       // Format time strings (HH:MM:SS -> HH:MM)
-      setStartTime(group.start_time.slice(0, 5));
-      setEndTime(group.end_time.slice(0, 5));
-      setRoomNumber(group.room_number);
-      setMonthlyPrice(String(group.monthly_price));
+      setStartTime(group.start_time?.slice(0, 5) ?? "");
+      setEndTime(group.end_time?.slice(0, 5) ?? "");
+      setRoomNumber(group.room_number ?? "");
+      setMonthlyPrice(group.monthly_price == null ? "" : String(group.monthly_price));
       setMaxStudents(String(group.max_students));
     } else {
       setName("");
@@ -133,24 +133,19 @@ export const GroupModal: React.FC<GroupModalProps> = ({
       setError("Kamida bitta dars kuni tanlanishi kerak");
       return;
     }
-    if (startTime >= endTime) {
+    if (startTime && endTime && startTime >= endTime) {
       setError("Dars boshlanish vaqti tugash vaqtidan oldin bo‘lishi kerak");
       return;
     }
-    if (!roomNumber.trim()) {
-      setError("Xona raqamini kiriting");
-      return;
-    }
-
     const priceNum = parseFloat(monthlyPrice);
-    if (isNaN(priceNum) || priceNum < 0) {
+    if (monthlyPrice.trim() && (isNaN(priceNum) || priceNum < 0)) {
       setError("Oylik to‘lov summasi noto‘g‘ri kiritildi");
       return;
     }
 
     const maxStudentsNum = parseInt(maxStudents, 10);
     if (isNaN(maxStudentsNum) || maxStudentsNum < 1) {
-      setError("Maksimal talabalar soni kamida 1 bo‘lishi kerak");
+      setError("Maksimal o‘quvchilar soni kamida 1 bo‘lishi kerak");
       return;
     }
 
@@ -163,12 +158,12 @@ export const GroupModal: React.FC<GroupModalProps> = ({
           name: name.trim(),
           subject_id: subjectId,
           teacher_id: teacherId,
-          monthly_price: priceNum,
+          monthly_price: monthlyPrice.trim() ? priceNum : undefined,
           max_students: maxStudentsNum,
           days_of_week: daysOfWeek,
-          start_time: startTime,
-          end_time: endTime,
-          room_number: roomNumber.trim(),
+          start_time: startTime || undefined,
+          end_time: endTime || undefined,
+          room_number: roomNumber.trim() || undefined,
         };
         const updated = await apiClient.patch<GroupItem>(`/api/v1/admin/groups/${group.id}`, payload);
         onSuccess(updated);
@@ -177,12 +172,12 @@ export const GroupModal: React.FC<GroupModalProps> = ({
           name: name.trim(),
           subject_id: subjectId,
           teacher_id: teacherId,
-          monthly_price: priceNum,
+          monthly_price: monthlyPrice.trim() ? priceNum : null,
           max_students: maxStudentsNum,
           days_of_week: daysOfWeek,
-          start_time: startTime,
-          end_time: endTime,
-          room_number: roomNumber.trim(),
+          start_time: startTime || null,
+          end_time: endTime || null,
+          room_number: roomNumber.trim() || null,
         };
         const created = await apiClient.post<GroupItem>("/api/v1/admin/groups", payload);
         onSuccess(created);
@@ -252,7 +247,7 @@ export const GroupModal: React.FC<GroupModalProps> = ({
               { value: "", label: "-- O‘qituvchini tanlang --" },
               ...teachers.map((t) => ({
                 value: t.id,
-                label: `${t.first_name} ${t.last_name} (${t.phone})`,
+                label: `${t.first_name} ${t.last_name ?? ""} (${t.phone ?? "Telefon kiritilmagan"})`,
               })),
             ]}
           />
@@ -315,16 +310,14 @@ export const GroupModal: React.FC<GroupModalProps> = ({
           <Input
             label="Dars boshlanish vaqti"
             type="time"
-            required
-            value={startTime}
+                        value={startTime}
             onChange={(e) => setStartTime(e.target.value)}
             disabled={isLoading}
           />
           <Input
             label="Dars tugash vaqti"
             type="time"
-            required
-            value={endTime}
+                        value={endTime}
             onChange={(e) => setEndTime(e.target.value)}
             disabled={isLoading}
           />
@@ -335,8 +328,7 @@ export const GroupModal: React.FC<GroupModalProps> = ({
           <Input
             label="Xona raqami / nomi"
             placeholder="masalan: 302-xona"
-            required
-            value={roomNumber}
+                        value={roomNumber}
             onChange={(e) => setRoomNumber(e.target.value)}
             disabled={isLoading}
           />
@@ -345,13 +337,12 @@ export const GroupModal: React.FC<GroupModalProps> = ({
             type="number"
             min="0"
             step="10000"
-            required
-            value={monthlyPrice}
+                        value={monthlyPrice}
             onChange={(e) => setMonthlyPrice(e.target.value)}
             disabled={isLoading}
           />
           <Input
-            label="Sig‘im (maksimal talaba)"
+            label="Sig‘im (maksimal o‘quvchi)"
             type="number"
             min="1"
             max="1000"

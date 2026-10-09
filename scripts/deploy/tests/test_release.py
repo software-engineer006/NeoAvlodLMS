@@ -41,6 +41,7 @@ if [[ "$*" == *pg_dump* ]]; then echo backup; fi
 if [[ "${FAIL_STEP:-}" == migration && "${NEOAVLOD_RELEASE_ID:-}" == """
             + C
             + """ && "$*" == *"run --rm -T --no-deps migrations" ]]; then exit 1; fi
+if [[ "${FAIL_STEP:-}" == import && "$*" == *neoavlod.educenter_import* ]]; then exit 1; fi
 """,
         )
         self.command(
@@ -131,6 +132,53 @@ if [[ "$*" == *release.txt* ]]; then basename "$(readlink "$WEB_ROOT/current")";
         self.assertFalse((self.app / "current").exists())
         self.assertFalse((self.web / "current").exists())
         self.assertIn("stop api worker", (self.root / "calls").read_text())
+
+    def test_private_import_after_migration_before_start_and_repeat_deploy(
+        self,
+    ) -> None:
+        private = self.app / "private/educenter_data"
+        private.mkdir(parents=True)
+        (private / "plan.sha256").write_text("d" * 64)
+        self.deploy(A)
+        self.deploy(B)
+        calls = (self.root / "calls").read_text().splitlines()
+        for release in (A, B):
+            lines = [line for line in calls if line.startswith(release)]
+            migration = next(
+                i
+                for i, line in enumerate(lines)
+                if line.endswith("--no-deps migrations")
+            )
+            imported = next(
+                i for i, line in enumerate(lines) if "neoavlod.educenter_import" in line
+            )
+            started = next(
+                i for i, line in enumerate(lines) if "--force-recreate" in line
+            )
+            self.assertLess(migration, imported)
+            self.assertLess(imported, started)
+            self.assertIn("/import-source:ro", lines[imported])
+            self.assertIn("--expected-plan " + "d" * 64, lines[imported])
+
+    def test_import_failure_and_unreviewed_data_restore_previous_release(self) -> None:
+        self.deploy(A)
+        private = self.app / "private/educenter_data"
+        private.mkdir(parents=True)
+        for sha in (None, "not-a-hash", "d" * 64):
+            if sha is not None:
+                (private / "plan.sha256").write_text(sha)
+            result = self.run_script("deploy.sh", B, FAIL_STEP="import")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual((self.app / "current").readlink().name, A)
+            self.assertFalse((self.app / "releases" / B / ".successful").exists())
+
+    def test_explicit_missing_import_directory_fails(self) -> None:
+        result = self.run_script(
+            "deploy.sh", A, EDUCENTER_DATA_DIR=str(self.root / "missing")
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("EDUCENTER_DATA_DIR mavjud emas", result.stderr)
+        self.assertFalse((self.app / "current").exists())
 
     def test_ci_ssh_key_rejects_arbitrary_commands(self) -> None:
         for command in (

@@ -22,7 +22,8 @@ server tayyor statik fayllarni tarqatadi va backend image’ini o‘zi build qil
 | Nginx frontend ildizlari | `/var/www/neoavlod/admin`, `/var/www/neoavlod/teacher` |
 | Backend | `127.0.0.1:8000` → `api.eduneo.uz` va portal `/api/` proxy |
 | Doimiy PostgreSQL volume | `neoavlod-prod_postgres-data` |
-| Backup | `/var/backups/neoavlod/*.dump` |
+| Doimiy Media volume | `neoavlod-prod_media-data` (`/app/media`) |
+| Backup | `/var/backups/neoavlod/*.dump` va media fayllari |
 
 Serverdagi clone bilan production release alohida. Deploy `git pull/reset` bilan
 qo‘lda o‘zgartirilgan fayllarni o‘chirmaydi; `git fetch` va `git archive` ishlatadi.
@@ -485,6 +486,21 @@ Backup tugamaguncha deploy boshlanmaydi; ikkisi bir xil lock ishlatadi.
 Kundalik va migration-oldi dump’larni serverdan tashqariga ham nusxalang.
 Avtomatik o‘chirish yo‘q; retentionni tekshirilgan backup rejangizga mos yuriting.
 
+Foydalanuvchi profil rasmlari (`/app/media`) `neoavlod-prod_media-data` docker volume’ida saqlanadi.
+Media fayllarini arxivlash:
+
+```bash
+docker run --rm -v neoavlod-prod_media-data:/media -v /var/backups/neoavlod:/backup alpine \
+  tar czf "/backup/neoavlod_media_$(date +%Y%m%d_%H%M%S).tar.gz" -C /media .
+```
+
+Media arxivini qayta tiklash:
+
+```bash
+docker run --rm -v neoavlod-prod_media-data:/media -v /var/backups/neoavlod:/backup alpine \
+  tar xzf /backup/YOUR_MEDIA_BACKUP.tar.gz -C /media
+```
+
 Dump formatini yozmasdan tekshirish:
 
 ```bash
@@ -528,3 +544,10 @@ migrations service’ni tasodifan qayta ishlatmang.
 Repositorydagi Docker smoke’lar bu oqimning infra qismini disposable muhitda
 tekshiradi. Haqiqiy VPS SSH/DNS/TLS, GitHub secrets va Telegram yetkazilishini
 serverda yuqoridagi qadamlar bilan alohida tasdiqlash kerak.
+
+# Educenter import
+
+To‘rtta Python CSV guruhi uchun optional private Docker import deploymentga
+ulangan. Serverdagi paket, reviewed hash va backup/import tartibi:
+[EDUCENTER_IMPORT.md](EDUCENTER_IMPORT.md). Xom CSV va credentiallar Gitga
+qo‘shilmaydi; main push workflow test/deploy tartibi saqlanadi.

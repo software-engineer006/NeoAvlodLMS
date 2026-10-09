@@ -5,7 +5,7 @@ import { ApiError } from "../api/errors";
 import { Modal } from "../components/Modal";
 import { Button } from "../components/Button";
 import { Alert } from "../components/Alert";
-import { Send, Copy, Check, RotateCcw } from "lucide-react";
+import { Send, Copy, Check, RotateCcw, ExternalLink } from "lucide-react";
 
 export interface TelegramLinkModalProps {
   isOpen: boolean;
@@ -71,7 +71,7 @@ export const TelegramLinkModal: React.FC<TelegramLinkModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title="Telegram onboarding havolasi"
-      description={`${staff.first_name} ${staff.last_name} (@${staff.username}) uchun bot havolasi`}
+      description={`${staff.first_name} ${staff.last_name ?? ""} (@${staff.username}) uchun bot havolasi`}
       size="md"
     >
       <div className="space-y-4">
@@ -91,34 +91,57 @@ export const TelegramLinkModal: React.FC<TelegramLinkModalProps> = ({
           </p>
         )}
 
-        {currentLink ? (
+        <div className="flex items-center justify-between text-xs p-2 bg-slate-50 rounded-lg border border-slate-200">
+          <span className="text-slate-600 font-medium">Ulanish holati:</span>
+          {staff.telegram_connected ? (
+            <span className="text-emerald-700 font-semibold flex items-center gap-1">
+              <Check className="w-3.5 h-3.5" /> Bog‘langan
+            </span>
+          ) : (
+            <span className="text-amber-600 font-semibold">
+              Kutilmoqda (ulanish kutilmoqda)
+            </span>
+          )}
+        </div>
+
+        {currentLink && currentLink.deep_link ? (
           <div className="space-y-3">
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between gap-2">
-              <span className="text-xs font-mono text-slate-800 break-all select-all">
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+              <span className="text-xs font-mono text-slate-800 break-all select-all flex-1">
                 {currentLink.deep_link}
               </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCopy}
-                className="shrink-0"
-                leftIcon={copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-              >
-                {copied ? "Nusxalandi" : "Nusxalash"}
-              </Button>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCopy}
+                  leftIcon={copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                >
+                  {copied ? "Nusxalandi" : "Nusxalash"}
+                </Button>
+                <a
+                  href={currentLink.deep_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Ochish
+                </a>
+              </div>
             </div>
 
             <div className="flex items-center justify-between text-xs text-slate-500">
               <span>Amal qilish muddati:</span>
-              <span className={currentLink.is_expired ? "text-rose-600 font-semibold" : "font-medium"}>
-                {new Date(currentLink.expires_at).toLocaleString("uz-UZ")}
-                {currentLink.is_expired && " (Muddati tugagan)"}
+              <span className={(currentLink.is_expired || currentLink.expired) ? "text-rose-600 font-semibold" : "font-medium"}>
+                {currentLink.expires_at ? new Date(currentLink.expires_at).toLocaleString("uz-UZ") : "—"}
+                {(currentLink.is_expired || currentLink.expired) && " (Muddati tugagan)"}
               </span>
             </div>
           </div>
         ) : (
           <Alert variant="warning">
-            Hozircha Telegram havolasi mavjud emas yoki muddati tugagan.
+            Hozircha Telegram havolasi mavjud emas yoki muddati tugagan. Yangi havola yaratish tugmasini bosing.
           </Alert>
         )}
 

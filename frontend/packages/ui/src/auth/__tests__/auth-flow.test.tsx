@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { LoginForm } from "../LoginForm";
 import { PasswordRecoveryModal } from "../PasswordRecoveryModal";
 import { PasswordChangeModal } from "../PasswordChangeModal";
+import { ApiError } from "../../api/errors";
 import { apiClient } from "../../api/client";
 import type { CurrentUser } from "../../api/types";
 
@@ -14,20 +15,32 @@ describe("Auth Flows & Security Requirements (Task 027)", () => {
   });
 
   describe("LoginForm Flow", () => {
-    it("shows a challenge-bound code only in the explicit local demo", async () => {
+    it("transitions to OTP step without showing OTP code on screen", async () => {
       vi.spyOn(apiClient, "post").mockResolvedValue({
         challenge_id: "local-challenge",
         expires_at: new Date(Date.now() + 300000).toISOString(),
       });
-      const getSpy = vi.spyOn(apiClient, "get").mockResolvedValue({ code: "765432" });
-      render(<LoginForm portal="teacher" localDemo onSuccess={vi.fn()} />);
+      const getSpy = vi.spyOn(apiClient, "get");
+      render(<LoginForm portal="teacher" onSuccess={vi.fn()} />);
       fireEvent.change(screen.getByLabelText(/Foydalanuvchi nomi/i), { target: { value: "teacher" } });
       fireEvent.change(screen.getByLabelText(/Parol/i), { target: { value: "1234" } });
       fireEvent.click(screen.getByRole("button", { name: /Kirish/i }));
-      expect(await screen.findByText("765432")).not.toBeNull();
-      expect(getSpy).toHaveBeenCalledWith("/api/v1/local-demo/teacher/otp/local-challenge");
-      expect(screen.getByText(/Quyida ko‘rsatilgan local sinov kodini/i)).not.toBeNull();
+      expect(await screen.findByLabelText(/Tasdiqlash kodi/i)).not.toBeNull();
+      expect(getSpy).not.toHaveBeenCalled();
+      expect(screen.queryByText(/Quyida ko‘rsatilgan local sinov kodini/i)).toBeNull();
       expect(localStorage.length).toBe(0);
+    });
+
+    it("displays clear message when staff is not linked to telegram bot", async () => {
+      vi.spyOn(apiClient, "post").mockRejectedValue(
+        new ApiError(403, "Telegram botga hali ulanmagan. Administratordan bot havolasini oling va botda /start tugmasini bosing.")
+      );
+      render(<LoginForm portal="admin" onSuccess={vi.fn()} />);
+      fireEvent.change(screen.getByLabelText(/Foydalanuvchi nomi/i), { target: { value: "unlinked_staff" } });
+      fireEvent.change(screen.getByLabelText(/Parol/i), { target: { value: "password123" } });
+      fireEvent.click(screen.getByRole("button", { name: /Kirish/i }));
+      expect(await screen.findByText(/Telegram botga ulanmagan/i)).not.toBeNull();
+      expect(screen.getByText(/Telegram botga hali ulanmagan/i)).not.toBeNull();
     });
 
     it("completes full username/password -> Telegram OTP login cycle", async () => {

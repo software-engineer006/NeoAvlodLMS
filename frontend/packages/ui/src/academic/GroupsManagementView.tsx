@@ -259,7 +259,7 @@ export const GroupsManagementView: React.FC<GroupsManagementViewProps> = ({ curr
                 { value: "all", label: "Barcha o‘qituvchilar" },
                 ...teachers.map((t) => ({
                   value: t.id,
-                  label: `${t.first_name} ${t.last_name}`,
+                  label: `${t.first_name} ${t.last_name ?? ""}`,
                 })),
               ]}
             />
@@ -359,7 +359,7 @@ export const GroupsManagementView: React.FC<GroupsManagementViewProps> = ({ curr
                       </div>
                       <div className="flex items-center gap-1 text-slate-500 font-mono">
                         <Clock className="w-3.5 h-3.5 text-slate-400" />
-                        {group.start_time.slice(0, 5)} - {group.end_time.slice(0, 5)}
+                        {group.start_time?.slice(0, 5) ?? "Kiritilmagan"} - {group.end_time?.slice(0, 5) ?? "Kiritilmagan"}
                       </div>
                     </div>
                   </TableCell>
@@ -512,7 +512,7 @@ export const GroupsManagementView: React.FC<GroupsManagementViewProps> = ({ curr
         }
       >
         <p className="text-sm text-slate-600">
-          Agar guruhda ro‘yxatdan o‘tgan talabalar yoki davomat qaydlari bo‘lsa, guruhni o‘chirib bo‘lmaydi. U holda guruhni nofaol qilish lozim.
+          Agar guruhda ro‘yxatdan o‘tgan o‘quvchilar yoki davomat qaydlari bo‘lsa, guruhni o‘chirib bo‘lmaydi. U holda guruhni nofaol qilish lozim.
         </p>
       </Modal>
     </div>

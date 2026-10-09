@@ -2,22 +2,32 @@ import hashlib
 import hmac
 import secrets
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 import anyio
-from sqlalchemy import case, select, update
+from sqlalchemy import case, or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from neoavlod.errors import DomainError
-from neoavlod.models import AuthRateLimit, OTPChallenge, OTPPurpose, Portal, Staff
+from neoavlod.errors import DomainError, telegram_not_linked
+from neoavlod.models import AuthRateLimit, OTPPurpose, Portal, Staff
 from neoavlod.security.passwords import hash_password, verify_password
 from neoavlod.security.sessions import Tokens, ensure_portal, issue_session
+from neoavlod.services.otp_store import OTP_TTL_SECONDS, OTPStore, OTPVerdict
 from neoavlod.services.telegram import TelegramSender
 from neoavlod.settings import Settings
 
 # Verification for an unknown username still performs Argon2 work.
 _dummy_hash = hash_password(secrets.token_urlsafe(32))
+
+
+@dataclass(frozen=True)
+class Challenge:
+    """Public handle of an OTP challenge; the code hash exists only in Redis."""
+
+    id: uuid.UUID
+    expires_at: datetime
 
 
 def digest(settings: Settings, value: str) -> str:
@@ -28,8 +38,8 @@ def digest(settings: Settings, value: str) -> str:
     ).hexdigest()
 
 
-def code_hash(settings: Settings, challenge: OTPChallenge, code: str) -> str:
-    return digest(settings, f"{challenge.purpose}:{challenge.id}:{code}")
+def code_hash(settings: Settings, challenge_id: uuid.UUID, purpose: OTPPurpose, code: str) -> str:
+    return digest(settings, f"{purpose}:{challenge_id}:{code}")
 
 
 async def rate_limit(
@@ -71,46 +81,41 @@ async def deliver_challenge(
     purpose: OTPPurpose,
     settings: Settings,
     sender: TelegramSender,
+    store: OTPStore,
     challenge_id: uuid.UUID | None = None,
     expires_at: datetime | None = None,
-) -> OTPChallenge:
+) -> Challenge:
     ensure_portal(person, portal)
     if person.telegram_id is None:
-        raise DomainError("Telegram hisob ulanmagan", 403)
-    # Serialize replacements for the same account, even across API instances.
-    await session.refresh(person, with_for_update=True)
-    ensure_portal(person, portal)
-    if person.telegram_id is None:
-        raise DomainError("Telegram hisob ulanmagan", 403)
+        raise telegram_not_linked()
     now = datetime.now(UTC)
-    await session.execute(
-        update(OTPChallenge)
-        .where(
-            OTPChallenge.staff_id == person.id,
-            OTPChallenge.portal == portal,
-            OTPChallenge.purpose == purpose,
-            OTPChallenge.consumed_at.is_(None),
-        )
-        .values(consumed_at=now)
+    telegram_id = person.telegram_id
+    staff_id = person.id
+    # Release the DB transaction before network I/O.
+    await session.commit()
+    challenge = Challenge(
+        id=challenge_id or uuid.uuid4(),
+        expires_at=expires_at or now + timedelta(seconds=OTP_TTL_SECONDS),
     )
     code = f"{secrets.randbelow(1_000_000):06d}"
-    challenge = OTPChallenge(
-        id=challenge_id or uuid.uuid4(),
-        staff_id=person.id,
+    # Storing replaces any earlier challenge for the same account, portal and purpose.
+    await store.put(
+        challenge_id=challenge.id,
+        staff_id=staff_id,
         portal=portal,
         purpose=purpose,
-        expires_at=expires_at or now + timedelta(minutes=5),
-        attempts=0,
+        code_hash=code_hash(settings, challenge.id, purpose, code),
+        ttl_seconds=int((challenge.expires_at - now).total_seconds()),
     )
-    challenge.code_hash = code_hash(settings, challenge, code)
-    session.add(challenge)
-    await session.commit()
     label = "Kirish" if purpose == OTPPurpose.LOGIN else "Parolni tiklash"
-    await sender.send_message(
-        person.telegram_id, f"NeoAvlod {label} kodi: {code}. Amal qilish muddati: 5 daqiqa."
-    )
-    challenge.delivered_at = datetime.now(UTC)
-    await session.commit()
+    try:
+        await sender.send_message(
+            telegram_id, f"NeoAvlod {label} kodi: {code}. Amal qilish muddati: 5 daqiqa."
+        )
+    except BaseException:
+        # An undelivered code must never stay valid.
+        await store.discard(challenge.id)
+        raise
     return challenge
 
 
@@ -118,74 +123,79 @@ async def begin_login(
     session: AsyncSession,
     settings: Settings,
     sender: TelegramSender,
+    store: OTPStore,
     username: str,
     password: str,
     portal: Portal,
     ip: str,
-) -> OTPChallenge:
+) -> Challenge:
     await rate_limit(session, settings, username, ip)
-    person = await session.scalar(select(Staff).where(Staff.username == username))
+    clean_username = username.strip().lower()
+    clean_phone = username.strip()
+    person = await session.scalar(
+        select(Staff).where(
+            or_(
+                Staff.username == clean_username,
+                Staff.phone == clean_phone,
+                Staff.phone == f"+{clean_phone.lstrip('+')}",
+            )
+        )
+    )
     valid = await anyio.to_thread.run_sync(
         verify_password, person.hashed_password if person else _dummy_hash, password
     )
     if person is None or not valid:
         raise DomainError("Username yoki parol noto‘g‘ri", 401)
-    return await deliver_challenge(session, person, portal, OTPPurpose.LOGIN, settings, sender)
+    return await deliver_challenge(
+        session, person, portal, OTPPurpose.LOGIN, settings, sender, store
+    )
 
 
 async def verify_challenge(
     session: AsyncSession,
     settings: Settings,
+    store: OTPStore,
     challenge_id: uuid.UUID,
     code: str,
     portal: Portal,
     purpose: OTPPurpose,
-) -> tuple[OTPChallenge, Staff]:
-    owner = await session.scalar(
-        select(OTPChallenge.staff_id).where(OTPChallenge.id == challenge_id)
+) -> Staff:
+    """Atomically consume the Redis challenge; a correct code works exactly once."""
+    result = await store.verify(
+        challenge_id=challenge_id,
+        portal=portal,
+        purpose=purpose,
+        code_hash=code_hash(settings, challenge_id, purpose, code),
     )
-    person = await session.scalar(select(Staff).where(Staff.id == owner).with_for_update())
-    challenge = await session.scalar(
-        select(OTPChallenge)
-        .where(
-            OTPChallenge.id == challenge_id,
-        )
+    if result.verdict is OTPVerdict.MISMATCH:
+        raise DomainError("Tasdiqlash kodi noto‘g‘ri", 401)
+    if result.verdict is not OTPVerdict.OK or result.staff_id is None:
+        raise DomainError("Tasdiqlash kodi yaroqsiz yoki muddati tugagan", 401)
+    person = await session.scalar(
+        select(Staff)
+        .where(Staff.id == result.staff_id)
         .with_for_update()
         .execution_options(populate_existing=True)
     )
-    if (
-        challenge is None
-        or challenge.portal != portal
-        or challenge.purpose != purpose
-        or challenge.delivered_at is None
-        or challenge.consumed_at is not None
-        or challenge.expires_at <= datetime.now(UTC)
-        or challenge.attempts >= 5
-    ):
-        raise DomainError("Tasdiqlash kodi yaroqsiz yoki muddati tugagan", 401)
-    if not hmac.compare_digest(challenge.code_hash, code_hash(settings, challenge, code)):
-        challenge.attempts += 1
-        await session.commit()
-        raise DomainError("Tasdiqlash kodi noto‘g‘ri", 401)
     if person is None:
         raise DomainError("Hisob topilmadi", 401)
     ensure_portal(person, portal)
     if person.telegram_id is None:
-        raise DomainError("Telegram hisob ulanmagan", 403)
-    return challenge, person
+        raise telegram_not_linked()
+    return person
 
 
 async def confirm_login(
     session: AsyncSession,
     settings: Settings,
+    store: OTPStore,
     challenge_id: uuid.UUID,
     code: str,
     portal: Portal,
 ) -> tuple[Staff, Tokens]:
-    challenge, person = await verify_challenge(
-        session, settings, challenge_id, code, portal, OTPPurpose.LOGIN
+    person = await verify_challenge(
+        session, settings, store, challenge_id, code, portal, OTPPurpose.LOGIN
     )
-    challenge.consumed_at = datetime.now(UTC)
     tokens = await issue_session(session, person, portal)
     await session.commit()
     return person, tokens

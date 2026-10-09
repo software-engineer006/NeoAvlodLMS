@@ -114,7 +114,7 @@ export const StudentsManagementView: React.FC<StudentsManagementViewProps> = ({ 
       if (err instanceof ApiError) {
         setError(err.detail);
       } else {
-        setError("Talabalar ro‘yxatini yuklashda xatolik yuz berdi");
+        setError("O‘quvchilar ro‘yxatini yuklashda xatolik yuz berdi");
       }
     } finally {
       setIsLoading(false);
@@ -153,7 +153,7 @@ export const StudentsManagementView: React.FC<StudentsManagementViewProps> = ({ 
       if (err instanceof ApiError) {
         setError(err.detail);
       } else {
-        setError("Talaba holatini o‘zgartirishda xatolik yuz berdi");
+        setError("O‘quvchi holatini o‘zgartirishda xatolik yuz berdi");
       }
     } finally {
       setTogglingId(null);
@@ -167,9 +167,9 @@ export const StudentsManagementView: React.FC<StudentsManagementViewProps> = ({ 
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Talabalar boshqaruvi</h1>
+          <h1 className="text-2xl font-bold text-slate-900">O‘quvchilar boshqaruvi</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Talabalar va ota-onalar hisoblari, Telegram ulanishlari hamda guruhlar taqsimoti
+            O‘quvchilar va ota-onalar hisoblari, Telegram ulanishlari hamda guruhlar taqsimoti
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -189,7 +189,7 @@ export const StudentsManagementView: React.FC<StudentsManagementViewProps> = ({ 
               onClick={handleOpenCreate}
               leftIcon={<UserPlus className="w-4 h-4" />}
             >
-              Yangi talaba
+              Yangi o‘quvchi
             </Button>
           )}
         </div>
@@ -230,8 +230,8 @@ export const StudentsManagementView: React.FC<StudentsManagementViewProps> = ({ 
               }}
               options={[
                 { value: "all", label: "Barcha holatlar" },
-                { value: "active", label: "Faol talabalar" },
-                { value: "inactive", label: "Nofaol talabalar" },
+                { value: "active", label: "Faol o‘quvchilar" },
+                { value: "inactive", label: "Nofaol o‘quvchilar" },
               ]}
             />
           </div>
@@ -247,20 +247,20 @@ export const StudentsManagementView: React.FC<StudentsManagementViewProps> = ({ 
 
       {/* Content */}
       {isLoading && students.length === 0 ? (
-        <LoadingState message="Talabalar ro‘yxati yuklanmoqda..." />
+        <LoadingState message="O‘quvchilar ro‘yxati yuklanmoqda..." />
       ) : error && students.length === 0 ? (
-        <ErrorState title="Talabalarni yuklab bo‘lmadi" message={error} onRetry={loadStudents} />
+        <ErrorState title="O‘quvchilarni yuklab bo‘lmadi" message={error} onRetry={loadStudents} />
       ) : students.length === 0 ? (
         <EmptyState
-          title="Talabalar topilmadi"
-          description="Filtrlarga mos keluvchi talabalar mavjud emas yoki ro‘yxat bo‘sh."
+          title="O‘quvchilar topilmadi"
+          description="Filtrlarga mos keluvchi o‘quvchilar mavjud emas yoki ro‘yxat bo‘sh."
         />
       ) : (
         <div className="space-y-4">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Talaba</TableHead>
+                <TableHead>O‘quvchi</TableHead>
                 <TableHead>Telefon & Telegram</TableHead>
                 <TableHead>Guruh</TableHead>
                 <TableHead>Ota-ona</TableHead>
@@ -270,31 +270,47 @@ export const StudentsManagementView: React.FC<StudentsManagementViewProps> = ({ 
             </TableHeader>
             <TableBody>
               {students.map((student) => (
-                <TableRow key={student.id}>
+                <TableRow
+                  key={student.id}
+                  className="cursor-pointer hover:bg-slate-50/80 transition-colors"
+                  onClick={() => setDrawerStudentId(student.id)}
+                >
                   <TableCell>
-                    <div
-                      className="cursor-pointer hover:underline"
-                      onClick={() => setDrawerStudentId(student.id)}
+                    <button
+                      type="button"
+                      className="text-left focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-0.5 group"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDrawerStudentId(student.id);
+                      }}
                     >
-                      <div className="font-semibold text-slate-900">
+                      <div className="font-semibold text-slate-900 group-hover:text-blue-600 group-hover:underline">
                         {student.first_name} {student.last_name}
                       </div>
-                      <div className="text-xs text-slate-500">{student.age} yosh</div>
-                    </div>
+                      <div className="text-xs text-slate-500">{student.age == null ? (student.school_grade ?? "Yosh kiritilmagan") : `${student.age} yosh`}</div>
+                    </button>
                   </TableCell>
 
                   <TableCell>
                     <div className="text-xs space-y-1">
-                      <div className="font-mono text-slate-700">{student.phone}</div>
-                      {student.telegram_connected ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-medium">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Ulangan
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-[11px] text-slate-400">
-                          <XCircle className="w-3.5 h-3.5" /> Ulanmagan
-                        </span>
-                      )}
+                      <a
+                        href={student.phone ? `tel:${student.phone}` : undefined}
+                        onClick={(e) => e.stopPropagation()}
+                        className="font-mono text-slate-700 hover:text-blue-600"
+                      >
+                        {student.phone ?? "Kiritilmagan"}
+                      </a>
+                      <div>
+                        {student.telegram_connected ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-medium">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Ulangan
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-slate-400">
+                            <XCircle className="w-3.5 h-3.5" /> Ulanmagan
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </TableCell>
 
@@ -307,11 +323,17 @@ export const StudentsManagementView: React.FC<StudentsManagementViewProps> = ({ 
                   <TableCell>
                     <div className="text-xs">
                       <div className="font-medium text-slate-900">
-                        {student.parent.first_name} {student.parent.last_name}
+                        {student.parent?.first_name ?? "Kiritilmagan"} {student.parent?.last_name}
                       </div>
-                      <div className="font-mono text-slate-500 mt-0.5">{student.parent.phone}</div>
+                      <a
+                        href={student.parent?.phone ? `tel:${student.parent.phone}` : undefined}
+                        onClick={(e) => e.stopPropagation()}
+                        className="font-mono text-slate-500 hover:text-blue-600 block mt-0.5"
+                      >
+                        {student.parent?.phone ?? "Kiritilmagan"}
+                      </a>
                       <div className="mt-0.5">
-                        {student.parent.telegram_connected ? (
+                        {student.parent?.telegram_connected ? (
                           <span className="text-[11px] text-emerald-700 font-medium flex items-center gap-1">
                             <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Botga ulangan
                           </span>
@@ -332,13 +354,16 @@ export const StudentsManagementView: React.FC<StudentsManagementViewProps> = ({ 
                     )}
                   </TableCell>
 
-                  <TableCell className="text-right">
+                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-1.5">
                       <Button
                         variant="ghost"
                         size="sm"
                         title="Batafsil ma’lumot"
-                        onClick={() => setDrawerStudentId(student.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDrawerStudentId(student.id);
+                        }}
                         className="px-2"
                       >
                         <Eye className="w-4 h-4 text-slate-600" />
@@ -350,7 +375,10 @@ export const StudentsManagementView: React.FC<StudentsManagementViewProps> = ({ 
                             variant="ghost"
                             size="sm"
                             title="Guruhni ko‘chirish"
-                            onClick={() => handleOpenTransfer(student)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenTransfer(student);
+                            }}
                             className="px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
                           >
                             <ArrowRightLeft className="w-4 h-4" />
@@ -360,7 +388,10 @@ export const StudentsManagementView: React.FC<StudentsManagementViewProps> = ({ 
                             variant="ghost"
                             size="sm"
                             title="Tahrirlash"
-                            onClick={() => handleOpenEdit(student)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenEdit(student);
+                            }}
                             className="px-2 text-slate-600 hover:text-slate-800"
                           >
                             <Edit2 className="w-4 h-4" />
@@ -370,7 +401,10 @@ export const StudentsManagementView: React.FC<StudentsManagementViewProps> = ({ 
                             variant="ghost"
                             size="sm"
                             title={student.status === "active" ? "Nofaol qilish" : "Faollashtirish"}
-                            onClick={() => handleToggleStatus(student)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleStatus(student);
+                            }}
                             isLoading={togglingId === student.id}
                             className={`px-2 ${
                               student.status === "active"
@@ -396,7 +430,7 @@ export const StudentsManagementView: React.FC<StudentsManagementViewProps> = ({ 
           {/* Pagination */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-1 py-2 text-xs text-slate-600">
             <div>
-              Jami: <span className="font-semibold text-slate-900">{total}</span> ta talaba
+              Jami: <span className="font-semibold text-slate-900">{total}</span> ta o‘quvchi
               {totalPages > 1 && (
                 <span>
                   {" "}(Sahifa: {page} / {totalPages})
