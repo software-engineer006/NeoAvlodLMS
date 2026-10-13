@@ -79,6 +79,23 @@ export const BotSettingsView: React.FC<BotSettingsViewProps> = ({ currentUser })
     loadSettings();
   }, [loadSettings]);
 
+  useEffect(() => {
+    if (!settings?.configured || (settings.worker_ready && !settings.reload_in_progress)) return;
+    let cancelled = false;
+    let inFlight = false;
+    const timer = window.setInterval(async () => {
+      if (inFlight) return;
+      inFlight = true;
+      try {
+        const current = await apiClient.get<BotSettingsItem>("/api/v1/admin/settings/bot");
+        if (!cancelled) setSettings((previous) => !previous || current.version >= previous.version ? current : previous);
+      } catch {
+        // Keep the saved configuration visible during temporary connection loss.
+      } finally { inFlight = false; }
+    }, 2000);
+    return () => { cancelled = true; window.clearInterval(timer); };
+  }, [settings?.configured, settings?.worker_ready, settings?.reload_in_progress]);
+
   const handleOpenConfirm = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newToken.trim()) {
@@ -99,6 +116,7 @@ export const BotSettingsView: React.FC<BotSettingsViewProps> = ({ currentUser })
       };
       const updated = await apiClient.post<BotSettingsItem>("/api/v1/admin/settings/bot", payload);
       setSettings(updated);
+      setBotUsernameInput(updated.bot_username || "");
       setNewToken("");
       setShowToken(false);
       setIsConfirmModalOpen(false);
@@ -130,6 +148,7 @@ export const BotSettingsView: React.FC<BotSettingsViewProps> = ({ currentUser })
         { bot_username: botUsernameInput.trim() }
       );
       setSettings(updated);
+      setBotUsernameInput(updated.bot_username || "");
       setSuccessMessage("Bot foydalanuvchi nomi muvaffaqiyatli saqlandi!");
     } catch (err) {
       if (err instanceof ApiError) {
@@ -234,14 +253,20 @@ export const BotSettingsView: React.FC<BotSettingsViewProps> = ({ currentUser })
                       <Badge variant="warning" className="gap-1 animate-pulse">
                         <RefreshCw className="w-3 h-3 animate-spin" /> Qayta yuklanmoqda...
                       </Badge>
-                    ) : (
+                    ) : settings.worker_ready ? (
                       <Badge variant="success" className="gap-1">
                         <CheckCircle2 className="w-3 h-3" /> Sinxronlashtirilgan
                       </Badge>
-                    )}
+                    ) : <Badge variant="warning">Worker hali tayyor emas</Badge>}
                   </div>
                 </div>
               </div>
+
+              {!!settings.reconnect_required && <Alert variant="info" title="Yangi botga ulanish kerak">
+                {settings.reconnect_required} ta hisob yangi botga qayta ulanishi kerak.
+                Xodimlar va ota-onalar uchun yangi havolani ochib, Telegramda Start tugmasini bosing.
+                Bir botning faqat nomi yoki tokeni yangilansa, qayta ulanish talab qilinmaydi.
+              </Alert>}
 
               {settings.last_error && (
                 <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg space-y-1">
@@ -276,14 +301,14 @@ export const BotSettingsView: React.FC<BotSettingsViewProps> = ({ currentUser })
                   value={botUsernameInput}
                   onChange={(e) => setBotUsernameInput(e.target.value)}
                   disabled={isUpdatingUsername}
-                  helperText="BotFather da yaratilgan bot nomi (@ belgisi bilan yoki belgisisiz)"
+                  helperText="Amaldagi token botining nomi tekshiriladi. Boshqa botga o‘tish uchun uning tokenini kiriting."
                 />
 
                 <div className="flex items-center justify-end pt-2">
                   <Button
                     type="submit"
                     variant="primary"
-                    disabled={!botUsernameInput.trim() || isUpdatingUsername}
+                    disabled={!settings.configured || !botUsernameInput.trim() || isUpdatingUsername}
                     isLoading={isUpdatingUsername}
                     leftIcon={<Save className="w-4 h-4" />}
                   >
@@ -394,7 +419,8 @@ export const BotSettingsView: React.FC<BotSettingsViewProps> = ({ currentUser })
             <li>Faol Telegram worker jarayoniga yangi konfiguratsiyani qayta yuklash buyrug‘ini beradi</li>
           </ul>
           <p className="text-xs text-amber-600 font-medium">
-            Agar token noto‘g‘ri kiritilsa, bot xabarnomalari to‘xtab qolishi mumkin.
+            Noto‘g‘ri token saqlanmaydi, amaldagi bot o‘zgarishsiz qoladi.
+            Boshqa botga o‘tilsa, avval ulangan xodimlar va ota-onalar yangi havola orqali Start bosishi kerak.
           </p>
         </div>
       </Modal>

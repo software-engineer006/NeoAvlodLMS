@@ -10,6 +10,8 @@ export const PERMISSIONS = {
   STUDENTS_CREATE: "students:create",
   STUDENTS_EDIT: "students:edit",
   ATTENDANCE_READ: "attendance:read",
+  ATTENDANCE_WRITE: "attendance:write",
+  MESSAGES_SEND: "messages:send",
 } as const;
 
 export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -21,7 +23,7 @@ export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
  * - Admin has only permissions explicitly present in user.permissions.
  */
 export function hasPermission(user: CurrentUser | null, permission: string): boolean {
-  if (!user || user.status !== "active") {
+  if (!user || user.status !== "active" || !Object.values(PERMISSIONS).includes(permission as PermissionKey)) {
     return false;
   }
   if (user.role === "superadmin") {
@@ -30,7 +32,12 @@ export function hasPermission(user: CurrentUser | null, permission: string): boo
   if (user.role === "teacher") {
     return false;
   }
-  return user.permissions.includes(permission) || user.permissions.includes("*");
+  const dependencies: Record<string, string[]> = {
+    [PERMISSIONS.GROUPS_READ]: [PERMISSIONS.GROUPS_CREATE, PERMISSIONS.GROUPS_EDIT],
+    [PERMISSIONS.STUDENTS_READ]: [PERMISSIONS.STUDENTS_CREATE, PERMISSIONS.STUDENTS_EDIT],
+    [PERMISSIONS.ATTENDANCE_READ]: [PERMISSIONS.ATTENDANCE_WRITE],
+  };
+  return user.permissions.includes(permission) || (dependencies[permission] ?? []).some((write) => user.permissions.includes(write));
 }
 
 /**

@@ -6,7 +6,9 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./admin-guide": "./src/guide/AdminGuideView.tsx",
+    "./teacher-guide": "./src/guide/TeacherGuideView.tsx"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

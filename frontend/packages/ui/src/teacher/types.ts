@@ -69,6 +69,9 @@ export interface TeacherAttendanceSheet {
   date: string;
   finalized: boolean;
   finalized_at: string | null;
+  can_edit: boolean;
+  edit_deadline: string | null;
+  edit_disabled_reason: string | null;
   items: TeacherAttendanceEntry[];
 }
 

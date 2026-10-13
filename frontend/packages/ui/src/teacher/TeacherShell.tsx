@@ -11,6 +11,7 @@ import {
   Menu,
   X,
   UserCheck,
+  BookOpenCheck,
 } from "lucide-react";
 
 export interface TeacherNavItemConfig {
@@ -31,6 +32,7 @@ export const TEACHER_NAV_ITEMS: TeacherNavItemConfig[] = [
     icon: CalendarCheck,
   },
   { id: "history", label: "Davomat tarixi", icon: CalendarCheck },
+  { id: "guide", label: "Qo‘llanma", icon: BookOpenCheck },
 ];
 
 export interface TeacherShellProps {
@@ -81,7 +83,7 @@ export const TeacherShell: React.FC<TeacherShellProps> = ({
       >
         {/* Brand header */}
         <div className="h-16 px-6 flex items-center justify-between border-b border-slate-800">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <NeoAvlodLogo portal="teacher" variant="badge" size="sm" />
             <div>
               <span className="font-bold text-white tracking-tight text-sm">NeoAvlod LMS</span>
@@ -179,15 +181,15 @@ export const TeacherShell: React.FC<TeacherShellProps> = ({
             >
               <Menu className="w-6 h-6" />
             </button>
-            <div className="flex items-center gap-2">
-              <NeoAvlodLogo portal="teacher" variant="badge" size="xs" className="lg:hidden" />
-              <h1 className="text-lg font-bold text-slate-900 tracking-tight">
+            <div className="flex items-center gap-2 min-w-0">
+              <NeoAvlodLogo portal="teacher" variant="badge" size="xs" className="hidden sm:block lg:hidden" />
+              <h1 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight truncate">
                 {currentItem?.label || "O‘qituvchi boshqaruvi"}
               </h1>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <div className="hidden sm:flex items-center gap-2">
               <span className="text-xs text-slate-500 font-medium">{user.phone ?? "Kiritilmagan"}</span>
               <div className="h-3.5 w-px bg-slate-200" />
@@ -224,8 +226,8 @@ export const TeacherShell: React.FC<TeacherShellProps> = ({
                     {initials || <UserCheck className="w-4 h-4" />}
                   </div>
                 )}
-                <div className="hidden sm:block">
-                  <span className="block text-xs font-semibold text-slate-800 leading-tight">
+                <div className="hidden sm:block min-w-0 max-w-40">
+                  <span className="block text-xs font-semibold text-slate-800 leading-tight truncate">
                     {user.first_name} {user.last_name}
                   </span>
                   <span className="block text-[10px] text-slate-500 font-medium">Profilim</span>

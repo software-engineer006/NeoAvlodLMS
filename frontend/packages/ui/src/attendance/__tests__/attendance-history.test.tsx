@@ -116,8 +116,8 @@ describe("Admin Attendance History (Task 032)", () => {
   describe("AdminAttendanceView Component", () => {
     it("fetches and renders attendance records in readonly table with stats", async () => {
       vi.spyOn(apiClient, "get").mockImplementation((url: string) => {
-        if (url.includes("/api/v1/admin/groups")) {
-          return Promise.resolve({ items: sampleGroups, total: 1, page: 1, page_size: 10 });
+        if (url === "/api/v1/admin/attendance/groups") {
+          return Promise.resolve(sampleGroups);
         }
         if (url.includes("/api/v1/admin/staff")) {
           return Promise.resolve({
@@ -150,7 +150,7 @@ describe("Admin Attendance History (Task 032)", () => {
       render(<AdminAttendanceView currentUser={adminUser} defaultTab="list" />);
 
       await waitFor(() => {
-        expect(screen.getByText("Davomat tarixi")).toBeDefined();
+        expect(screen.getByText("Davomat")).toBeDefined();
         expect(screen.getByText("Jasur Bekmurodov")).toBeDefined();
         expect(screen.getByText("Kamola Ismoilova")).toBeDefined();
         expect(screen.getByText("Sardor Aliyev")).toBeDefined();
@@ -181,6 +181,7 @@ describe("Admin Attendance History (Task 032)", () => {
 
     it("handles filters and reset filters button", async () => {
       const getSpy = vi.spyOn(apiClient, "get").mockImplementation((url: string) => {
+        if (url === "/api/v1/admin/attendance/groups") return Promise.resolve(sampleGroups);
         if (url.includes("/api/v1/admin/attendance")) {
           return Promise.resolve({
             items: [sampleRecords[0]],

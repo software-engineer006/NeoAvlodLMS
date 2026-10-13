@@ -14,6 +14,7 @@ import {
   MonthlyAttendanceHistoryView,
   useAuth,
 } from "@neoavlod/ui";
+import { TeacherGuideView } from "@neoavlod/ui/teacher-guide";
 import type { TeacherGroupItem } from "@neoavlod/ui";
 
 const TeacherMainApp: React.FC = () => {
@@ -79,6 +80,7 @@ const TeacherMainApp: React.FC = () => {
         {activeTab === "history" && (
           <MonthlyAttendanceHistoryView portal="teacher" initialGroupId={selectedGroup?.id} currentUser={user} />
         )}
+        {activeTab === "guide" && <TeacherGuideView currentUser={user} onNavigate={handleTabChange} />}
 
         {/* Password Change Modal */}
         <PasswordChangeModal

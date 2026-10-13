@@ -59,6 +59,17 @@ describe("Admin Shell & Permission Routing (Task 028)", () => {
       expect(hasPermission(teacherUser, PERMISSIONS.GROUPS_READ)).toBe(false);
       expect(canManageBot(teacherUser)).toBe(false);
     });
+    it("matches server write/read dependencies, rejects wildcard and never grants bot to full admin", () => {
+      const admin = { ...limitedAdminUser, permissions: [PERMISSIONS.GROUPS_CREATE, PERMISSIONS.STUDENTS_EDIT, PERMISSIONS.ATTENDANCE_WRITE] };
+      expect(hasPermission(admin, PERMISSIONS.GROUPS_READ)).toBe(true);
+      expect(hasPermission(admin, PERMISSIONS.STUDENTS_READ)).toBe(true);
+      expect(hasPermission(admin, PERMISSIONS.ATTENDANCE_READ)).toBe(true);
+      expect(hasPermission(admin, PERMISSIONS.STAFF_MANAGE)).toBe(false);
+      expect(hasPermission({ ...admin, permissions: ["*"] }, PERMISSIONS.GROUPS_READ)).toBe(false);
+      expect(hasPermission({ ...admin, permissions: Object.values(PERMISSIONS) }, PERMISSIONS.MESSAGES_SEND)).toBe(true);
+      expect(canManageBot({ ...admin, permissions: Object.values(PERMISSIONS) })).toBe(false);
+      expect(hasPermission(superadminUser, "unknown:permission")).toBe(false);
+    });
   });
 
   describe("Teacher 403 Forbidden Page", () => {
@@ -98,7 +109,8 @@ describe("Admin Shell & Permission Routing (Task 028)", () => {
       expect(screen.getByRole("button", { name: /Fanlar/i })).not.toBeNull();
       expect(screen.getByRole("button", { name: /Guruhlar/i })).not.toBeNull();
       expect(screen.getByRole("button", { name: /O‘quvchilar/i })).not.toBeNull();
-      expect(screen.getByRole("button", { name: /Davomat tarixi/i })).not.toBeNull();
+      expect(screen.getByRole("button", { name: /^Davomat$/i })).not.toBeNull();
+      expect(screen.getByRole("button", { name: /^Xabarlar$/i })).not.toBeNull();
       expect(screen.getByRole("button", { name: /Bot sozlamalari/i })).not.toBeNull();
     });
 
@@ -126,6 +138,7 @@ describe("Admin Shell & Permission Routing (Task 028)", () => {
       expect(screen.queryByRole("button", { name: /Fanlar/i })).toBeNull();
       expect(screen.queryByRole("button", { name: /Guruhlar/i })).toBeNull();
       expect(screen.queryByRole("button", { name: /Bot sozlamalari/i })).toBeNull();
+      expect(screen.queryByRole("button", { name: /^Xabarlar$/i })).toBeNull();
     });
 
     it("blocks unauthorized tab access and displays warning", () => {

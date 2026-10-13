@@ -2,9 +2,15 @@ import uuid
 from datetime import date, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict
 
+from neoavlod.api.attendance_schemas import (
+    AttendanceChangesOut,
+    AttendanceSheetOut,
+    DraftSaveIn,
+    FinalizeIn,
+)
 from neoavlod.api.deps import SessionDependency, require_permission
 from neoavlod.models import AttendanceStatus
 from neoavlod.security.rbac import Permission
@@ -13,6 +19,138 @@ from neoavlod.services import attendance as service
 
 router = APIRouter(prefix="/api/v1/admin/attendance", tags=["admin-attendance"])
 AttendanceReader = Annotated[Identity, Depends(require_permission(Permission.ATTENDANCE_READ))]
+AttendanceWriter = Annotated[
+    Identity, Depends(require_permission(Permission.ATTENDANCE_READ, Permission.ATTENDANCE_WRITE))
+]
+
+
+class AttendanceGroupOut(BaseModel):
+    id: uuid.UUID
+    name: str
+    teacher_id: uuid.UUID
+    teacher_name: str
+    days_of_week: list[int]
+
+
+@router.get("/pending", response_model=list[AttendanceGroupOut])
+async def pending_attendance(
+    _: AttendanceReader,
+    session: SessionDependency,
+    target_date: Annotated[date, Query(alias="date")],
+) -> list[AttendanceGroupOut]:
+    return [
+        AttendanceGroupOut.model_validate(row)
+        for row in await service.attendance_groups(session, pending_date=target_date)
+    ]
+
+
+@router.get("/groups", response_model=list[AttendanceGroupOut])
+async def attendance_groups(
+    _: AttendanceReader,
+    session: SessionDependency,
+) -> list[AttendanceGroupOut]:
+    return [
+        AttendanceGroupOut.model_validate(row) for row in await service.attendance_groups(session)
+    ]
+
+
+@router.get("/groups/{group_id}/attendance", response_model=AttendanceSheetOut)
+async def attendance_sheet(
+    group_id: uuid.UUID,
+    actor: AttendanceReader,
+    session: SessionDependency,
+    target_date: Annotated[date, Query(alias="date")],
+) -> AttendanceSheetOut:
+    return AttendanceSheetOut.model_validate(
+        await service.get_attendance_sheet(session, actor, group_id, target_date)
+    )
+
+
+@router.post("/groups/{group_id}/attendance/draft", response_model=AttendanceSheetOut)
+async def save_draft(
+    group_id: uuid.UUID,
+    body: DraftSaveIn,
+    actor: AttendanceWriter,
+    session: SessionDependency,
+) -> AttendanceSheetOut:
+    return AttendanceSheetOut.model_validate(
+        await service.save_attendance_draft(
+            session,
+            actor,
+            group_id,
+            body.date,
+            [service.DraftItem(i.student_id, i.status, i.note) for i in body.items],
+            body.reason,
+        )
+    )
+
+
+@router.post("/groups/{group_id}/attendance/finalize", response_model=AttendanceSheetOut)
+async def finalize(
+    group_id: uuid.UUID,
+    body: FinalizeIn,
+    actor: AttendanceWriter,
+    session: SessionDependency,
+    background_tasks: BackgroundTasks,
+    request: Request,
+) -> AttendanceSheetOut:
+    sheet = await service.finalize_attendance(
+        session,
+        actor,
+        group_id,
+        body.date,
+        [service.DraftItem(i.student_id, i.status, i.note) for i in body.items]
+        if body.items is not None
+        else None,
+        body.reason,
+    )
+    background_tasks.add_task(
+        service.dispatch_pending_outbox_stub,
+        request.app.state.database,
+        getattr(request.app.state, "telegram_transport", None),
+    )
+    return AttendanceSheetOut.model_validate(sheet)
+
+
+@router.post("/groups/{group_id}/attendance/correct", response_model=AttendanceSheetOut)
+async def correct(
+    group_id: uuid.UUID,
+    body: DraftSaveIn,
+    actor: AttendanceWriter,
+    session: SessionDependency,
+    background_tasks: BackgroundTasks,
+    request: Request,
+) -> AttendanceSheetOut:
+    sheet = await service.correct_attendance(
+        session,
+        actor,
+        group_id,
+        body.date,
+        [service.DraftItem(i.student_id, i.status, i.note) for i in body.items],
+        body.reason,
+    )
+    background_tasks.add_task(
+        service.dispatch_pending_outbox_stub,
+        request.app.state.database,
+        getattr(request.app.state, "telegram_transport", None),
+    )
+    return AttendanceSheetOut.model_validate(sheet)
+
+
+@router.get("/groups/{group_id}/attendance/changes", response_model=AttendanceChangesOut)
+async def changes(
+    group_id: uuid.UUID,
+    actor: AttendanceReader,
+    session: SessionDependency,
+    target_date: Annotated[date, Query(alias="date")],
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(ge=1, le=100)] = 20,
+) -> AttendanceChangesOut:
+    return AttendanceChangesOut.model_validate(
+        await service.list_attendance_changes(
+            session, actor, group_id, target_date, page=page, page_size=page_size
+        )
+    )
 
 
 class AdminAttendanceOut(BaseModel):
@@ -140,9 +278,7 @@ async def get_attendance_history(
     month: Annotated[str | None, Query(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")] = None,
 ) -> GroupMonthlyAttendanceHistoryOut:
     target_month = month or datetime.now().strftime("%Y-%m")
-    history = await service.get_group_monthly_attendance_history(
-        session, group_id, target_month
-    )
+    history = await service.get_group_monthly_attendance_history(session, group_id, target_month)
     return GroupMonthlyAttendanceHistoryOut.model_validate(history)
 
 
@@ -154,7 +290,5 @@ async def get_group_attendance_history(
     month: Annotated[str | None, Query(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")] = None,
 ) -> GroupMonthlyAttendanceHistoryOut:
     target_month = month or datetime.now().strftime("%Y-%m")
-    history = await service.get_group_monthly_attendance_history(
-        session, group_id, target_month
-    )
+    history = await service.get_group_monthly_attendance_history(session, group_id, target_month)
     return GroupMonthlyAttendanceHistoryOut.model_validate(history)

@@ -13,6 +13,16 @@ const history: GroupMonthlyAttendanceHistoryResponse = {
 };
 beforeEach(() => vi.restoreAllMocks());
 describe("Monthly attendance", () => {
+  it("loads admin groups using attendance permission and avoids a forbidden fallback while supplied groups load", async () => {
+    const get = vi.spyOn(apiClient, "get").mockImplementation(async (path) => path.endsWith("/attendance/groups") ? groups : history);
+    const view = render(<MonthlyAttendanceHistoryView portal="admin" groups={[]} initialMonth="2026-10" />);
+    expect(get).not.toHaveBeenCalled();
+    view.unmount();
+    render(<MonthlyAttendanceHistoryView portal="admin" initialMonth="2026-10" />);
+    await screen.findByText("Test Student");
+    expect(get).toHaveBeenCalledWith("/api/v1/admin/attendance/groups");
+    expect(get.mock.calls.every(([path]) => path !== "/api/v1/admin/groups")).toBe(true);
+  });
   it("shows the whole month, notes, neutral gaps and denies unauthorized profile", async () => {
     const get = vi.spyOn(apiClient, "get").mockResolvedValue(history);
     render(<MonthlyAttendanceHistoryView portal="admin" groups={groups} initialGroupId="g1" initialMonth="2026-10" />);

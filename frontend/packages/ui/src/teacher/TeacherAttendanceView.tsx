@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import type {
   TeacherGroupItem,
   TeacherAttendanceSheet,
@@ -6,6 +6,7 @@ import type {
   TeacherDraftItemIn,
 } from "./types";
 import { apiClient } from "../api/client";
+import { AttendanceChangesView } from "../attendance/AttendanceChangesView";
 import { Button } from "../components/Button";
 import { Card, CardContent } from "../components/Card";
 import { Input } from "../components/Input";
@@ -38,9 +39,16 @@ import {
 export interface TeacherAttendanceViewProps {
   preselectedGroupId?: string;
   initialDate?: string;
-  groups?: TeacherGroupItem[];
+  groups?: AttendanceGroupOption[];
+  portal?: "teacher" | "admin";
   onSelectGroupChange?: (groupId: string) => void;
 }
+
+export type AttendanceGroupOption = Pick<TeacherGroupItem, "id" | "name"> & {
+  subject?: TeacherGroupItem["subject"];
+  teacher_id?: string;
+  teacher_name?: string;
+};
 
 interface LocalEntryState {
   student_id: string;
@@ -55,19 +63,36 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
   initialDate,
   groups: initialGroups,
   onSelectGroupChange,
+  portal = "teacher",
 }) => {
-  const [groups, setGroups] = useState<TeacherGroupItem[]>(initialGroups || []);
+  const [groups, setGroups] = useState<AttendanceGroupOption[]>(initialGroups || []);
+  const apiBase = portal === "admin" ? "/api/v1/admin/attendance" : "/api/v1/teacher";
+  const [reason, setReason] = useState("");
+  const [revision, setRevision] = useState(0);
+  const [pendingGroups, setPendingGroups] = useState<AttendanceGroupOption[]>([]);
+  const [pendingError, setPendingError] = useState<string | null>(null);
+  const [pendingLoading, setPendingLoading] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState<string>(preselectedGroupId || "");
 
   const todayStr = useMemo(() => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Tashkent", year: "numeric", month: "2-digit", day: "2-digit",
+    }).format(new Date());
   }, []);
 
   const [date, setDate] = useState<string>(initialDate || todayStr);
+  useEffect(() => {
+    if (portal !== "admin") return;
+    let cancelled = false;
+    setPendingGroups([]);
+    setPendingLoading(true);
+    setPendingError(null);
+    apiClient.get<AttendanceGroupOption[]>(`${apiBase}/pending?date=${date}`)
+      .then((data) => { if (!cancelled) setPendingGroups(data); })
+      .catch((err) => { if (!cancelled) setPendingError(err instanceof Error ? err.message : "Darslarni yuklab bo‘lmadi"); })
+      .finally(() => { if (!cancelled) setPendingLoading(false); });
+    return () => { cancelled = true; };
+  }, [portal, apiBase, date, revision]);
   const [sheet, setSheet] = useState<TeacherAttendanceSheet | null>(null);
   const [entries, setEntries] = useState<Record<string, LocalEntryState>>({});
   const [initialEntriesSnapshot, setInitialEntriesSnapshot] = useState<string>("");
@@ -76,6 +101,26 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
   const [isLoadingSheet, setIsLoadingSheet] = useState<boolean>(false);
   const [isSavingDraft, setIsSavingDraft] = useState<boolean>(false);
   const [isFinalizing, setIsFinalizing] = useState<boolean>(false);
+  const [deadlineExpired, setDeadlineExpired] = useState(false);
+  const sheetRequest = useRef(0);
+  const canEdit = sheet?.can_edit === true && !deadlineExpired && !isLoadingSheet
+    && sheet.group_id === selectedGroupId && sheet.date === date;
+  const controlsDisabled = !canEdit || isSavingDraft || isFinalizing;
+  const deadlineLabel = sheet?.edit_deadline ? new Intl.DateTimeFormat("uz-UZ", {
+    timeZone: "Asia/Tashkent", dateStyle: "medium", timeStyle: "short",
+  }).format(new Date(sheet.edit_deadline)) : "";
+
+  useEffect(() => {
+    setDeadlineExpired(false);
+    if (!sheet?.can_edit || !sheet.edit_deadline) return;
+    const remaining = new Date(sheet.edit_deadline).getTime() - Date.now();
+    if (remaining <= 0) {
+      setDeadlineExpired(true);
+      return;
+    }
+    const timer = window.setTimeout(() => setDeadlineExpired(true), Math.min(remaining + 1, 2147483647));
+    return () => window.clearTimeout(timer);
+  }, [sheet]);
 
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -90,16 +135,30 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
   } | null>(null);
 
   const isDirty = useMemo(() => {
-    if (sheet?.finalized) return false;
     if (!initialEntriesSnapshot) return false;
     return JSON.stringify(entries) !== initialEntriesSnapshot;
-  }, [entries, initialEntriesSnapshot, sheet?.finalized]);
+  }, [entries, initialEntriesSnapshot]);
+
+  const applySheet = useCallback((data: TeacherAttendanceSheet) => {
+    setSheet(data);
+    const localMap: Record<string, LocalEntryState> = {};
+    data.items.forEach((item) => {
+      localMap[item.student_id] = {
+        student_id: item.student_id, student_first_name: item.student_first_name,
+        student_last_name: item.student_last_name ?? "", status: item.status, note: item.note || "",
+      };
+    });
+    setEntries(localMap);
+    setInitialEntriesSnapshot(JSON.stringify(localMap));
+    setReason("");
+    setRevision((value) => value + 1);
+  }, []);
 
   // Fetch groups if not provided
   const fetchGroups = async () => {
     setIsLoadingGroups(true);
     try {
-      const data = await apiClient.get<TeacherGroupItem[]>("/api/v1/teacher/groups");
+      const data = await apiClient.get<AttendanceGroupOption[]>(`${apiBase}/groups`);
       setGroups(data);
       if (!selectedGroupId && data.length > 0) {
         const defaultId = preselectedGroupId || data[0].id;
@@ -126,6 +185,7 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
   // Fetch Attendance Sheet
   const fetchAttendanceSheet = useCallback(async (groupId: string, targetDate: string) => {
     if (!groupId || !targetDate) return;
+    const requestId = ++sheetRequest.current;
     setIsLoadingSheet(true);
     setError(null);
     setSuccessMessage(null);
@@ -133,28 +193,16 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
 
     try {
       const data = await apiClient.get<TeacherAttendanceSheet>(
-        `/api/v1/teacher/groups/${groupId}/attendance?date=${targetDate}`
+        `${apiBase}/groups/${groupId}/attendance?date=${targetDate}`
       );
-      setSheet(data);
-
-      const localMap: Record<string, LocalEntryState> = {};
-      data.items.forEach((item) => {
-        localMap[item.student_id] = {
-          student_id: item.student_id,
-          student_first_name: item.student_first_name,
-          student_last_name: item.student_last_name ?? "",
-          status: item.status,
-          note: item.note || "",
-        };
-      });
-      setEntries(localMap);
-      setInitialEntriesSnapshot(JSON.stringify(localMap));
+      if (requestId === sheetRequest.current) applySheet(data);
     } catch (err) {
+      if (requestId !== sheetRequest.current) return;
       setError(err instanceof Error ? err.message : "Davomat ma’lumotlarini yuklashda xatolik yuz berdi");
     } finally {
-      setIsLoadingSheet(false);
+      if (requestId === sheetRequest.current) setIsLoadingSheet(false);
     }
-  }, []);
+  }, [applySheet, apiBase]);
 
   useEffect(() => {
     if (selectedGroupId && date) {
@@ -211,7 +259,7 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
   };
 
   const handleStatusChange = (studentId: string, status: TeacherAttendanceStatus) => {
-    if (sheet?.finalized) return;
+    if (controlsDisabled) return;
     setEntries((prev) => {
       const existing = prev[studentId];
       if (!existing) return prev;
@@ -219,14 +267,14 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
         ...prev,
         [studentId]: {
           ...existing,
-          status: existing.status === status ? null : status,
+          status: existing.status === status && !sheet?.finalized ? null : status,
         },
       };
     });
   };
 
   const handleNoteChange = (studentId: string, note: string) => {
-    if (sheet?.finalized) return;
+    if (controlsDisabled) return;
     setEntries((prev) => {
       const existing = prev[studentId];
       if (!existing) return prev;
@@ -241,7 +289,7 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
   };
 
   const handleMarkAllPresent = () => {
-    if (sheet?.finalized) return;
+    if (controlsDisabled) return;
     setEntries((prev) => {
       const next = { ...prev };
       Object.keys(next).forEach((id) => {
@@ -264,9 +312,13 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
 
   // Save Draft
   const handleSaveDraft = async () => {
-    if (!selectedGroupId || isSavingDraft || isFinalizing || sheet?.finalized) return false;
+    if (!selectedGroupId || controlsDisabled) return false;
     setError(null);
     setSuccessMessage(null);
+    if (portal === "admin" && !reason.trim() && (sheet?.finalized || sheet?.items.some((item) => item.status !== null))) {
+      setError("Administrator tuzatish sababini kiritishi shart");
+      return false;
+    }
 
     const itemsToSave: TeacherDraftItemIn[] = Object.values(entries)
       .filter((e) => e.status !== null)
@@ -284,15 +336,17 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
     setIsSavingDraft(true);
     try {
       const updatedSheet = await apiClient.post<TeacherAttendanceSheet>(
-        `/api/v1/teacher/groups/${selectedGroupId}/attendance/draft`,
+        `${apiBase}/groups/${selectedGroupId}/attendance/${sheet?.finalized ? "correct" : "draft"}`,
         {
           date,
           items: itemsToSave,
+          ...(portal === "admin" ? { reason: reason.trim() || null } : {}),
         }
       );
-      setSheet(updatedSheet);
-      setInitialEntriesSnapshot(JSON.stringify(entries));
-      setSuccessMessage("Davomat qoralamasi muvaffaqiyatli saqlandi.");
+      applySheet(updatedSheet);
+      setSuccessMessage(sheet?.finalized
+        ? "Davomat tuzatishlari muvaffaqiyatli saqlandi."
+        : "Davomat qoralamasi muvaffaqiyatli saqlandi.");
       return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Qoralamani saqlashda xatolik yuz berdi");
@@ -317,6 +371,7 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
 
   // Open Finalize Dialog
   const handleOpenFinalizeModal = () => {
+    if (controlsDisabled || sheet?.finalized) return;
     setError(null);
     setValidationError(null);
 
@@ -330,7 +385,7 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
 
   // Finalize Attendance
   const handleConfirmFinalize = async () => {
-    if (!selectedGroupId || isFinalizing || isSavingDraft || counts.unmarked > 0) return;
+    if (!selectedGroupId || controlsDisabled || sheet?.finalized || counts.unmarked > 0) return;
     setError(null);
     setIsFinalizing(true);
 
@@ -342,14 +397,14 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
 
     try {
       const finalizedSheet = await apiClient.post<TeacherAttendanceSheet>(
-        `/api/v1/teacher/groups/${selectedGroupId}/attendance/finalize`,
+        `${apiBase}/groups/${selectedGroupId}/attendance/finalize`,
         {
           date,
           items: itemsToSubmit,
+          ...(portal === "admin" ? { reason: reason.trim() || null } : {}),
         }
       );
-      setSheet(finalizedSheet);
-      setInitialEntriesSnapshot(JSON.stringify(entries));
+      applySheet(finalizedSheet);
       setIsConfirmFinalizeOpen(false);
       setSuccessMessage(
         "Davomat muvaffaqiyatli yakunlandi! Ota-onalarga bildirishnomalar yuborish navbatiga qo‘yildi."
@@ -391,15 +446,15 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          {sheet?.finalized ? (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs font-semibold">
-              <Lock className="w-4 h-4 text-emerald-600" />
-              <span>Davomat yakunlangan (Readonly)</span>
-            </div>
-          ) : isDirty ? (
+          {isDirty ? (
             <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-xs font-medium">
               <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
               <span>Saqlanmagan o‘zgarishlar bor</span>
+            </div>
+          ) : sheet && !canEdit ? (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs font-semibold">
+              <Lock className="w-4 h-4 text-emerald-600" />
+              <span>Davomat faqat o‘qish rejimida</span>
             </div>
           ) : (
             <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-100 rounded-lg text-slate-600 text-xs font-medium">
@@ -420,7 +475,7 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
               onChange={(e) => handleGroupSelect(e.target.value)}
               options={groups.map((g) => ({
                 value: g.id,
-                label: `${g.name} (${g.subject?.name || "Fan yo‘q"})`,
+                label: `${g.name}${g.teacher_name ? ` — ${g.teacher_name}` : g.subject?.name ? ` (${g.subject.name})` : ""}`,
               }))}
             />
           </div>
@@ -448,6 +503,15 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
       </Card>
 
       {/* Alerts */}
+      {portal === "admin" && <Card className="p-4 space-y-3">
+        <h3 className="font-semibold text-slate-900">Davomat olinmagan darslar</h3>
+        <p className="text-xs text-slate-500">{date} sanasida jadval bo‘yicha darsi bor, davomati hali yakunlanmagan guruhlar.</p>
+        {pendingError ? <Alert variant="danger">{pendingError}</Alert> : pendingLoading ? <p>Darslar yuklanmoqda...</p> : pendingGroups.length ? <div className="flex flex-wrap gap-2">
+          {pendingGroups.map((group) => <Button key={group.id} variant="outline" disabled={isSavingDraft || isFinalizing}
+            onClick={() => handleGroupSelect(group.id)}>{group.name} — {group.teacher_name}</Button>)}
+        </div> : <p className="text-sm text-slate-500">Yakunlanmagan dars topilmadi.</p>}
+      </Card>}
+
       {error && (
         <Alert variant="danger" title="Xatolik" onDismiss={() => setError(null)}>
           {error}
@@ -460,12 +524,18 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
         </Alert>
       )}
 
-      {sheet?.finalized && (
-        <Alert variant="info" title="Davomat yakunlangan">
-          Ushbu sana (<strong>{date}</strong>) uchun davomat yakunlangan va ota-onalarga Telegram
-          bildirishnomalari yuborilgan. Ma’lumotlar faqat o‘qish rejimida ko‘rsatilmoqda.
+      {sheet && !isLoadingSheet && (
+        <Alert variant="info" title={canEdit ? "Davomatni tahrirlash mumkin" : "Davomat tahriri yopiq"}>
+          {canEdit ? <>
+            {sheet.finalized ? "Davomat yakunlangan. Status va izohni tuzatish mumkin. " : "Davomatni belgilash va yakunlash mumkin. "}
+            {sheet.edit_deadline ? <>Tahrirlash muddati: <strong>{deadlineLabel}</strong> (Toshkent vaqti).</> : "Administrator tuzatishlari sabab bilan tarixga saqlanadi."}
+          </> : (sheet.edit_disabled_reason || "Davomatni tahrirlash uchun 2 kunlik muddat tugagan")}
         </Alert>
       )}
+
+      {portal === "admin" && canEdit && <Input label="Tuzatish sababi" value={reason} maxLength={2000}
+        onChange={(event) => setReason(event.target.value)} disabled={controlsDisabled}
+        placeholder="Mavjud yozuvni o‘zgartirsangiz, sababini kiriting" />}
 
       {/* Summary Counts Card */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
@@ -532,7 +602,7 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
       ) : (
         <div className="space-y-4">
           {/* Quick Mark All Bar */}
-          {!sheet?.finalized && (
+          {canEdit && (
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 p-3 sm:p-4 rounded-xl border border-slate-200">
               <div className="text-xs text-slate-600">
                 <span className="font-semibold text-slate-800">Davomat holati: </span>
@@ -542,6 +612,7 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
                 variant="outline"
                 size="sm"
                 onClick={handleMarkAllPresent}
+                disabled={controlsDisabled}
                 leftIcon={<Check className="w-4 h-4 text-emerald-600" />}
                 className="self-start sm:self-auto"
               >
@@ -579,7 +650,7 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
                           {/* Keldi Button */}
                           <button
                             type="button"
-                            disabled={sheet?.finalized}
+                            disabled={controlsDisabled}
                             onClick={() => handleStatusChange(entry.student_id, "present")}
                             title="Keldi"
                             className={`px-3 sm:px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
@@ -595,7 +666,7 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
                           {/* Kech qoldi Button */}
                           <button
                             type="button"
-                            disabled={sheet?.finalized}
+                            disabled={controlsDisabled}
                             onClick={() => handleStatusChange(entry.student_id, "late")}
                             title="Kech qoldi"
                             className={`px-3 sm:px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
@@ -611,7 +682,7 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
                           {/* Kelmadi Button */}
                           <button
                             type="button"
-                            disabled={sheet?.finalized}
+                            disabled={controlsDisabled}
                             onClick={() => handleStatusChange(entry.student_id, "absent")}
                             title="Kelmadi"
                             className={`px-3 sm:px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
@@ -627,7 +698,7 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
                       </TableCell>
 
                       <TableCell>
-                        {sheet?.finalized ? (
+                        {!canEdit ? (
                           <span className="text-xs text-slate-600 italic">
                             {entry.note || "Izoh kiritilmagan"}
                           </span>
@@ -640,6 +711,7 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
                               handleNoteChange(entry.student_id, e.target.value)
                             }
                             maxLength={2000}
+                            disabled={controlsDisabled}
                           />
                         )}
                       </TableCell>
@@ -651,10 +723,12 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
           </div>
 
           {/* Action Bar */}
-          {!sheet?.finalized && (
+          {canEdit && (
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-white rounded-xl border border-slate-200 shadow-xs">
               <div className="text-xs text-slate-500">
-                {counts.unmarked > 0 ? (
+                {sheet?.finalized ? (
+                  <span>Status yoki izohni tuzatib, o‘zgarishlarni saqlang.</span>
+                ) : counts.unmarked > 0 ? (
                   <span className="text-amber-600 font-semibold flex items-center gap-1">
                     <AlertCircle className="w-4 h-4" />
                     Yakunlash uchun barcha o‘quvchilar belgilanishi shart ({counts.unmarked} nafar qoldi)
@@ -672,20 +746,20 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
                   variant="outline"
                   onClick={handleSaveDraft}
                   isLoading={isSavingDraft}
-                  disabled={isFinalizing || isSavingDraft}
+                  disabled={controlsDisabled || (sheet?.finalized && !isDirty)}
                   leftIcon={<Save className="w-4 h-4" />}
                 >
-                  Qoralama saqlash
+                  {sheet?.finalized ? "Tuzatishni saqlash" : "Qoralama saqlash"}
                 </Button>
 
-                <Button
+                {!sheet?.finalized && <Button
                   variant="primary"
                   onClick={handleOpenFinalizeModal}
-                  disabled={isFinalizing || isSavingDraft}
+                  disabled={controlsDisabled}
                   leftIcon={<CalendarCheck className="w-4 h-4" />}
                 >
                   Davomatni yakunlash
-                </Button>
+                </Button>}
               </div>
             </div>
           )}
@@ -693,6 +767,9 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
       )}
 
       {/* Confirmation Modal for Finalize */}
+      {sheet && !isLoadingSheet && <AttendanceChangesView key={`${selectedGroupId}/${date}`}
+        endpoint={`${apiBase}/groups/${selectedGroupId}/attendance/changes?date=${date}`} revision={revision} />}
+
       <Modal
         isOpen={isConfirmFinalizeOpen}
         onClose={() => setIsConfirmFinalizeOpen(false)}
@@ -726,14 +803,16 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
           ) : (
             <>
               <p className="text-sm text-slate-600 leading-relaxed">
-                Davomat yakunlangach, barcha ota-onalarga Telegram boti orqali farzandining
-                bugungi darsdagi ishtiroki haqida avtomatik xabar yuboriladi.
+                Davomat yakunlangach, botga ulangan ota-onalarga farzandining
+                darsdagi ishtiroki haqida Telegram xabari navbatga qo‘shiladi.
               </p>
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900 flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                 <span>
-                  <strong>Diqqat:</strong> Yakunlangandan so‘ng ushbu sana bo‘yicha davomatni
-                  o‘zgartirib bo‘lmaydi.
+                  {portal === "admin" ? "Administrator yakunlangan va eski sanalardagi davomatni sabab bilan tuzatishi mumkin. O‘zgarish audit tarixida saqlanadi." : <>
+                    Yakunlangandan keyin ham dars sanasidan keyingi 2-kun oxirigacha
+                    davomatni tuzatish mumkin. Tahrirlash muddati: {deadlineLabel} (Toshkent vaqti).
+                  </>}
                 </span>
               </div>
               <div className="grid grid-cols-3 gap-2 text-center text-xs pt-1">
@@ -800,12 +879,12 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
       >
         <div className="space-y-3">
           <p className="text-sm text-slate-600">
-            Siz davomatga kiritgan o‘zgarishlarni qoralama sifatida saqlamadingiz yoki yakunlamadingiz. Guruh yoki sanani almashtirsangiz, ushbu o‘zgarishlar yo‘qoladi.
+            Davomatdagi o‘zgarishlar hali saqlanmagan. Guruh yoki sanani almashtirsangiz, ushbu o‘zgarishlar yo‘qoladi.
           </p>
           <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900 flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
             <span>
-              Davom etishdan oldin o‘zgarishlarni qoralama sifatida saqlashni tavsiya qilamiz.
+              Davom etishdan oldin o‘zgarishlarni saqlang.
             </span>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import os
 from collections.abc import AsyncIterator, Iterator
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -8,6 +9,13 @@ from sqlalchemy.engine import make_url
 
 from neoavlod.database import Base, Database
 from neoavlod.settings import Settings
+
+
+@pytest.fixture
+def attendance_clock(monkeypatch: pytest.MonkeyPatch) -> None:
+    from neoavlod.services import attendance
+
+    monkeypatch.setattr(attendance, "attendance_now", lambda: datetime(2026, 10, 5, 10, tzinfo=UTC))
 
 
 @pytest.fixture

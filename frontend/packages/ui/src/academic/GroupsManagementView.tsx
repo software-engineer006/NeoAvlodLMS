@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import type { CurrentUser } from "../api/types";
-import type { GroupItem, GroupListResponse, SubjectItem } from "./types";
-import type { StaffItem } from "../staff/types";
+import type { GroupItem, GroupListResponse, GroupOptions } from "./types";
 import { formatDaysOfWeek, formatPrice, DAYS_OF_WEEK } from "./types";
 import { hasPermission, PERMISSIONS } from "../navigation/permissions";
 import { apiClient } from "../api/client";
@@ -55,8 +54,8 @@ export const GroupsManagementView: React.FC<GroupsManagementViewProps> = ({ curr
   const [dayFilter, setDayFilter] = useState<string>("all");
 
   // Options for dropdowns
-  const [subjects, setSubjects] = useState<SubjectItem[]>([]);
-  const [teachers, setTeachers] = useState<StaffItem[]>([]);
+  const [subjects, setSubjects] = useState<GroupOptions["subjects"]>([]);
+  const [teachers, setTeachers] = useState<GroupOptions["teachers"]>([]);
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -80,16 +79,9 @@ export const GroupsManagementView: React.FC<GroupsManagementViewProps> = ({ curr
   useEffect(() => {
     const loadFilterOptions = async () => {
       try {
-        const [subRes, staffRes] = await Promise.all([
-          apiClient.get<{ items: SubjectItem[] }>("/api/v1/admin/subjects", {
-            params: { page_size: 100 },
-          }),
-          apiClient.get<{ items: StaffItem[] }>("/api/v1/admin/staff", {
-            params: { page_size: 100, role: "teacher" },
-          }),
-        ]);
-        setSubjects(subRes.items);
-        setTeachers(staffRes.items);
+        const options = await apiClient.get<GroupOptions>("/api/v1/admin/lookups/group-options");
+        setSubjects(options.subjects);
+        setTeachers(options.teachers);
       } catch {
         // Soft fail on filter options
       }

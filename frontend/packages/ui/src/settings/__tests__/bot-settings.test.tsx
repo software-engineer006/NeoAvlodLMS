@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { BotSettingsView } from "../BotSettingsView";
 import type { CurrentUser } from "../../api/types";
 import type { BotSettingsItem } from "../types";
 import { apiClient } from "../../api/client";
+import { ApiError } from "../../api/errors";
 
 describe("Superadmin Bot Settings (Task 033)", () => {
   const superadminUser: CurrentUser = {
@@ -35,12 +36,58 @@ describe("Superadmin Bot Settings (Task 033)", () => {
     active_version: 3,
     last_error: null,
     reload_in_progress: false,
+    worker_ready: true,
   };
 
   beforeEach(() => {
     localStorage.clear();
     sessionStorage.clear();
     vi.restoreAllMocks();
+  });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it("updates the verified username and polls until the new worker is actually ready", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const getSpy = vi.spyOn(apiClient, "get").mockResolvedValue(sampleBotSettings);
+    const changed = { ...sampleBotSettings, bot_username: "production_fixture_bot", version: 4,
+      active_version: 3, worker_ready: false, reload_in_progress: true, reconnect_required: 4 };
+    vi.spyOn(apiClient, "post").mockResolvedValue(changed);
+    render(<BotSettingsView currentUser={superadminUser} />);
+    await screen.findByText("@neoavlod_lms_bot");
+    fireEvent.change(screen.getByLabelText(/Yangi Bot Tokeni/), { target: { value: "test-only-token" } });
+    fireEvent.click(screen.getByRole("button", { name: "Tokenni saqlash va yangilash" }));
+    fireEvent.click(screen.getByRole("button", { name: "Tasdiqlash va saqlash" }));
+    await screen.findByText("@production_fixture_bot");
+    expect((screen.getByLabelText(/Bot Username/) as HTMLInputElement).value).toBe("production_fixture_bot");
+    expect(screen.getByText("Yangi botga ulanish kerak")).toBeDefined();
+    expect(screen.queryByText("Sinxronlashtirilgan")).toBeNull();
+    getSpy.mockResolvedValue({ ...changed, active_version: 4, worker_ready: true, reload_in_progress: false });
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+    expect(screen.getByText("Sinxronlashtirilgan")).toBeDefined();
+    expect(getSpy).toHaveBeenCalledTimes(2);
+    const tokenInput = screen.getByLabelText(/Yangi Bot Tokeni/) as HTMLInputElement;
+    expect(tokenInput.value).toBe("");
+    expect(localStorage.length).toBe(0); expect(sessionStorage.length).toBe(0);
+  });
+
+  it("does not label a stopped worker ready merely because versions match", async () => {
+    vi.spyOn(apiClient, "get").mockResolvedValue({ ...sampleBotSettings, worker_ready: false });
+    render(<BotSettingsView currentUser={superadminUser} />);
+    await screen.findByText("Worker hali tayyor emas");
+    expect(screen.queryByText("Sinxronlashtirilgan")).toBeNull();
+  });
+
+  it("retains the existing bot when a replacement token is rejected", async () => {
+    vi.spyOn(apiClient, "get").mockResolvedValue(sampleBotSettings);
+    vi.spyOn(apiClient, "post").mockRejectedValue(new ApiError(422, "Telegram bot tokeni yaroqsiz"));
+    render(<BotSettingsView currentUser={superadminUser} />);
+    await screen.findByText("@neoavlod_lms_bot");
+    fireEvent.change(screen.getByLabelText(/Yangi Bot Tokeni/), { target: { value: "invalid-fixture-token" } });
+    fireEvent.click(screen.getByRole("button", { name: "Tokenni saqlash va yangilash" }));
+    fireEvent.click(screen.getByRole("button", { name: "Tasdiqlash va saqlash" }));
+    await screen.findByText("Telegram bot tokeni yaroqsiz");
+    expect(screen.getByText("@neoavlod_lms_bot")).toBeDefined();
+    expect(screen.queryByText(/Bot tokeni muvaffaqiyatli yangilandi/)).toBeNull();
   });
 
   it("strictly forbids regular admin and teacher from accessing bot settings", () => {

@@ -11,6 +11,7 @@ import {
   Layers,
   GraduationCap,
   CalendarCheck,
+  MessageSquare,
   Bot,
   LogOut,
   KeyRound,
@@ -20,6 +21,7 @@ import {
   ShieldAlert,
   ChevronLeft,
   ChevronRight,
+  BookOpenCheck,
 } from "lucide-react";
 
 export interface NavItemConfig {
@@ -62,9 +64,15 @@ export const ADMIN_NAV_ITEMS: NavItemConfig[] = [
   },
   {
     id: "attendance",
-    label: "Davomat tarixi",
+    label: "Davomat",
     icon: CalendarCheck,
     permission: PERMISSIONS.ATTENDANCE_READ,
+  },
+  {
+    id: "messages",
+    label: "Xabarlar",
+    icon: MessageSquare,
+    permission: PERMISSIONS.MESSAGES_SEND,
   },
   {
     id: "bot-settings",
@@ -72,6 +80,7 @@ export const ADMIN_NAV_ITEMS: NavItemConfig[] = [
     icon: Bot,
     superadminOnly: true,
   },
+  { id: "guide", label: "Qo‘llanma", icon: BookOpenCheck },
 ];
 
 export interface AdminShellProps {
@@ -313,7 +322,7 @@ export const AdminShell: React.FC<AdminShellProps> = ({
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Header */}
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 sm:px-6 lg:px-8 shrink-0">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(true)}
@@ -332,15 +341,15 @@ export const AdminShell: React.FC<AdminShellProps> = ({
             >
               {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
             </button>
-            <div className="flex items-center gap-2">
-              <NeoAvlodLogo portal="admin" variant="badge" size="xs" className="lg:hidden" />
-              <h1 className="text-lg font-bold text-slate-900 tracking-tight">
+            <div className="flex items-center gap-2 min-w-0">
+              <NeoAvlodLogo portal="admin" variant="badge" size="xs" className="hidden sm:block lg:hidden" />
+              <h1 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight truncate">
                 {currentItem?.label || "Boshqaruv"}
               </h1>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <div className="hidden sm:flex items-center gap-2">
               <span className="text-xs text-slate-500 font-medium">{user.phone ?? "Kiritilmagan"}</span>
               <div className="h-3.5 w-px bg-slate-200" />
@@ -377,8 +386,8 @@ export const AdminShell: React.FC<AdminShellProps> = ({
                     {initials || <UserCheck className="w-4 h-4" />}
                   </div>
                 )}
-                <div className="hidden sm:block">
-                  <span className="block text-xs font-semibold text-slate-800 leading-tight">
+                <div className="hidden sm:block min-w-0 max-w-40">
+                  <span className="block text-xs font-semibold text-slate-800 leading-tight truncate">
                     {user.first_name} {user.last_name}
                   </span>
                   <span className="block text-[10px] text-slate-500 font-medium">Profilim</span>

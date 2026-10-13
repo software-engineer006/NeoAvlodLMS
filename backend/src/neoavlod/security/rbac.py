@@ -28,9 +28,16 @@ class Permission(StrEnum):
     STUDENTS_CREATE = "students:create"
     STUDENTS_EDIT = "students:edit"
     ATTENDANCE_READ = "attendance:read"
+    ATTENDANCE_WRITE = "attendance:write"
+    MESSAGES_SEND = "messages:send"
 
 
 PERMISSION_CATALOG: frozenset[str] = frozenset(item.value for item in Permission)
+READ_DEPENDENCIES = {
+    Permission.GROUPS_READ: (Permission.GROUPS_CREATE, Permission.GROUPS_EDIT),
+    Permission.STUDENTS_READ: (Permission.STUDENTS_CREATE, Permission.STUDENTS_EDIT),
+    Permission.ATTENDANCE_READ: (Permission.ATTENDANCE_WRITE,),
+}
 FORBIDDEN = "Bu amal uchun ruxsat yo‘q"
 
 
@@ -43,7 +50,11 @@ def parse_permission(value: str | Permission) -> Permission:
 
 def validate_permissions(values: Iterable[str]) -> list[str]:
     """Return a sorted, de-duplicated list or reject any unknown key."""
-    return sorted({parse_permission(value).value for value in values})
+    permissions = {parse_permission(value).value for value in values}
+    for read, writes in READ_DEPENDENCIES.items():
+        if any(write.value in permissions for write in writes):
+            permissions.add(read.value)
+    return sorted(permissions)
 
 
 def has_permission(person: Staff, permission: Permission) -> bool:
@@ -52,7 +63,9 @@ def has_permission(person: Staff, permission: Permission) -> bool:
     if person.role == Role.SUPERADMIN:
         return True
     if person.role == Role.ADMIN:
-        return permission.value in person.permissions
+        return permission.value in person.permissions or any(
+            write.value in person.permissions for write in READ_DEPENDENCIES.get(permission, ())
+        )
     return False
 
 

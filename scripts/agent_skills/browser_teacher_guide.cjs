@@ -1,0 +1,44 @@
+const { chromium } = require('playwright');
+const fs = require('node:fs');
+const assert = require('node:assert/strict');
+const { teacher, user, installFixtures } = require('./browser_fixtures.cjs');
+(async () => {
+  const browser = await chromium.launch({ headless: true });
+  const errors = [];
+  for (const width of [1440, 768, 360]) {
+    const page = await browser.newPage({ viewport: { width, height: 1000 }, timezoneId: 'Asia/Tashkent' });
+    page.on('pageerror', (error) => errors.push(error.message));
+    const state = { user: teacher, loggedIn: true };
+    const unexpected = await installFixtures(page, state);
+    await page.goto('http://teacher:3001');
+    if (width < 1024) await page.getByRole('button', { name: 'Menyuni ochish' }).click();
+    await page.getByRole('button', { name: 'Qo‘llanma', exact: true }).click();
+    const nav = page.getByRole('navigation', { name: 'Qo‘llanma mavzulari' });
+    await nav.waitFor(); assert.equal(await nav.getByRole('button').count(), 11);
+    if (width === 1440) for (let index = 0; index < 11; index++) {
+      await nav.getByRole('button').nth(index).click();
+      const image = page.locator('article img'); await image.scrollIntoViewIfNeeded(); await image.evaluate((node) => node.decode());
+      assert(await image.evaluate((node) => node.naturalWidth > 300));
+    }
+    await page.getByLabel('Qo‘llanmadan qidirish').fill('chorshanba 23:59');
+    await page.getByRole('heading', { name: 'Yakunlangan davomatni 2 kun ichida tuzatish', exact: true }).waitFor();
+    await page.locator('article img').evaluate((node) => node.decode());
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    const exit = await page.locator('header').getByRole('button', { name: 'Chiqish', exact: true }).boundingBox();
+    assert(exit.x >= 0 && exit.x + exit.width <= width);
+    fs.mkdirSync('/workspace/.private/ui-acceptance', { recursive: true, mode: 0o700 });
+    await page.screenshot({ path: `/workspace/.private/ui-acceptance/teacher-guide-${width}.png`, fullPage: true });
+    await page.getByRole('button', { name: /Rasmni kattalashtirish/ }).click();
+    await page.getByRole('dialog').locator('img').evaluate((node) => node.decode());
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Bo‘limga o‘tish', exact: true }).click();
+    await page.getByLabel('Dars sanasi').waitFor();
+    assert.equal(await page.getByRole('button', { name: 'Xodimlar', exact: true }).count(), 0);
+    state.user = { ...user, role: 'superadmin' }; await page.reload();
+    await page.getByText(/Ruxsat berilmagan/).first().waitFor();
+    assert.equal(await page.getByLabel('Qo‘llanmadan qidirish').count(), 0);
+    assert.deepEqual(unexpected, []); await page.close();
+  }
+  await browser.close(); assert.deepEqual(errors, []);
+  console.log('Teacher guide browser:11 topics/all images, correction-boundary search/zoom/destination,admin-denied,1440/768/360 no overflow/JS error; synthetic only.');
+})().catch((error) => { console.error(error.message); process.exit(1); });

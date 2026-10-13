@@ -125,6 +125,8 @@ def test_catalogue_is_exactly_the_documented_keys() -> None:
         "students:create",
         "students:edit",
         "attendance:read",
+        "attendance:write",
+        "messages:send",
     }
 
 
@@ -146,6 +148,7 @@ def test_permission_matrix_by_role_and_status() -> None:
 
 
 def test_unknown_permissions_are_rejected_everywhere() -> None:
+    assert validate_permissions(["attendance:write"]) == ["attendance:read", "attendance:write"]
     assert validate_permissions(["students:read", "groups:read", "students:read"]) == [
         "groups:read",
         "students:read",

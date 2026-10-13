@@ -22,10 +22,14 @@ from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession
 
 from neoavlod.database import Database
 from neoavlod.errors import DomainError
-from neoavlod.models import Role, Staff, SystemSettings
+from neoavlod.models import Role, Staff
 from neoavlod.models.common import Status
 from neoavlod.security.secrets import decrypt_token
-from neoavlod.services.bot_settings import get_bot_settings, report_reload_status
+from neoavlod.services.bot_settings import (
+    get_bot_settings,
+    locked_bot_settings,
+    report_reload_status,
+)
 from neoavlod.services.onboarding import link_telegram_account
 from neoavlod.services.telegram import TelegramClient
 from neoavlod.settings import Settings
@@ -63,8 +67,9 @@ async def record_poll(
     update_id: int | None = None,
 ) -> None:
     # A rejected /start rolls back and expires ORM state; reload before recording offset.
-    config = await session.get(SystemSettings, 1, populate_existing=True)
-    if config is None or config.version != version:
+    config = await locked_bot_settings(session)
+    if config.version != version:
+        await session.commit()
         return
     if update_id is not None:
         config.last_update_id = update_id
@@ -139,7 +144,7 @@ async def process_telegram_update(
                 logger.exception("Account linking unexpected failure or delivery failed")
         else:
             linked_staff = await session.scalar(select(Staff).where(Staff.telegram_id == chat_id))
-            if linked_staff is not None:
+            if linked_staff is not None and linked_staff.telegram_connected:
                 if linked_staff.status != Status.ACTIVE:
                     reply = "Hisobingiz faol emas. Iltimos, ma’muriyatga murojaat qiling."
                 else:
@@ -227,10 +232,16 @@ class BotWorker:
                 updates = await client.get_updates(offset=offset, limit=50, timeout=0)
             except Exception as err:
                 logger.warning("Error fetching updates in single iteration: %s", err)
+                await report_reload_status(
+                    session, version=version, error="Telegram polling so‘rovi muvaffaqiyatsiz"
+                )
                 return 0
 
             processed = 0
             for update in updates:
+                if (await locked_bot_settings(session)).version != version:
+                    await session.commit()
+                    return processed
                 update_id = update.get("update_id")
                 handled = await process_telegram_update(
                     session, client, update, settings=self.settings
@@ -256,7 +267,12 @@ class BotWorker:
         try:
             await client.delete_webhook()
         except Exception:
-            logger.debug("Webhook deletion skipped or failed")
+            async with self.database.session() as session:
+                await report_reload_status(
+                    session, version=version, error="Telegram webhookini o‘chirib bo‘lmadi"
+                )
+            await asyncio.sleep(self.idle_sleep)
+            return
 
         while not self._stop_event.is_set():
             if lease is not None:
@@ -280,23 +296,33 @@ class BotWorker:
                     )
                 except (httpx.HTTPError, DomainError) as err:
                     logger.warning("Telegram polling error: %s", err)
+                    await report_reload_status(
+                        session, version=version, error="Telegram polling so‘rovi muvaffaqiyatsiz"
+                    )
                     await asyncio.sleep(0.5)
                     continue
                 except asyncio.CancelledError:
                     raise
                 except Exception as err:
                     logger.exception("Unexpected error in bot polling: %s", err)
+                    await report_reload_status(
+                        session, version=version, error="Telegram polling so‘rovi muvaffaqiyatsiz"
+                    )
                     await asyncio.sleep(0.5)
                     continue
 
                 for update in updates:
                     if self._stop_event.is_set():
                         break
+                    if (await locked_bot_settings(session)).version != version:
+                        await session.commit()
+                        return
                     update_id = update.get("update_id")
                     await process_telegram_update(session, client, update, settings=self.settings)
                     if isinstance(update_id, int):
                         await record_poll(session, version, update_id)
                 await record_poll(session, version)
+                await report_reload_status(session, version=version)
 
     async def run_forever(self) -> None:
         """Wait for exclusive polling ownership, and reacquire it after a DB reconnect."""
@@ -335,8 +361,6 @@ class BotWorker:
 
                     target_version = sys_settings.version
                     client = TelegramClient(token, transport=self.transport)
-                    await report_reload_status(session, version=target_version)
-
                 await self._poll_session(client, target_version, lease=lease)
 
             except asyncio.CancelledError:

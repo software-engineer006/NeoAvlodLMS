@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import type { CurrentUser } from "../api/types";
 import type { AdminAttendanceItem, AdminAttendanceListResponse } from "./types";
-import type { GroupItem } from "../academic/types";
-import type { StaffItem } from "../staff/types";
 import { apiClient } from "../api/client";
 import { ApiError } from "../api/errors";
 import { Card } from "../components/Card";
@@ -26,17 +24,22 @@ import {
   Lock,
 } from "lucide-react";
 import { MonthlyAttendanceHistoryView } from "./MonthlyAttendanceHistoryView";
+import { AdminChangesHistoryView } from "./AdminChangesHistoryView";
+import { TeacherAttendanceView } from "../teacher/TeacherAttendanceView";
+import type { AttendanceGroupOption } from "../teacher/TeacherAttendanceView";
+import { hasPermission, PERMISSIONS } from "../navigation/permissions";
 
 export interface AdminAttendanceViewProps {
   currentUser: CurrentUser;
-  defaultTab?: "matrix" | "list";
+  defaultTab?: "matrix" | "list" | "mark";
 }
 
 export const AdminAttendanceView: React.FC<AdminAttendanceViewProps> = ({
   currentUser: _currentUser,
-  defaultTab = "matrix",
+  defaultTab,
 }) => {
-  const [activeTab, setActiveTab] = useState<"matrix" | "list">(defaultTab);
+  const canWrite = hasPermission(_currentUser, PERMISSIONS.ATTENDANCE_WRITE);
+  const [activeTab, setActiveTab] = useState<"matrix" | "list" | "mark" | "changes">(defaultTab || (canWrite ? "mark" : "matrix"));
   const [records, setRecords] = useState<AdminAttendanceItem[]>([]);
   const [total, setTotal] = useState<number>(0);
   const [page, setPage] = useState<number>(1);
@@ -49,8 +52,8 @@ export const AdminAttendanceView: React.FC<AdminAttendanceViewProps> = ({
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   // Options
-  const [groups, setGroups] = useState<GroupItem[]>([]);
-  const [teachers, setTeachers] = useState<StaffItem[]>([]);
+  const [groups, setGroups] = useState<AttendanceGroupOption[]>([]);
+  const [teachers, setTeachers] = useState<Array<{ id: string; name: string }>>([]);
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,16 +62,11 @@ export const AdminAttendanceView: React.FC<AdminAttendanceViewProps> = ({
   useEffect(() => {
     const loadOptions = async () => {
       try {
-        const [grpRes, staffRes] = await Promise.all([
-          apiClient.get<{ items: GroupItem[] }>("/api/v1/admin/groups", {
-            params: { page_size: 100 },
-          }),
-          apiClient.get<{ items: StaffItem[] }>("/api/v1/admin/staff", {
-            params: { page_size: 100, role: "teacher" },
-          }),
-        ]);
-        setGroups(grpRes.items);
-        setTeachers(staffRes.items);
+        const groupList = await apiClient.get<AttendanceGroupOption[]>("/api/v1/admin/attendance/groups");
+        setGroups(groupList);
+        setTeachers(Array.from(new Map(groupList.filter((group) => group.teacher_id).map((group) => [
+          group.teacher_id!, { id: group.teacher_id!, name: group.teacher_name || "O‘qituvchi" },
+        ])).values()));
       } catch {
         // Soft fail
       }
@@ -118,7 +116,9 @@ export const AdminAttendanceView: React.FC<AdminAttendanceViewProps> = ({
   }, [loadAttendance]);
 
   const setTodayDate = () => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Tashkent", year: "numeric", month: "2-digit", day: "2-digit",
+    }).format(new Date());
     setDateFilter(today);
     setPage(1);
   };
@@ -143,9 +143,9 @@ export const AdminAttendanceView: React.FC<AdminAttendanceViewProps> = ({
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Davomat tarixi</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Davomat</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Barcha guruhlar va o‘qituvchilar bo‘yicha dars davomati jurnali (faqat ko‘rish huquqi)
+            Barcha guruhlar bo‘yicha davomat, oylik natijalar va o‘zgarishlar tarixi
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -162,7 +162,11 @@ export const AdminAttendanceView: React.FC<AdminAttendanceViewProps> = ({
       </div>
 
       {/* View Mode Tabs */}
-      <div className="flex border-b border-slate-200">
+      <div className="flex flex-wrap border-b border-slate-200">
+        {canWrite && <button type="button" onClick={() => setActiveTab("mark")}
+          className={`py-2.5 px-4 text-sm font-medium border-b-2 ${activeTab === "mark" ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-500"}`}>
+          Davomat olish
+        </button>}
         <button
           type="button"
           onClick={() => setActiveTab("matrix")}
@@ -185,9 +189,13 @@ export const AdminAttendanceView: React.FC<AdminAttendanceViewProps> = ({
         >
           Yozuvlar ro‘yxati
         </button>
+        <button type="button" onClick={() => setActiveTab("changes")}
+          className={`py-2.5 px-4 text-sm font-medium border-b-2 ${activeTab === "changes" ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-500"}`}>
+          Audit tarixi
+        </button>
       </div>
 
-      {activeTab === "matrix" ? (
+      {activeTab === "changes" ? <AdminChangesHistoryView groups={groups} /> : activeTab === "mark" && canWrite ? <TeacherAttendanceView portal="admin" /> : activeTab === "matrix" ? (
         <MonthlyAttendanceHistoryView
           portal="admin"
           groups={groups}
@@ -255,7 +263,7 @@ export const AdminAttendanceView: React.FC<AdminAttendanceViewProps> = ({
                 { value: "all", label: "Barcha o‘qituvchilar" },
                 ...teachers.map((t) => ({
                   value: t.id,
-                  label: `${t.first_name} ${t.last_name}`,
+                  label: t.name,
                 })),
               ]}
             />

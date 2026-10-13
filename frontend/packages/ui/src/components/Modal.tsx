@@ -1,5 +1,8 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useId, useRef } from "react";
 import { X } from "lucide-react";
+
+const openDialogs: HTMLElement[] = [];
+let originalOverflow = "";
 
 export interface ModalProps {
   isOpen: boolean;
@@ -20,21 +23,50 @@ export const Modal: React.FC<ModalProps> = ({
   footer,
   size = "md",
 }) => {
+  const titleId = useId();
+  const descriptionId = useId();
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
   useEffect(() => {
+    if (!isOpen || !dialogRef.current) return;
+    const dialog = dialogRef.current;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    if (openDialogs.length === 0) {
+      originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+    }
+    openDialogs.push(dialog);
+    const focusable = () => Array.from(dialog.querySelectorAll<HTMLElement>(
+      'button:not(:disabled), input:not(:disabled):not([type="hidden"]), textarea:not(:disabled), select:not(:disabled), a[href], [tabindex="0"]',
+    )).filter((element) => !element.hidden && !element.closest('[hidden], [aria-hidden="true"]'));
+    (focusable()[0] ?? dialog).focus();
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen) {
-        onClose();
+      if (openDialogs.at(-1) !== dialog) return;
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeRef.current();
+      }
+      if (e.key === "Tab") {
+        const elements = focusable();
+        const first = elements[0] ?? dialog;
+        const last = elements.at(-1) ?? dialog;
+        if (!dialog.contains(document.activeElement) ||
+          (e.shiftKey && document.activeElement === first) ||
+          (!e.shiftKey && document.activeElement === last)) {
+          e.preventDefault();
+          (e.shiftKey ? last : first).focus();
+        }
       }
     };
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-      window.addEventListener("keydown", handleKeyDown);
-    }
+    window.addEventListener("keydown", handleKeyDown);
     return () => {
-      document.body.style.overflow = "";
       window.removeEventListener("keydown", handleKeyDown);
+      openDialogs.splice(openDialogs.indexOf(dialog), 1);
+      if (openDialogs.length === 0) document.body.style.overflow = originalOverflow;
+      if (previousFocus?.isConnected) previousFocus.focus();
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) {
     return null;
@@ -51,7 +83,11 @@ export const Modal: React.FC<ModalProps> = ({
   return (
     <div
       role="dialog"
+      ref={dialogRef}
+      tabIndex={-1}
       aria-modal="true"
+      aria-labelledby={title ? titleId : undefined}
+      aria-describedby={description ? descriptionId : undefined}
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-xs transition-opacity"
       onClick={onClose}
     >
@@ -61,8 +97,8 @@ export const Modal: React.FC<ModalProps> = ({
       >
         <div className="px-5 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
           <div>
-            {title && <h3 className="text-base font-semibold text-slate-900">{title}</h3>}
-            {description && <p className="text-xs text-slate-500 mt-0.5">{description}</p>}
+            {title && <h3 id={titleId} className="text-base font-semibold text-slate-900">{title}</h3>}
+            {description && <p id={descriptionId} className="text-xs text-slate-500 mt-0.5">{description}</p>}
           </div>
           <button
             type="button"

@@ -86,10 +86,11 @@ async def deliver_challenge(
     expires_at: datetime | None = None,
 ) -> Challenge:
     ensure_portal(person, portal)
-    if person.telegram_id is None:
+    if not person.telegram_connected:
         raise telegram_not_linked()
     now = datetime.now(UTC)
     telegram_id = person.telegram_id
+    assert telegram_id is not None
     staff_id = person.id
     # Release the DB transaction before network I/O.
     await session.commit()
@@ -110,7 +111,8 @@ async def deliver_challenge(
     label = "Kirish" if purpose == OTPPurpose.LOGIN else "Parolni tiklash"
     try:
         await sender.send_message(
-            telegram_id, f"NeoAvlod {label} kodi: {code}. Amal qilish muddati: 5 daqiqa."
+            telegram_id,
+            f"NeoAvlod {label} kodi: {code}. Amal qilish muddati: {OTP_TTL_SECONDS // 60} daqiqa.",
         )
     except BaseException:
         # An undelivered code must never stay valid.
@@ -180,7 +182,7 @@ async def verify_challenge(
     if person is None:
         raise DomainError("Hisob topilmadi", 401)
     ensure_portal(person, portal)
-    if person.telegram_id is None:
+    if not person.telegram_connected:
         raise telegram_not_linked()
     return person
 

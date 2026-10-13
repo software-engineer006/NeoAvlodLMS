@@ -8,6 +8,7 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
+    String,
     Text,
     UniqueConstraint,
     func,
@@ -70,3 +71,26 @@ class Attendance(UUIDPrimaryKey, AuditFields, Base):
         ForeignKey("attendance_batches.id", ondelete="RESTRICT"),
         index=True,
     )
+
+
+class AttendanceChange(UUIDPrimaryKey, Base):
+    __tablename__ = "attendance_changes"
+    __table_args__ = (
+        CheckConstraint("action IN ('draft', 'finalize', 'correct')", name="action"),
+        CheckConstraint(
+            "reason IS NULL OR length(reason) BETWEEN 1 AND 2000", name="reason_length"
+        ),
+    )
+    attendance_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("attendance.id", ondelete="RESTRICT"), index=True
+    )
+    actor_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("staff.id", ondelete="RESTRICT"))
+    actor_name: Mapped[str] = mapped_column(String(201))
+    actor_role: Mapped[str] = mapped_column(String(20))
+    action: Mapped[str] = mapped_column(String(20))
+    old_status: Mapped[str | None] = mapped_column(String(10))
+    new_status: Mapped[str] = mapped_column(String(10))
+    old_note: Mapped[str | None] = mapped_column(Text)
+    new_note: Mapped[str | None] = mapped_column(Text)
+    reason: Mapped[str | None] = mapped_column(Text)
+    changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

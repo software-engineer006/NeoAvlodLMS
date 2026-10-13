@@ -39,7 +39,7 @@ def entity_kind(entity: LinkEntity) -> str:
 
 async def link_state(session: AsyncSession, entity: LinkEntity) -> LinkState:
     await session.flush()
-    if entity.telegram_id is not None:
+    if entity.telegram_connected:
         return LinkState(connected=True, expired=False, deep_link=None, expires_at=None)
     expired = entity.auth_used_at is not None or entity.auth_expires_at <= datetime.now(UTC)
     if expired:
@@ -73,7 +73,7 @@ async def rotate_staff_link(session: AsyncSession, staff_id: uuid.UUID) -> LinkS
         raise DomainError("Xodim topilmadi", 404)
     if person.status != Status.ACTIVE:
         raise DomainError("Faol bo‘lmagan xodimga havola berilmaydi", 409)
-    if person.telegram_id is not None:
+    if person.telegram_connected:
         raise DomainError("Xodim Telegramga allaqachon ulangan", 409)
     person.auth_uuid = uuid.uuid4()
     person.auth_expires_at = link_expiry()
@@ -92,7 +92,7 @@ async def rotate_student_link(session: AsyncSession, student_id: uuid.UUID) -> L
         raise DomainError("Talaba topilmadi", 404)
     if learner.status != Status.ACTIVE:
         raise DomainError("Faol bo‘lmagan talabaga havola berilmaydi", 409)
-    if learner.telegram_id is not None:
+    if learner.telegram_connected:
         raise DomainError("Talaba Telegramga allaqachon ulangan", 409)
     learner.auth_uuid = uuid.uuid4()
     learner.auth_expires_at = link_expiry()
@@ -109,7 +109,7 @@ async def rotate_parent_link(session: AsyncSession, parent_id: uuid.UUID) -> Lin
     )
     if guardian is None:
         raise DomainError("Ota-ona topilmadi", 404)
-    if guardian.telegram_id is not None:
+    if guardian.telegram_connected:
         raise DomainError("Ota-ona Telegramga allaqachon ulangan", 409)
     guardian.auth_uuid = uuid.uuid4()
     guardian.auth_expires_at = link_expiry()
@@ -134,7 +134,7 @@ async def resolve_link(session: AsyncSession, payload: str) -> LinkEntity:
     )
     if entity is None or entity.auth_expires_at <= datetime.now(UTC):
         raise DomainError("Havola yaroqsiz yoki muddati tugagan", 400)
-    if entity.telegram_id is not None or entity.auth_used_at is not None:
+    if entity.telegram_connected or entity.auth_used_at is not None:
         raise DomainError(
             "Havola allaqachon ishlatilgan. Parolingizni unutgan bo‘lsangiz, login sahifasidagi "
             "«Parolni unutdingizmi?» havolasidan foydalaning.",
@@ -175,6 +175,7 @@ async def link_telegram_account(
         )
 
     entity.telegram_id = telegram_id
+    entity.telegram_reconnect_required = False
     entity.auth_used_at = datetime.now(UTC)
     await session.flush()
 

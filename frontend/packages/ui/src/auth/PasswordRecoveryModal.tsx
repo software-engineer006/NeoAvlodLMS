@@ -33,7 +33,7 @@ export const PasswordRecoveryModal: React.FC<PasswordRecoveryModalProps> = ({
   const [otpCode, setOtpCode] = useState<string>("");
   const [newPassword, setNewPassword] = useState<string>("");
   const [confirmPassword, setConfirmPassword] = useState<string>("");
-  const [secondsRemaining, setSecondsRemaining] = useState<number>(300);
+  const [secondsRemaining, setSecondsRemaining] = useState<number>(0);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -85,7 +85,7 @@ export const PasswordRecoveryModal: React.FC<PasswordRecoveryModalProps> = ({
       setChallenge(res);
       setStep("confirm");
       const initialSeconds = Math.max(0, Math.floor((new Date(res.expires_at).getTime() - Date.now()) / 1000));
-      setSecondsRemaining(initialSeconds > 0 ? initialSeconds : 300);
+      setSecondsRemaining(initialSeconds);
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.detail);

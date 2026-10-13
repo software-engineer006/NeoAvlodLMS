@@ -28,6 +28,8 @@ const AVAILABLE_PERMISSIONS = [
   { key: PERMISSIONS.STUDENTS_CREATE, label: "O‘quvchi yaratish" },
   { key: PERMISSIONS.STUDENTS_EDIT, label: "O‘quvchilarni tahrirlash" },
   { key: PERMISSIONS.ATTENDANCE_READ, label: "Davomat tarixini ko‘rish" },
+  { key: PERMISSIONS.ATTENDANCE_WRITE, label: "Davomatni belgilash va tuzatish" },
+  { key: PERMISSIONS.MESSAGES_SEND, label: "Ota-onalar va o‘quvchilarga Telegram xabari yuborish" },
 ];
 
 export const StaffModal: React.FC<StaffModalProps> = ({
@@ -70,9 +72,17 @@ export const StaffModal: React.FC<StaffModalProps> = ({
   }, [staff, isOpen]);
 
   const togglePermission = (permKey: string) => {
-    setSelectedPermissions((prev) =>
-      prev.includes(permKey) ? prev.filter((p) => p !== permKey) : [...prev, permKey]
-    );
+    const dependencies: Record<string, string[]> = {
+      [PERMISSIONS.GROUPS_READ]: [PERMISSIONS.GROUPS_CREATE, PERMISSIONS.GROUPS_EDIT],
+      [PERMISSIONS.STUDENTS_READ]: [PERMISSIONS.STUDENTS_CREATE, PERMISSIONS.STUDENTS_EDIT],
+      [PERMISSIONS.ATTENDANCE_READ]: [PERMISSIONS.ATTENDANCE_WRITE],
+    };
+    setSelectedPermissions((prev) => {
+      if (prev.includes(permKey)) return prev.filter((value) => value !== permKey && !(dependencies[permKey] ?? []).includes(value));
+      const next = new Set([...prev, permKey]);
+      for (const [read, writes] of Object.entries(dependencies)) if (writes.includes(permKey)) next.add(read);
+      return [...next];
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -220,6 +230,17 @@ export const StaffModal: React.FC<StaffModalProps> = ({
             <label className="block text-sm font-medium text-slate-700">
               Admin ruxsatlari
             </label>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" size="sm" variant="outline" disabled={isLoading}
+                onClick={() => setSelectedPermissions(AVAILABLE_PERMISSIONS.map((item) => item.key))}>
+                Barcha ruxsatlarni berish
+              </Button>
+              <Button type="button" size="sm" variant="ghost" disabled={isLoading}
+                onClick={() => setSelectedPermissions([])}>Ruxsatlarni tozalash</Button>
+            </div>
+            <p className="text-xs text-slate-500">
+              Yaratish yoki tahrirlash ko‘rish ruxsatini ham beradi. Bot sozlamalari faqat superadmin uchun.
+            </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
               {AVAILABLE_PERMISSIONS.map((perm) => (
                 <label key={perm.key} className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">

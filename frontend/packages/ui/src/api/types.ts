@@ -14,6 +14,8 @@ export interface CurrentUser {
   status: StaffStatus;
   permissions: string[];
   telegram_id?: number | null;
+  telegram_connected?: boolean;
+  telegram_reconnect_required?: boolean;
   must_change_password?: boolean;
   avatar_url?: string | null;
 }

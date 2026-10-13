@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import type { CurrentUser } from "../api/types";
 import type { StudentItem, StudentListResponse } from "./types";
-import type { GroupItem } from "../academic/types";
+import type { StudentGroupOption } from "../academic/types";
 import { hasPermission, PERMISSIONS } from "../navigation/permissions";
 import { apiClient } from "../api/client";
 import { ApiError } from "../api/errors";
@@ -51,7 +51,7 @@ export const StudentsManagementView: React.FC<StudentsManagementViewProps> = ({ 
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   // Groups list for dropdown
-  const [groups, setGroups] = useState<GroupItem[]>([]);
+  const [groups, setGroups] = useState<StudentGroupOption[]>([]);
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,9 +78,7 @@ export const StudentsManagementView: React.FC<StudentsManagementViewProps> = ({ 
   useEffect(() => {
     const loadGroups = async () => {
       try {
-        const res = await apiClient.get<{ items: GroupItem[] }>("/api/v1/admin/groups", {
-          params: { page_size: 100 },
-        });
+        const res = await apiClient.get<{ items: StudentGroupOption[] }>("/api/v1/admin/lookups/student-groups");
         setGroups(res.items);
       } catch {
         // Soft fail on filter options

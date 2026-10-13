@@ -6,10 +6,12 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
+      "@neoavlod/ui/admin-guide": fileURLToPath(new URL("../../packages/ui/src/guide/AdminGuideView.tsx", import.meta.url)),
       "@neoavlod/ui": fileURLToPath(new URL("../../packages/ui/src/index.ts", import.meta.url)),
     },
   },
   server: {
+    allowedHosts: ["admin"],
     port: 3000,
     host: "0.0.0.0",
     proxy: {

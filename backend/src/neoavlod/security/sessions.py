@@ -53,7 +53,7 @@ def ensure_portal(person: Staff, portal: Portal) -> None:
 
 async def issue_session(session: AsyncSession, person: Staff, portal: Portal) -> Tokens:
     ensure_portal(person, portal)
-    if person.telegram_id is None:
+    if not person.telegram_connected:
         raise telegram_not_linked()
     now = datetime.now(UTC)
     access, refresh, csrf = (secrets.token_urlsafe(32) for _ in range(3))

@@ -42,6 +42,7 @@ if [[ "${FAIL_STEP:-}" == migration && "${NEOAVLOD_RELEASE_ID:-}" == """
             + C
             + """ && "$*" == *"run --rm -T --no-deps migrations" ]]; then exit 1; fi
 if [[ "${FAIL_STEP:-}" == import && "$*" == *neoavlod.educenter_import* ]]; then exit 1; fi
+if [[ "${FAIL_STEP:-}" == english && "$*" == *neoavlod.english_import* ]]; then exit 1; fi
 """,
         )
         self.command(
@@ -179,6 +180,41 @@ if [[ "$*" == *release.txt* ]]; then basename "$(readlink "$WEB_ROOT/current")";
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("EDUCENTER_DATA_DIR mavjud emas", result.stderr)
         self.assertFalse((self.app / "current").exists())
+
+    def test_english_import_receipt_order_repeat_and_failed_import_rollback(self) -> None:
+        for name in ("educenter_data", "english_data"):
+            private = self.app / "private" / name
+            private.mkdir(parents=True)
+            (private / "plan.sha256").write_text("e" * 64)
+        self.deploy(A)
+        self.deploy(B)
+        calls = (self.root / "calls").read_text().splitlines()
+        for release in (A, B):
+            lines = [line for line in calls if line.startswith(release)]
+            imported = [i for i, line in enumerate(lines) if "neoavlod." in line and "_import" in line]
+            self.assertEqual(len(imported), 2)
+            self.assertIn("neoavlod.educenter_import", lines[imported[0]])
+            self.assertIn("neoavlod.english_import", lines[imported[1]])
+            for index in imported:
+                self.assertIn("--deployment-receipt", lines[index])
+                self.assertIn("/import-source:ro", lines[index])
+            started = next(i for i, line in enumerate(lines) if "--force-recreate" in line)
+            self.assertLess(imported[-1], started)
+        result = self.run_script("deploy.sh", C, FAIL_STEP="english")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual((self.app / "current").readlink().name, B)
+        self.assertFalse((self.app / "releases" / C / ".successful").exists())
+
+    def test_english_missing_directory_and_reviewed_hash_fail_closed(self) -> None:
+        self.assertNotEqual(self.run_script("deploy.sh", A,
+            ENGLISH_DATA_DIR=str(self.root / "missing")).returncode, 0)
+        private = self.app / "private/english_data"
+        private.mkdir(parents=True)
+        for digest in (None, "invalid"):
+            if digest is not None:
+                (private / "plan.sha256").write_text(digest)
+            self.assertNotEqual(self.run_script("deploy.sh", A).returncode, 0)
+            self.assertFalse((self.app / "current").exists())
 
     def test_ci_ssh_key_rejects_arbitrary_commands(self) -> None:
         for command in (

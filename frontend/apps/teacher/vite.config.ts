@@ -6,10 +6,12 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
+      "@neoavlod/ui/teacher-guide": fileURLToPath(new URL("../../packages/ui/src/guide/TeacherGuideView.tsx", import.meta.url)),
       "@neoavlod/ui": fileURLToPath(new URL("../../packages/ui/src/index.ts", import.meta.url)),
     },
   },
   server: {
+    allowedHosts: ["teacher"],
     port: 3001,
     host: "0.0.0.0",
     proxy: {

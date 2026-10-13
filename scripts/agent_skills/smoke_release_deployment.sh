@@ -68,6 +68,12 @@ report = root.parent / 'reviewed.json'
 asyncio.run(run(argparse.Namespace(source=root, year=2026, capacity=30, report=report,
                                   credentials=root.parent / 'unused.json', apply=False)))
 (root / 'plan.sha256').write_text(json.loads(report.read_text())['plan_sha256'])
+import sys
+sys.path.insert(0, '/workspace/backend/tests')
+from test_english_import import sources as english_sources
+from neoavlod.english_import import build_plan as english_plan, reviewed_digest
+english = english_sources(root.parent / 'english_data')
+(english / 'plan.sha256').write_text(reviewed_digest(english_plan(english)))
 PY
 printf '\nAPI_PORT=%s\n' "$((25000 + RANDOM % 1000))" >> "$APP_ROOT/.env.production"
 cp "$AGENT_ROOT/nginx/acme-http.conf" "$NGINX_CONFIG_ROOT/conf.d/neoavlod-acme.conf"
@@ -110,6 +116,25 @@ C=cccccccccccccccccccccccccccccccccccccccc
 TEST_DIR="$(dirname "$APP_ROOT")"
 fail() { echo "$*" >&2; exit 1; }
 bash "$AGENT_ROOT/scripts/deploy/deploy.sh" "$A" </dev/null
+# Later manual edits must survive the next deployment's import hooks.
+bash "$AGENT_ROOT/scripts/deploy/appctl.sh" exec -T api python - <<'PY'
+import asyncio
+from sqlalchemy import select
+from neoavlod.database import Database
+from neoavlod.settings import Settings
+from neoavlod.models import Group, Attendance
+async def edit():
+    db = Database(Settings())
+    try:
+        async with db.session() as s, s.begin():
+            group = await s.scalar(select(Group))
+            record = await s.scalar(select(Attendance))
+            group.name = 'Admin edited production fixture'
+            record.note = 'Admin corrected production fixture'
+    finally:
+        await db.close()
+asyncio.run(edit())
+PY
 bash "$AGENT_ROOT/scripts/deploy/deploy.sh" "$B" </dev/null
 # Both releases import the same source; counts must stay unchanged after rerun.
 bash "$AGENT_ROOT/scripts/deploy/appctl.sh" exec -T api python - <<'PY'
@@ -117,14 +142,16 @@ import asyncio
 from sqlalchemy import func, select
 from neoavlod.database import Database
 from neoavlod.settings import Settings
-from neoavlod.models import Staff, Group, Student, Attendance, AttendanceBatch, NotificationOutbox
+from neoavlod.models import Staff, Group, Student, Attendance, AttendanceBatch, NotificationOutbox, ImportReceipt
 async def verify():
     db = Database(Settings())
     try:
         async with db.session() as s:
-            for model, expected in ((Staff, 3), (Group, 4), (Student, 8), (Attendance, 44),
-                                    (AttendanceBatch, 22), (NotificationOutbox, 0)):
+            for model, expected in ((Staff, 5), (Group, 7), (Student, 15), (Attendance, 50),
+                                    (AttendanceBatch, 22), (NotificationOutbox, 0), (ImportReceipt, 2)):
                 assert await s.scalar(select(func.count()).select_from(model)) == expected
+            assert await s.scalar(select(Group.id).where(Group.name == 'Admin edited production fixture'))
+            assert await s.scalar(select(Attendance.id).where(Attendance.note == 'Admin corrected production fixture'))
     finally:
         await db.close()
 asyncio.run(verify())

@@ -7,8 +7,15 @@ from fastapi import APIRouter, BackgroundTasks, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from neoavlod.api.admin_attendance import GroupMonthlyAttendanceHistoryOut
+from neoavlod.api.attendance_schemas import (
+    AttendanceChangesOut,
+    AttendanceEntryOut,
+    AttendanceSheetOut,
+    DraftSaveIn,
+    FinalizeIn,
+)
 from neoavlod.api.deps import SessionDependency, TeacherDependency
-from neoavlod.models import AttendanceStatus, Student
+from neoavlod.models import Student
 from neoavlod.models.common import Status
 from neoavlod.services import attendance as attendance_service
 from neoavlod.services import teacher as service
@@ -125,13 +132,13 @@ class TeacherStudentOut(BaseModel):
             status=learner.status,
             group_id=learner.group_id,
             group_name=learner.group.name,
-            telegram_connected=learner.telegram_id is not None,
+            telegram_connected=learner.telegram_connected,
             parent=TeacherParentOut(
                 id=learner.parent.id,
                 first_name=learner.parent.first_name,
                 last_name=learner.parent.last_name,
                 phone=learner.parent.phone,
-                telegram_connected=learner.parent.telegram_id is not None,
+                telegram_connected=learner.parent.telegram_connected,
             )
             if learner.parent is not None
             else None,
@@ -147,37 +154,6 @@ class TeacherStudentOut(BaseModel):
             monthly_price=learner.group.monthly_price,
             attendance_stats=stats,
         )
-
-
-class AttendanceEntryOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    student_id: uuid.UUID
-    student_first_name: str
-    student_last_name: str | None
-    status: AttendanceStatus | None = None
-    note: str | None = None
-    marked_at: datetime | None = None
-
-
-class AttendanceSheetOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    group_id: uuid.UUID
-    date: date
-    finalized: bool
-    finalized_at: datetime | None = None
-    items: list[AttendanceEntryOut]
-
-
-class DraftItemIn(BaseModel):
-    model_config = ConfigDict(str_strip_whitespace=True)
-    student_id: uuid.UUID
-    status: AttendanceStatus
-    note: str | None = Field(default=None, max_length=2000)
-
-
-class DraftSaveIn(BaseModel):
-    date: date
-    items: list[DraftItemIn] = Field(min_length=1)
 
 
 @router.get("/groups", response_model=list[TeacherGroupOut])
@@ -239,6 +215,9 @@ async def get_group_attendance(
         date=sheet.date,
         finalized=sheet.finalized,
         finalized_at=sheet.finalized_at,
+        can_edit=sheet.can_edit,
+        edit_deadline=sheet.edit_deadline,
+        edit_disabled_reason=sheet.edit_disabled_reason,
         items=[
             AttendanceEntryOut(
                 student_id=item.student_id,
@@ -269,13 +248,16 @@ async def save_group_attendance_draft(
         for item in body.items
     ]
     sheet = await attendance_service.save_attendance_draft(
-        session, teacher, group_id, body.date, items
+        session, teacher, group_id, body.date, items, body.reason
     )
     return AttendanceSheetOut(
         group_id=sheet.group_id,
         date=sheet.date,
         finalized=sheet.finalized,
         finalized_at=sheet.finalized_at,
+        can_edit=sheet.can_edit,
+        edit_deadline=sheet.edit_deadline,
+        edit_disabled_reason=sheet.edit_disabled_reason,
         items=[
             AttendanceEntryOut(
                 student_id=item.student_id,
@@ -290,9 +272,28 @@ async def save_group_attendance_draft(
     )
 
 
-class FinalizeIn(BaseModel):
-    date: date
-    items: list[DraftItemIn] | None = None
+@router.post("/groups/{group_id}/attendance/correct", response_model=AttendanceSheetOut)
+async def correct_group_attendance(
+    group_id: uuid.UUID,
+    body: DraftSaveIn,
+    teacher: TeacherDependency,
+    session: SessionDependency,
+    background_tasks: BackgroundTasks,
+    request: Request,
+) -> AttendanceSheetOut:
+    items = [
+        attendance_service.DraftItem(student_id=item.student_id, status=item.status, note=item.note)
+        for item in body.items
+    ]
+    sheet = await attendance_service.correct_attendance(
+        session, teacher, group_id, body.date, items, body.reason
+    )
+    background_tasks.add_task(
+        attendance_service.dispatch_pending_outbox_stub,
+        request.app.state.database,
+        getattr(request.app.state, "telegram_transport", None),
+    )
+    return AttendanceSheetOut.model_validate(sheet)
 
 
 @router.post("/groups/{group_id}/attendance/finalize", response_model=AttendanceSheetOut)
@@ -315,7 +316,7 @@ async def finalize_group_attendance(
             for item in body.items
         ]
     sheet = await attendance_service.finalize_attendance(
-        session, teacher, group_id, body.date, items
+        session, teacher, group_id, body.date, items, body.reason
     )
     background_tasks.add_task(
         attendance_service.dispatch_pending_outbox_stub,
@@ -327,6 +328,9 @@ async def finalize_group_attendance(
         date=sheet.date,
         finalized=sheet.finalized,
         finalized_at=sheet.finalized_at,
+        can_edit=sheet.can_edit,
+        edit_deadline=sheet.edit_deadline,
+        edit_disabled_reason=sheet.edit_disabled_reason,
         items=[
             AttendanceEntryOut(
                 student_id=item.student_id,
@@ -370,3 +374,17 @@ async def get_teacher_attendance_history(
         session, group_id, target_month, teacher=teacher
     )
     return GroupMonthlyAttendanceHistoryOut.model_validate(history)
+
+
+@router.get("/groups/{group_id}/attendance/changes", response_model=AttendanceChangesOut)
+async def get_attendance_changes(
+    group_id: uuid.UUID,
+    teacher: TeacherDependency,
+    session: SessionDependency,
+    target_date: Annotated[date, Query(alias="date")],
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(ge=1, le=100)] = 20,
+) -> AttendanceChangesOut:
+    return AttendanceChangesOut.model_validate(await attendance_service.list_attendance_changes(
+        session, teacher, group_id, target_date, page=page, page_size=page_size
+    ))

@@ -42,7 +42,28 @@ import_educenter() {
     -v "$source_dir:/import-source:ro" -v "$state_dir:/import-state" \
     migrations python -m neoavlod.educenter_import --source /import-source \
     --credentials /import-state/prepared-accounts.json --report /import-state/last-plan.json \
-    --apply --expected-plan "$expected" </dev/null
+    --apply --expected-plan "$expected" --deployment-receipt </dev/null
+}
+import_english() {
+  local release="$1"
+  local source_dir="${ENGLISH_DATA_DIR:-$APP_ROOT/private/english_data}"
+  local state_dir="$APP_ROOT/private/english-state"
+  if [[ ! -d "$source_dir" ]]; then
+    [[ -z "${ENGLISH_DATA_DIR:-}" ]] || { fail 'ENGLISH_DATA_DIR mavjud emas.'; return 1; }
+    printf 'English private data katalogi yo‘q; English import sozlanmagan.\n'
+    return 0
+  fi
+  local expected
+  [[ -f "$source_dir/plan.sha256" ]] || { fail 'Reviewed English plan.sha256 kerak.'; return 1; }
+  expected="$(cat "$source_dir/plan.sha256")"
+  [[ "$expected" =~ ^[a-f0-9]{64}$ ]] || { fail 'English import SHA256 noto‘g‘ri.'; return 1; }
+  mkdir -p "$state_dir"
+  chmod 700 "$state_dir"
+  compose_release "$release" run --rm -T --no-deps --user "$(id -u):$(id -g)" \
+    -v "$source_dir:/import-source:ro" -v "$state_dir:/import-state" \
+    migrations python -m neoavlod.english_import --source /import-source \
+    --credentials /import-state/prepared-accounts.json --report /import-state/last-plan.json \
+    --apply --expected-plan "$expected" --deployment-receipt </dev/null
 }
 atomic_link() {
   local target="$1" link="$2"

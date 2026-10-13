@@ -1,0 +1,23 @@
+const fs = require('node:fs');
+const crypto = require('node:crypto');
+const assert = require('node:assert/strict');
+const root = '/workspace/frontend/packages/ui/src/guide';
+const topics = fs.readdirSync(root).filter((name) => /Topics\.ts$/.test(name));
+const names = new Set(topics.flatMap((name) => [...fs.readFileSync(`${root}/${name}`, 'utf8').matchAll(/\.\/images\/([^"']+\.png)/g)].map((match) => match[1])));
+assert(names.size > 0);
+const results = [...names].sort().map((name) => {
+  assert(/^(admin|teacher)-[a-z-]+\.png$/.test(name));
+  const data = fs.readFileSync(`${root}/images/${name}`);
+  assert.equal(data.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
+  const width = data.readUInt32BE(16), height = data.readUInt32BE(20);
+  assert(width >= 300 && height >= 200 && data.length < 2000000, name);
+  return { name, width, height, sha256: crypto.createHash('sha256').update(data).digest('hex') };
+});
+const fixtures = fs.readFileSync('/workspace/scripts/agent_skills/browser_fixtures.cjs', 'utf8');
+assert(fixtures.includes("if (!path.startsWith('/api/')) return route.continue()"));
+assert(fixtures.includes("return route.fulfill({ status: 403"));
+assert(!fixtures.includes('readFile') && !fixtures.includes('fetch(') && !fixtures.includes('route.fallback'));
+const dir = '/workspace/.private/ui-acceptance';
+fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+fs.writeFileSync(`${dir}/guide-asset-audit.json`, JSON.stringify({ assets: results, synthetic_fixture_only: true, no_live_api_fallback: true }, null, 2), { mode: 0o600 });
+console.log(`${results.length} referenced guide PNG assets verified; dimensions/checksums and closed synthetic API fixture audited.`);

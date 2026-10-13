@@ -1,0 +1,1 @@
+export { MessagesManagementView } from "./MessagesManagementView";

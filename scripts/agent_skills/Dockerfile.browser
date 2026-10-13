@@ -1,0 +1,5 @@
+FROM mcr.microsoft.com/playwright:v1.58.2-noble
+WORKDIR /opt/browser
+RUN npm init -y && npm install --save-exact playwright@1.58.2
+ENV NODE_PATH=/opt/browser/node_modules
+WORKDIR /workspace

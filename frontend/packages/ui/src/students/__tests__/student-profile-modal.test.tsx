@@ -277,7 +277,7 @@ describe("Student Profile & Monthly Attendance Modal (Task 057)", () => {
   describe("Table Row Click & Action Event Propagation in StudentsManagementView", () => {
     it("opens profile modal when table row or student name is clicked", async () => {
       vi.spyOn(apiClient, "get").mockImplementation((url: string) => {
-        if (url.includes("/api/v1/admin/groups")) {
+        if (url.includes("/api/v1/admin/lookups/student-groups")) {
           return Promise.resolve({
             items: [
               {

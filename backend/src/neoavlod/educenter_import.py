@@ -33,6 +33,7 @@ from neoavlod.roster_import import (
     normalized,
     parse_phone,
 )
+from neoavlod.services.import_receipts import deployment_import
 from neoavlod.settings import Settings
 
 SUBJECT = "Python dasturlash&vibecoding"
@@ -316,19 +317,37 @@ async def run(args: argparse.Namespace) -> None:
     if args.apply:
         if args.expected_plan != digest:
             raise ValueError("Apply requires exact reviewed --expected-plan hash")
-        accounts = prepare(profiles, args.credentials)
         settings = Settings()
         db = Database(settings)
+        links: dict[str, str | None] | None = None
         try:
             async with db.session() as session, session.begin():
-                created, links = await provision_staff(
-                    session, accounts, settings, require_bot=False
-                )
-                output["result"] = {
-                    "created_staff": created,
-                    **await apply_educenter(session, plan, capacity=args.capacity),
-                }
-            private_write(args.credentials.with_name("links.json"), json.dumps(links, indent=2))
+
+                async def apply_once() -> dict[str, int]:
+                    nonlocal links
+                    accounts = prepare(profiles, args.credentials)
+                    created, links = await provision_staff(
+                        session, accounts, settings, require_bot=False
+                    )
+                    return {
+                        "created_staff": created,
+                        **await apply_educenter(session, plan, capacity=args.capacity),
+                    }
+
+                if getattr(args, "deployment_receipt", False):
+                    output["result"] = await deployment_import(
+                        session,
+                        key=f"educenter:{args.year}:python",
+                        digest=digest,
+                        roster=plan.roster,
+                        attendance=plan.attendance,
+                        lessons=plan.lessons,
+                        apply=apply_once,
+                    )
+                else:
+                    output["result"] = await apply_once()
+            if links is not None:
+                private_write(args.credentials.with_name("links.json"), json.dumps(links, indent=2))
         finally:
             await db.close()
     print(json.dumps(output, ensure_ascii=False))
@@ -343,6 +362,7 @@ def main() -> None:
     parser.add_argument("--credentials", type=Path, required=True)
     parser.add_argument("--apply", action="store_true")
     parser.add_argument("--expected-plan")
+    parser.add_argument("--deployment-receipt", action="store_true")
     args = parser.parse_args()
     try:
         asyncio.run(run(args))

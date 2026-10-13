@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import type { CurrentUser, PortalType } from "../api/types";
 import { apiClient } from "../api/client";
+import { ApiError } from "../api/errors";
 
 export interface AuthContextValue {
   user: CurrentUser | null;
@@ -54,6 +55,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ portal, children }) 
   useEffect(() => {
     fetchMe();
   }, [fetchMe]);
+
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+    let running = false;
+    const refreshPermissions = async () => {
+      if (running || document.visibilityState === "hidden") return;
+      running = true;
+      try {
+        const updated = await apiClient.get<CurrentUser>(`/api/v1/auth/${portal}/me`);
+        if (active) setUser(updated);
+      } catch (err) {
+        if (active && err instanceof ApiError && (err.status === 401 || err.status === 403)) setUser(null);
+      } finally {
+        running = false;
+      }
+    };
+    const onVisible = () => { if (document.visibilityState === "visible") void refreshPermissions(); };
+    window.addEventListener("focus", refreshPermissions);
+    document.addEventListener("visibilitychange", onVisible);
+    const timer = setInterval(refreshPermissions, 60_000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+      window.removeEventListener("focus", refreshPermissions);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [portal, user?.id]);
 
   return (
     <AuthContext.Provider

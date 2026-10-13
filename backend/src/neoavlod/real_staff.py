@@ -88,6 +88,7 @@ async def provision_staff(
     settings: Settings,
     *,
     require_bot: bool = True,
+    preserve_missing_fields: bool = False,
 ) -> tuple[int, dict[str, str | None]]:
     """Never resets an existing password, rotates a live link, or commits the caller's work."""
     await session.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": 0x4E454F065})
@@ -114,8 +115,11 @@ async def provision_staff(
         elif (
             person.role != spec.role
             or person.first_name != spec.first_name
-            or person.last_name != spec.last_name
-            or person.phone != spec.phone
+            or (
+                person.last_name != spec.last_name
+                and not (preserve_missing_fields and spec.last_name is None)
+            )
+            or (person.phone != spec.phone and not (preserve_missing_fields and spec.phone is None))
             or person.status != Status.ACTIVE
         ):
             raise ValueError("Existing username differs from reviewed real profile")

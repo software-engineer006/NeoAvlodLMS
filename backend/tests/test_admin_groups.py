@@ -64,17 +64,17 @@ async def test_group_permissions_and_role_access(model_database: Database) -> No
         assert (await client.patch(f"{BASE}/{uuid.uuid4()}", json={"name": "X"})).status_code == 403
         assert (await client.delete(f"{BASE}/{uuid.uuid4()}")).status_code == 403
 
-    # Creator can create, but cannot list or edit
+    # Creator can list and create, but cannot edit.
     async with client_for(creator) as client:
-        assert (await client.get(BASE)).status_code == 403
+        assert (await client.get(BASE)).status_code == 200
         create_resp = await client.post(BASE, json=group_payload)
         assert create_resp.status_code == 201
         created_id = create_resp.json()["id"]
         assert (await client.patch(f"{BASE}/{created_id}", json={"name": "X"})).status_code == 403
 
-    # Editor can edit, deactivate, activate, delete, but cannot list or create
+    # Editor can list/edit/deactivate/activate/delete, but cannot create.
     async with client_for(editor) as client:
-        assert (await client.get(BASE)).status_code == 403
+        assert (await client.get(BASE)).status_code == 200
         assert (await client.post(BASE, json=group_payload)).status_code == 403
         patch_resp = await client.patch(f"{BASE}/{created_id}", json={"name": "Matematika Yangi"})
         assert patch_resp.status_code == 200

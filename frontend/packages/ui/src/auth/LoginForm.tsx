@@ -39,7 +39,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   // Step 2 fields
   const [challenge, setChallenge] = useState<LoginChallenge | null>(null);
   const [otpCode, setOtpCode] = useState<string>("");
-  const [secondsRemaining, setSecondsRemaining] = useState<number>(300);
+  const [secondsRemaining, setSecondsRemaining] = useState<number>(0);
 
   // States
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -81,7 +81,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       setStep("otp");
       setOtpCode("");
       const initialSeconds = Math.max(0, Math.floor((new Date(res.expires_at).getTime() - Date.now()) / 1000));
-      setSecondsRemaining(initialSeconds > 0 ? initialSeconds : 300);
+      setSecondsRemaining(initialSeconds);
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.detail);

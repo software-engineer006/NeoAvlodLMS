@@ -10,3 +10,5 @@ export * from "./settings";
 export * from "./teacher";
 export * from "./profile";
 export * from "./dashboard";
+export * from "./messages";
+export * from "./guide";

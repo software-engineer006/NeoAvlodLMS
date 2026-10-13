@@ -3,6 +3,7 @@ import uuid
 from datetime import UTC, datetime
 
 import anyio
+import httpx
 from sqlalchemy import or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -77,6 +78,7 @@ async def send_reset(
     challenge_id: uuid.UUID,
     expires_at: datetime,
     override: TelegramSender | None = None,
+    transport: httpx.AsyncBaseTransport | None = None,
 ) -> None:
     # Runs after the same generic HTTP response for every username. No account
     # existence or external delivery timing is exposed in that response.
@@ -93,9 +95,9 @@ async def send_reset(
                     )
                 )
             )
-            if person is None or person.status != Status.ACTIVE or person.telegram_id is None:
+            if person is None or person.status != Status.ACTIVE or not person.telegram_connected:
                 return
-            sender = override or DatabaseTelegramSender(session, settings)
+            sender = override or DatabaseTelegramSender(session, settings, transport=transport)
             await deliver_challenge(
                 session,
                 person,

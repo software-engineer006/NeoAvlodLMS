@@ -24,6 +24,7 @@ import {
   StudentsManagementView,
   AdminAttendanceView,
   BotSettingsView,
+  MessagesManagementView,
   Table,
   TableBody,
   TableCell,
@@ -33,6 +34,7 @@ import {
   apiClient,
   useAuth,
 } from "@neoavlod/ui";
+import { AdminGuideView } from "@neoavlod/ui/admin-guide";
 import {
   ShieldCheck,
   Users,
@@ -226,6 +228,12 @@ const AdminContent: React.FC<{ activeTab: string; onNavigate?: (tab: string) => 
 
   if (activeTab === "bot-settings" && user) {
     return <BotSettingsView currentUser={user} />;
+  }
+  if (activeTab === "messages" && user) {
+    return <MessagesManagementView currentUser={user} />;
+  }
+  if (activeTab === "guide" && user) {
+    return <AdminGuideView currentUser={user} onNavigate={onNavigate} />;
   }
 
   // Fallback view for other tabs

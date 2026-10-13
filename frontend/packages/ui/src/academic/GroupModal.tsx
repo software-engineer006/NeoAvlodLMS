@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-import type { GroupItem, GroupCreateInput, GroupUpdateInput, SubjectItem } from "./types";
-import type { StaffItem } from "../staff/types";
+import type { GroupItem, GroupCreateInput, GroupUpdateInput, GroupOptions } from "./types";
 import { DAYS_OF_WEEK } from "./types";
 import { apiClient } from "../api/client";
 import { ApiError } from "../api/errors";
@@ -36,8 +35,8 @@ export const GroupModal: React.FC<GroupModalProps> = ({
   const [maxStudents, setMaxStudents] = useState<string>("15");
 
   // Options from API
-  const [subjects, setSubjects] = useState<SubjectItem[]>([]);
-  const [teachers, setTeachers] = useState<StaffItem[]>([]);
+  const [subjects, setSubjects] = useState<GroupOptions["subjects"]>([]);
+  const [teachers, setTeachers] = useState<GroupOptions["teachers"]>([]);
   const [isLoadingOptions, setIsLoadingOptions] = useState<boolean>(false);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -50,28 +49,21 @@ export const GroupModal: React.FC<GroupModalProps> = ({
     const loadOptions = async () => {
       setIsLoadingOptions(true);
       try {
-        const [subRes, staffRes] = await Promise.all([
-          apiClient.get<{ items: SubjectItem[] }>("/api/v1/admin/subjects", {
-            params: { page_size: 100, is_active: true },
-          }),
-          apiClient.get<{ items: StaffItem[] }>("/api/v1/admin/staff", {
-            params: { page_size: 100, role: "teacher", status: "active" },
-          }),
-        ]);
-        setSubjects(subRes.items);
-        setTeachers(staffRes.items);
+        const options = await apiClient.get<GroupOptions>("/api/v1/admin/lookups/group-options", { params: { active_only: true } });
+        setSubjects(options.subjects);
+        setTeachers(options.teachers);
 
         // Set defaults if creating and not set
         if (!group) {
-          if (subRes.items.length > 0 && !subjectId) {
-            setSubjectId(subRes.items[0].id);
+          if (options.subjects.length > 0 && !subjectId) {
+            setSubjectId(options.subjects[0].id);
           }
-          if (staffRes.items.length > 0 && !teacherId) {
-            setTeacherId(staffRes.items[0].id);
+          if (options.teachers.length > 0 && !teacherId) {
+            setTeacherId(options.teachers[0].id);
           }
         }
       } catch {
-        // Fallback or alert if options fail
+        setError("Fan va o‘qituvchi tanlovlarini yuklab bo‘lmadi. Formani qayta oching.");
       } finally {
         setIsLoadingOptions(false);
       }
@@ -247,7 +239,7 @@ export const GroupModal: React.FC<GroupModalProps> = ({
               { value: "", label: "-- O‘qituvchini tanlang --" },
               ...teachers.map((t) => ({
                 value: t.id,
-                label: `${t.first_name} ${t.last_name ?? ""} (${t.phone ?? "Telefon kiritilmagan"})`,
+                label: `${t.first_name} ${t.last_name ?? ""}`.trim(),
               })),
             ]}
           />

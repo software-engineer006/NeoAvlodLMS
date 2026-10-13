@@ -2,7 +2,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 
-from sqlalchemy import DateTime, Uuid, func, text
+from sqlalchemy import Boolean, DateTime, Uuid, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 
@@ -27,6 +27,16 @@ def link_expiry() -> datetime:
 
 
 class TelegramLink:
+    telegram_reconnect_required: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=text("false")
+    )
+
+    @property
+    def telegram_connected(self) -> bool:
+        return (
+            getattr(self, "telegram_id", None) is not None and not self.telegram_reconnect_required
+        )
+
     auth_uuid: Mapped[uuid.UUID] = mapped_column(Uuid, unique=True, default=uuid.uuid4)
     auth_expires_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

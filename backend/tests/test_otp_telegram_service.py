@@ -178,9 +178,7 @@ async def test_telegram_client_retry_on_429_and_transient_failure() -> None:
     def handler_always_429(request: httpx.Request) -> httpx.Response:
         return httpx.Response(429, json={"ok": False, "parameters": {"retry_after": 0.01}})
 
-    client_failing = TelegramClient(
-        "token_fail", transport=httpx.MockTransport(handler_always_429)
-    )
+    client_failing = TelegramClient("token_fail", transport=httpx.MockTransport(handler_always_429))
     with pytest.raises(DomainError) as exc_429:
         await client_failing.call("sendMessage", {"chat_id": 1, "text": "test"}, max_retries=1)
     assert exc_429.value.status_code == 429
@@ -195,9 +193,7 @@ async def test_telegram_client_retry_on_429_and_transient_failure() -> None:
             raise httpx.ReadTimeout("Connection timed out")
         return httpx.Response(200, json={"ok": True, "result": {"message_id": 2}})
 
-    client_timeout = TelegramClient(
-        "token_timeout", transport=httpx.MockTransport(handler_timeout)
-    )
+    client_timeout = TelegramClient("token_timeout", transport=httpx.MockTransport(handler_timeout))
     res_timeout = await client_timeout.call("sendMessage", {"chat_id": 1, "text": "test"})
     assert res_timeout["ok"] is True
     assert timeout_count == 2
@@ -252,7 +248,15 @@ async def test_redis_otp_store_live_operations() -> None:
             portal=portal,
             purpose=purpose,
             code_hash=c_hash,
-            ttl_seconds=300,
+            ttl_seconds=180,
+        )
+        assert 179 <= await store._redis.ttl(f"neoavlod:otp:{challenge_id}") <= 180
+        assert (
+            179
+            <= await store._redis.ttl(
+                f"neoavlod:otp-active:{staff_id}:{portal.value}:{purpose.value}"
+            )
+            <= 180
         )
 
         # 2. Wrong code -> mismatch

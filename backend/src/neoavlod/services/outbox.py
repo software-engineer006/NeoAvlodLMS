@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from neoavlod.database import Database
 from neoavlod.models import NotificationOutbox, OutboxStatus, Parent
+from neoavlod.services.message_delivery import dispatch_pending_messages
 from neoavlod.services.telegram import DatabaseTelegramSender, TelegramSender
 from neoavlod.settings import Settings
 
@@ -29,7 +30,7 @@ def format_attendance_message(payload: dict[str, Any]) -> str:
     note = payload.get("note")
 
     lines = [
-        "📋 Davomat bildirishnomasi",
+        "📋 Davomat tuzatildi" if payload.get("correction") else "📋 Davomat bildirishnomasi",
         f"Farzandingiz: {student}",
         f"Guruh: {group}",
         f"Sana: {date_val}",
@@ -90,10 +91,19 @@ async def process_outbox_item(
     item = item_in_session
 
     # Check if parent is connected to Telegram
-    telegram_id = item.telegram_id
+    parent = await session.get(Parent, item.parent_id)
+    if parent is not None and parent.telegram_reconnect_required:
+        item.status = OutboxStatus.PENDING
+        item.available_at = datetime.now(UTC) + timedelta(seconds=30)
+        item.attempts = max(0, item.attempts - 1)
+        item.locked_by = None
+        item.locked_until = None
+        item.last_error = "Ota-ona yangi botga qayta ulanishi kutilmoqda"
+        await session.commit()
+        return False
+    telegram_id = parent.telegram_id if parent and parent.telegram_connected else item.telegram_id
     if telegram_id is None:
-        parent = await session.get(Parent, item.parent_id)
-        if parent is not None and parent.telegram_id is not None:
+        if parent is not None and parent.telegram_connected:
             telegram_id = parent.telegram_id
             item.telegram_id = telegram_id
         else:
@@ -104,6 +114,8 @@ async def process_outbox_item(
             await session.commit()
             return False
 
+    assert telegram_id is not None
+    item.telegram_id = telegram_id
     message = format_attendance_message(item.payload)
     try:
         await sender.send_message(telegram_id, message)
@@ -126,7 +138,7 @@ async def process_outbox_item(
             item.status = OutboxStatus.FAILED
         else:
             item.status = OutboxStatus.PENDING
-            backoff = min(2 ** item.attempts * 2, 300)
+            backoff = min(2**item.attempts * 2, 300)
             item.available_at = now + timedelta(seconds=backoff)
 
         item.locked_by = None
@@ -164,9 +176,7 @@ async def dispatch_pending_outbox(
             item = await session.get(NotificationOutbox, item_id)
             if item is None:
                 continue
-            active_sender = sender or DatabaseTelegramSender(
-                session, settings, transport=transport
-            )
+            active_sender = sender or DatabaseTelegramSender(session, settings, transport=transport)
             try:
                 success = await process_outbox_item(
                     session, item, active_sender, max_attempts=max_attempts
@@ -206,11 +216,14 @@ class OutboxWorker:
         return self._stop_event.is_set()
 
     async def run_single_iteration(self) -> int:
-        return await dispatch_pending_outbox(
+        attendance_delivered = await dispatch_pending_outbox(
             self.database,
             sender=self.sender,
             worker_id=self.worker_id,
             batch_size=self.batch_size,
+        )
+        return attendance_delivered + await dispatch_pending_messages(
+            self.database, settings=self.settings, sender=self.sender, batch_size=self.batch_size
         )
 
     async def run_forever(self) -> None:

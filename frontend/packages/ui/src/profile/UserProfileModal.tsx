@@ -423,8 +423,8 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-slate-500">Telegram:</span>
-                  <Badge variant={user.telegram_id ? "success" : "neutral"}>
-                    {user.telegram_id ? "Ulangan" : "Ulanmagan"}
+                  <Badge variant={(user.telegram_connected ?? Boolean(user.telegram_id)) ? "success" : "neutral"}>
+                    {user.telegram_reconnect_required ? "Yangi botga qayta ulanish kerak" : (user.telegram_connected ?? Boolean(user.telegram_id)) ? "Ulangan" : "Ulanmagan"}
                   </Badge>
                 </div>
               </div>

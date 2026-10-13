@@ -10,7 +10,7 @@ from neoavlod.database import Database
 from neoavlod.models import Attendance, AttendanceBatch, Group, Role, Subject
 from neoavlod.models.common import Status
 
-pytestmark = pytest.mark.anyio
+pytestmark = [pytest.mark.anyio, pytest.mark.usefixtures("attendance_clock")]
 BASE = "/api/v1/teacher/groups"
 
 

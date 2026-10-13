@@ -1,4 +1,5 @@
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta, tzinfo
+from typing import Self
 
 import httpx
 import pytest
@@ -11,6 +12,7 @@ from neoavlod.errors import DomainError
 from neoavlod.main import create_app
 from neoavlod.models import AuthSession, Portal, RefreshToken, Role
 from neoavlod.models.common import Status
+from neoavlod.security import sessions as session_service
 from neoavlod.security.sessions import (
     ACCESS_COOKIE,
     CSRF_COOKIE,
@@ -76,6 +78,57 @@ async def test_tokens_are_hashed_and_refresh_deadline_is_absolute(model_database
         with pytest.raises(DomainError):
             await authenticate(session, tokens.access)
         assert (await authenticate(session, refreshed.access)).session.id == tokens.session_id
+
+
+@pytest.mark.parametrize("role", [Role.ADMIN, Role.TEACHER])
+async def test_portal_restores_after_six_days_and_expires_at_seven_days(
+    model_database: Database,
+    monkeypatch: pytest.MonkeyPatch,
+    role: Role,
+) -> None:
+    tokens = await seeded_session(model_database, role)
+    started = tokens.expires_at - timedelta(days=7)
+    assert tokens.access_expires_at - started == timedelta(minutes=15)
+    clock = {"now": tokens.expires_at - timedelta(hours=1)}
+
+    class SessionClock(datetime):
+        @classmethod
+        def now(cls, tz: tzinfo | None = None) -> Self:
+            return cls.fromtimestamp(clock["now"].timestamp(), tz)
+
+    monkeypatch.setattr(session_service, "datetime", SessionClock)
+    portal = "teacher" if role == Role.TEACHER else "admin"
+    origin = f"https://{portal}.eduneo.uz"
+    app = create_app(Settings(environment="test"))
+    async with (
+        app.router.lifespan_context(app),
+        httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app),
+            base_url=origin,
+            headers={"Origin": origin, "X-CSRF-Token": tokens.csrf},
+        ) as client,
+    ):
+        for name, value, path in (
+            (ACCESS_COOKIE, tokens.access, "/"),
+            (REFRESH_COOKIE, tokens.refresh, REFRESH_PATH),
+            (CSRF_COOKIE, tokens.csrf, "/"),
+        ):
+            client.cookies.set(name, value, domain=f"{portal}.eduneo.uz", path=path)
+        me = f"/api/v1/auth/{portal}/me"
+        refresh = f"/api/v1/auth/{portal}/refresh"
+        assert (await client.get(me)).status_code == 401
+        # A browser reopened after 6 days 23 hours can silently recover.
+        assert (await client.post(refresh)).status_code == 204
+        assert (await client.get(me)).status_code == 200
+        clock["now"] = tokens.expires_at - timedelta(minutes=1)
+        assert (await client.post(refresh)).status_code == 204
+        async with model_database.session() as session:
+            auth = await session.get(AuthSession, tokens.session_id)
+            assert auth and auth.expires_at == tokens.expires_at
+            assert auth.access_expires_at == tokens.expires_at
+        clock["now"] = tokens.expires_at
+        assert (await client.get(me)).status_code == 401
+        assert (await client.post(refresh)).status_code == 401
 
 
 async def test_refresh_replay_durably_revokes_whole_family(model_database: Database) -> None:

@@ -1,0 +1,149 @@
+# NeoAvlod LMS release test rejasi
+
+Manba: 2026-10-13 rasmli qo‘llanmalar, permission audit, UI/backend sinovi va
+GitHub CI/CD orqali production talabi. Tartib TASKS.md 095–101; release natijalari
+shu faylning qabul jadvaliga yoziladi. Bajarilmagan sinov “o‘tdi” deb belgilanmaydi.
+
+## Ruxsat va rol matriksi
+
+Barcha endpointlar faol xodim va tirik sessionni tekshiradi. Admin endpointlari
+admin portal sessiyasini, teacher endpointlari teacher rolini talab qiladi.
+Yozish so‘rovlari Origin va sessionga bog‘liq double-submit CSRFni tekshiradi.
+O‘chirilgan/revoked/expired hisob 401; tirik hisobda ruxsat yo‘q bo‘lsa 403.
+Teacher begona guruh/o‘quvchisiga mavjudligini oshkor qilmaydigan 404 oladi.
+
+| Bo‘lim/amal | Superadmin | Administrator | Teacher |
+| --- | --- | --- | --- |
+| Dashboard | Hammasi | Faqat tegishli grantga mos hisoblar | O‘z guruhlari |
+| Xodimlar | staff:manage, admin/teacher va admin grantlari | staff:manage, faqat teacher boshqarish | Yopiq |
+| Fanlar | Barcha amallar | subjects:manage | Yopiq |
+| Guruhlar | Barcha amallar | groups:read/create/edit alohida | Faqat o‘z guruhini ko‘rish |
+| O‘quvchilar | Barcha amallar | students:read/create/edit alohida; edit ko‘chirish/status/link amallarini ham beradi | Faqat o‘z guruhidagi profil/statistika |
+| Davomat tarixi | Barcha guruhlar | attendance:read | O‘z guruhlari |
+| Davomat yozish/tuzatish | Barcha guruhlar, eski sana sabab bilan | attendance:write, eski sana sabab bilan | O‘z guruhi; dars sanasidan keyingi 2-kun oxirigacha, Toshkent vaqti |
+| Telegram xabarlar | Barcha faol auditoriya | messages:send | Yopiq |
+| Bot sozlamalari | Faqat shu rol | Hatto full grant bilan yopiq | Yopiq |
+| Shaxsiy profil/parol | O‘z hisobi | O‘z hisobi | O‘z hisobi |
+| Qo‘llanma | Barcha superadmin mavzulari | Faqat berilgan amallarga mos mavzular | Teacher mavzulari |
+
+Write/create/edit grant o‘z modulining read grantini ham beradi. Yangi admin
+grantlari saqlanganda normalizatsiya qilinadi; eski hisoblar uchun server va UI
+shu bog‘liqlikni bir xil hisoblaydi. Read olib tashlansa staff UI unga bog‘liq
+yozish grantlarini ham olib tashlaydi. Full admin — katalogdagi barcha 11 kalit;
+`*`, noma’lum yoki boshqa registrdagi kalitlar to‘liq ruxsat bermaydi.
+
+`/admin/lookups/group-options` groups read/create/edit uchun faqat fan
+id/nom/faollik va teacher id/ism/faollikni qaytaradi. Staff username, telefon,
+permission yoki bot havolasi berilmaydi; boshqa modullarni boshqarish ochilmaydi.
+`/admin/lookups/student-groups` student read/create/edit uchun faqat faol guruh
+id/nom/sig‘im/band sonini qaytaradi. Tanlovlar 100 ta bilan jimgina kesilmaydi.
+
+## Izolyatsiya va sinov ma’lumotlari
+
+- Barcha runtime/test/migration/build Dockerda. Backend test DB — alohida
+  `neoavlod_test`; har bir model fixture tozalanadi. Testlar serving DBni yozmaydi.
+- Brauzer actual admin/teacher appni ochadi, barcha `/api/**` so‘rovlarini
+  sintetik fixture bilan intercept qiladi. Bekor qilingan noma’lum endpointlar
+  real backendga uzatilmaydi. Ismlar “Namuna”, telefonlar namuna yoki bo‘sh.
+- Telegram HTTP transporti sintetik; bu real /start, OTP yoki yetkazish dalili
+  sifatida talqin qilinmaydi. Agent oilalarga test broadcast yubormaydi.
+- Serving acceptance SQL tranzaksiyasi `READ ONLY`; POST faqat preview, navbatga
+  qo‘shish yo‘q. PII, parol, token, raw CSV, Telegram ID, capability linklar
+  private dalillarda; public screenshotlarga yoki Gitga chiqmaydi.
+
+## Bajariladigan case va dalillar
+
+| ID | Sinov | Kutilgan natija / avtomatlashtirilgan dalil |
+| --- | --- | --- |
+| P01 | Har bir grant, grantsiz, full, wildcard, noma’lum | Haqiqiy 8 API route matriksi; test_permission_audit.py |
+| P02 | Superadmin/teacher/inactive/revoked/demoted | 200/403/401 va ownership404; test_rbac.py, test_sessions.py |
+| P03 | Cheklangan guruh creator/editor | Selector ishlaydi, unrelated staff/fan boshqaruvi403; test_permission_audit.py |
+| P04 | Student creator/editor | Sig‘im selector, group management403, grant bekor qilinsa darhol403 |
+| P05 | Staff boshqarishda rol ko‘tarish | Admin faqat teacher; superadmin admin grantini o‘zgartiradi; oxirgi superadmin saqlanadi |
+| P06 | Read/write va full admin UI | Sidebar/tugma/mavzu bir xil dependency; bot faqat superadmin; admin-shell/staff/academic/student testlar |
+| P08 | Ochiq panelda grant yangilanishi | Refocus/visible/60soniya profile refresh; qoralama/spinner reset yo‘q;401/403 hisob yopiladi,503da form saqlanadi |
+| P07 | CSRF/Origin/portal | GET ruxsati mutationga yetmaydi; noto‘g‘ri header/cookie/origin403; backend regressiya |
+| A01 | Admin/teacher bir xil davomat | Draft/finalize/correct atomik, teacher ownership va 2 kun; test_admin_attendance/edit_window |
+| A02 | Eski sana va audit | Admin sabab majburiy; old/new/actor/time/action; no-op/retry dublikat yo‘q |
+| A03 | Sessiya 15min/7kun va ko‘p tab | Automatic refresh ayni payload bilan; form saqlanadi; 7kun mutlaq; backend+client-refresh/attendance-session |
+| A04 | OTP login/reset, ikki portal | 179soniya qabul,180rad, replayrad; UI03:00→00:00; test_otp_expiry/otp-expiry |
+| B01 | Bot rename/token/boshqa bot | getMe identity, yangi link, samebot ulanish saqlanishi, newbot Start, stale ack himoyasi |
+| M01 | Parent/student/both; selected/groups/all | Active roster, siblings/entity/chat dedup, orphan/inactive chiqariladi; test_messages.py |
+| M02 | Preview/stale/request retry | Matn/ro‘yxat o‘zgarsa fresh preview; requestid retry saqlanadi; atomic concurrent enqueue |
+| M03 | Qidiruv/pagination/limit | Tanlov saqlanadi; full formatted UTF16≤4096; kerak bo‘lmasa yuborish disabled |
+| M04 | Tasdiqlash/tarix/detail | Explicit confirmdan oldin send yo‘q; actor/text/audience immutable; status/attempt/vaqt |
+| M05 | Failed retry/pending cancel | Delivered qayta yuborilmaydi; faqat xatoli yoki navbatdagi; in-flight cancel serialization |
+| M06 | Worker/restart/bot/rate/error | 10/sec,1/chat/sec,429 persisted pause,5 transient retry; fresh token, reconnect/permissions recheck |
+| G01 | Admin rol va grant mavzulari | Grantsiz umumiy mavzular; har bir grant uchun action mavzusi; fulladmin bot mavzusi yo‘q |
+| G02 | Teacher to‘liq mavzulari | Guruh/profil/statistika/davomat/tarix/session/OTP, admin boshqaruvi yo‘q |
+| G03 | Qo‘llanma qidiruv va bo‘lim tanlash | Ism/keyword/step bo‘yicha; unauthorized mavzu searchda ham chiqmaydi; empty state va reset |
+| G04 | Rasm va raqamli qadam mosligi | Har screenshot actual app DOM; marker1..N qadamga mos; alt text, matnli qadam, broken asset yo‘q |
+| G05 | Ruxsat o‘zgarsa ochiq qo‘llanma | Oldingi mavzu yopiladi, yangi topics qayta hisoblanadi; stale selection ochilmaydi |
+| U01 | 1440/768/360px | Sidebar/mobile menu, guide/topic/card/grid/dialog; horizontal overflow yo‘q; private screenshot review |
+| U02 | Klaviatura va matn | Nomlangan dialog, focus trap/restore, Tab/Escape, form labels, alt; shared modal tests+browser |
+| U03 | Console/network | JS exception yo‘q; rasm200; sintetik script orqali to‘liq UI oqim; API spy unknownblocked |
+| D01 | Migratsiya | Upgrade/downgrade/head/model match, eski FK/credential/history saqlanadi; test_migrations.py |
+| D02 | Haqiqiy private import | Hash/backup restore, rerun0, Asila bo‘sh, Jamshid k-only98; admin keyingi tahriri saqlanadi |
+| R01 | Full Docker gate | check_backend/frontend/agent, pytest/Vitest, release build/checksum; TASKS evidence |
+| R02 | Public diff | Secret/PII scan, unrelated output excluded, no force push, exactSHA remote mos |
+| R03 | CI/CD | Actions test/build/deploy haqiqatan success; pinnedSSH; private source faqat serverda; runURL+SHA |
+| R04 | Production | Backup→exactSHA→migrate/import→healthy singletonworker; HTTPS/API/guideassets/release marker; read-only data reconcile |
+| R05 | Rollback | Mavjud deploy sinovi rollback; xato bo‘lsa old verified release; schema/data mosligi, secretlar saqlanishi |
+
+## Buyruqlar
+
+`scripts/agent_skills/check_backend.sh`, `check_frontend.sh`,
+`check_agent_skills.sh`, `run_migrations.sh`; `docker_env.sh node npm test`;
+`scripts/deploy/build_frontend.sh`, Node `prepare-release.mjs --check` va
+Docker Python `scripts/deploy/verify_frontend.py /workspace/frontend`.
+Brauzer: `scripts/agent_skills/browser.sh scripts/agent_skills/browser_messages.cjs`;
+guide/role browser cases qo‘llanma implementation bilan qo‘shiladi. Private
+screenshots `.private/ui-acceptance/`; public guide rasmlari faqat sintetik auditdan
+keyin frontend assetsga ko‘chiriladi.
+
+Local DB: `real_data.sh backup <unique-name>` → `real_data.sh migrate` →
+read-only `verify_english.py --baseline ... --allow-message-grant` va
+`verify_messages.py`. Local bot worker production bilan polling qilmaydi.
+
+## Qabul natijalari
+
+| Bosqich | Holat | Dalil |
+| --- | --- | --- |
+| 092–094 Xabarlar backend/UI/local | O‘tdi | 288 pytest,167 Vitest,13 agent;0009; ikki build/checksum;118 unlinked,0 sends |
+| 095 permission audit | O‘tdi | Full309 backend; final39 API/RBAC/CRUD,173 Vitest/typecheck/lint; minimal lookup/write→read/full-grant/refocus verified; Chromium1440/768/360 Xabarlar,0 visible error/overflow/JS exception |
+| 096 admin qo‘llanma | O‘tdi | 22 mavzu/21 numbered real-UI synthetic screenshot; superadmin22/fulladmin20/limited6; grant/search/zoom/revocation16 tests; full191 Vitest/typecheck/lint; Chromium3 viewport/barcha image decode |
+| 097 teacher qo‘llanma | O‘tdi | 11 mavzu/11 numbered actual-UI synthetic screenshots; full196 Vitest/typecheck/lint; teacher-only/search2-kun23:59/zoom/destination/11image decode/3viewports;32asset audit |
+| 098 full UI/backend/release | O‘tdi | Full309pytest/Ruff/mypy124,clean196Vitest/typecheck/lint,13agent,0009head/model,real-data-preservation/preview read-only;2build/Node+Python checksum/32PNG/portal-scoped assets; final3 browser scripts passed |
+| 099 production tayyorlov | O‘tdi | 316backend/Ruff/mypy128;0010head/model;13agent/13deploy/actionlint; real disposable production Python+English receipt/repeat/admin-edits/TLS/rollback; VPS private backup scratch restore5staff/4groups/62students/388attendance/24batches; restricted CI SSH key verified; English private package0600 serverga yuborildi |
+| 100 GitHub/CI/CD | Kutilmoqda | Exact SHA va Actions URL keyin yoziladi |
+| 101 production qabul | Kutilmoqda | Exact serving SHA va read-only health/data/assets dalili keyin yoziladi |
+
+### 098 final case dalillari (2026-10-13)
+
+- P01–P08: `test_permission_audit.py`21 case va real endpoint matritsi; existing
+  RBAC/staff/group/student/session/CSRF regressiyasi full309pytestda o‘tdi.
+  UI fullgrant, dependent read, wildcard rejection va refocus/grant revocation
+  draft preservation sinovlari full196Vitestda o‘tdi.
+- A01–A04/B01/M01–M06: full backend309 va frontend196: audit/concurrency/
+  rollback, teacher window, session refresh/absolute7days, real Redis180TTL,
+  bot identity/hot reload/reconnect, message durable retry/pacing/cancel/input
+  recovery. Telegram transport sintetik; haqiqiy oilaga test yetkazish qilinmadi.
+- G01–G05/U01–U03: admin guide22/fulladmin20/limited6; teacher11/admin-denied,
+ 33 topic image decode (32 unique PNG), search/section/zoom/permission-safe
+  destination; 1440/768/360px barcha3 script no overflow/visible action error/
+  JS exception. Modal keyboard/focus va header exit fully-visible tekshirildi.
+  Rasmlar .private/ui-acceptance dagi viewport dalillari bilan ko‘zdan kechirildi.
+- D01–D02:0009 development/serving head/model match; migration upgrade/downgrade
+  regressiyasi, private backup restore bir xil count. Read-only English baseline
+  rows/credential/history/immutable config preserved; faqat0009ning yangi
+  messages:send admin granti normalizatsiya istisnosi. Local 6staff/7groups/
+  118students/462attendance/22batches, Asila empty/Jamshid98k-only drafts,
+  0parent/118unlinked/0campaign/0delivery. Serving API va ikkala portal HTTP200.
+- R01: clean npmci/typecheck/lint/full196Vitest/2build,309backend/13agent,
+  Node+Python checksum,32PNG audit. Builddagi aralash portal assets tuzatildi:
+  admin21PNG/teacher11PNG; teacher JSda administrator grant/bot manual yo‘q.
+  `npm audit --omit=dev` runtime vulnerability0; full installning9 dev advisory
+  warningi major toolchain upgrade doirasiga kiradi, runtime/static production
+  paketiga tegishli emas. Public diff whitespace check passed.
+- R02–R05: user authorized push/deploy, lekin exact commit/Actions/VPS dalillari
+  099–101da olinadi. Local real bot worker polling konflikti uchun stopped.

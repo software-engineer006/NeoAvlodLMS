@@ -127,7 +127,7 @@ export const MonthlyAttendanceHistoryView: React.FC<MonthlyAttendanceHistoryView
 
   // Load groups if not provided
   useEffect(() => {
-    if (initialGroups && initialGroups.length > 0) {
+    if (initialGroups !== undefined) {
       setGroups(initialGroups);
       if (!selectedGroupId && initialGroups[0]) {
         setSelectedGroupId(initialGroups[0].id);
@@ -138,13 +138,12 @@ export const MonthlyAttendanceHistoryView: React.FC<MonthlyAttendanceHistoryView
     const fetchGroups = async () => {
       try {
         if (portal === "admin") {
-          const res = await apiClient.get<{ items: Array<{ id: string; name: string }> }>(
-            "/api/v1/admin/groups",
-            { params: { page_size: 100 } }
+          const res = await apiClient.get<Array<{ id: string; name: string }>>(
+            "/api/v1/admin/attendance/groups"
           );
-          setGroups(res.items);
-          if (!selectedGroupId && res.items.length > 0) {
-            setSelectedGroupId(res.items[0].id);
+          setGroups(res);
+          if (!selectedGroupId && res.length > 0) {
+            setSelectedGroupId(res[0].id);
           }
         } else {
           const res = await apiClient.get<Array<{ id: string; name: string }>>(

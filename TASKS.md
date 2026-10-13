@@ -50,14 +50,19 @@ invariantlari tekshiruvdan o‘tdi.
   guruh va talaba uchun ownership SQL so‘rovi bilan tekshiriladi.
 - Permission katalogi: `staff:manage`, `subjects:manage`, `groups:read`,
   `groups:create`, `groups:edit`, `students:read`, `students:create`,
-  `students:edit`, `attendance:read`. Bot sozlamalari faqat superadmin uchun.
-  Davomatni yozish faqat biriktirilgan teacher uchun, superadmin uchun ham emas.
+  `students:edit`, `attendance:read`, `attendance:write`, `messages:send`. Bot sozlamalari faqat
+  superadmin uchun. Guruh/o‘quvchi create/edit va attendance write o‘z read
+  permissionini ham beradi; UI va API dependency mos (095). 0007 migratsiya
+  mavjud administratorlarga ikkisini beradi. Teacher o‘z guruhiga, davomat
+  permissionli administrator/superadmin barcha guruhlarga yozadi (087).
 - Xodimlarda qo‘shimcha `auth_uuid` mavjud: `staff_<uuid>` bot havolasi orqali
   Telegram ulanadi. Parent/student havolalari mos ravishda `parent_<uuid>` va
   `student_<uuid>`. UUID taxmin qilib bo‘lmaydi; bog‘lash bir martalik,
   tranzaksion va mavjud boshqa Telegram hisobiga qayta bog‘lashni rad etadi.
 - Parollar Argon2 bilan hash qilinadi. Username/parol tekshirilgach Telegramga
-  6 raqamli, qisqa muddatli OTP yuboriladi. OTP maqsadi, urinishlar limiti,
+  6 raqamli, 3 daqiqalik (180 soniya) OTP yuboriladi. Login/reset API va Telegram
+  matni bitta OTP_TTL_SECONDS qiymatiga bog‘langan; UI expires_atni ishlatadi.
+  OTP maqsadi, urinishlar limiti,
   muddati va bir martalik ishlatilishi DB orqali tekshiriladi; kod loglanmaydi.
 - Qisqa access session va rotatsiyalanuvchi refresh token: refresh oilasi uchun
   mutlaq 7 kunlik muddat, qayta ishlatish aniqlansa oilani bekor qilish.
@@ -74,8 +79,14 @@ invariantlari tekshiruvdan o‘tdi.
 - Student va parent bir tranzaksiyada yaratiladi. Parent takroriy telefon uchun
   avtomatik birlashtirilmaydi. Yosh, telefon, jadval va FK lar validatsiya qilinadi.
 - Davomat uchun `(group_id, student_id, date)` unique. Draftlarni faqat guruh
-  teacheri yozadi. Yakunlash guruh/sana uchun bir marta va atomik bajariladi;
-  faol talabalarning barchasi belgilanadi. Yakunlangan davomat keyin o‘zgarmaydi.
+  teacheri yoki administrator yozadi. Yakunlash guruh/sana uchun bir marta va atomik bajariladi;
+  faol talabalarning barchasi belgilanadi. Dars sanasidan keyingi 2-kun oxirigacha
+  (Asia/Tashkent) guruh teacheri yakunlangan davomat status/izohini tuzata oladi;
+  batch yakunlangan holda qoladi. Keyin teacher yozishi yopiladi, tarix o‘qiladi.
+  Administrator eski sanani ham sabab bilan tuzatadi; kelajak sanasi yopiq.
+  AttendanceChange actor/role/name/time/action/old/new/reasonni o‘sha tranzaksiyada
+  saqlaydi; eski importlar uchun taxminiy audit yaratilmaydi. Auditni o‘zgartirish
+  yoki o‘chirish API mavjud emas; no-op va parallel retry dublikat yaratmaydi.
 - Davomat yakunlanganda notification outbox shu DB tranzaksiyasida yoziladi.
   FastAPI Background Task tezkor dispatchni boshlaydi; alohida worker retry va
   restartdan tiklanishni ta’minlaydi. Telegram tarmog‘i uzilishi davomatni yo‘qotmaydi.
@@ -84,6 +95,16 @@ invariantlari tekshiruvdan o‘tdi.
   token qaytarilmaydi. Tokenni tekshirish, bot username va versiyani saqlash,
   workerning eski pollingni to‘xtatib yangi konfiguratsiyani yuklashi talab qilinadi.
   Webhook/polling birga ishlamaydi; bitta polling worker faol bo‘ladi.
+  GetMe tekshirilgan bot ID parametersda saqlanadi; username qo‘lda faqat amaldagi
+  token botiga mos bo‘lsa saqlanadi. Boshqa bot IDda polling offset 0ga qaytadi,
+  eski Telegram ID/parollar saqlanib, qayta Start flagi va yangi capability havola
+  yaratiladi. O‘sha bot rename/token rotation ulanishlarni saqlaydi; eski bot ID
+  noma’lum va token bekor bo‘lsa, taxminiy tenglik o‘rniga qayta Start talab qilinadi.
+  Worker readiness faqat muvaffaqiyatli polling heartbeatdan; eski version
+  natijasi/statusi yangi konfiguratsiyaga qo‘llanmaydi. Reconnect kutilayotgan
+  ota-onaning pending xabari attempts sarflanmasdan kutadi; OTP yangi botga Startdan
+  keyin yuboriladi. Config mutatsiyalari va worker acknowledgement serializatsiya
+  qilinadi. Staff/parent/student hamda profil connected holati amaldagi botga mos.
 - Birinchi login uchun bootstrap ketma-ketligi: migratsiya → superadmin CLI →
   boshlang‘ich bot tokenini yashirin kirituvchi settings CLI → bot worker →
   superadminning staff havolasini bosishi → web login/OTP. Keyingi token
@@ -115,7 +136,197 @@ invariantlari tekshiruvdan o‘tdi.
 
 ## Davom ettirish checkpoint
 
-Faol registry task: Yo‘q; 001–082 yakunlangan. Public GitHub main uchun 169 faylli release 92b636bf871dbe84eff1ff7059074e11745965c0 va checkpoint a016cbe9d0e045928ab719531d78e423d395fb93 non-force push bilan tasdiqlandi. Actual secret/password/student-name scan findings=0, unrelated output/ va private data chiqarildi. Docker 225 backend test, yangilangan frontend build/checksum, 13 agent testi, legacy synthetic fixture va real production import/rollback/cleanup exit 0. Actions 37908343083 va 37908590407 test joblari to‘liq success, production release/rollback/cleanup ham o‘tdi. Ikkala deploy job «Configure pinned server identity»da failure; 37908343083 logida SSH_PRIVATE_KEY va SSH_KNOWN_HOSTS bo‘sh, ssh-keygen empty key uchun libcrypto xatosi berdi. VPS deploy boshlanmagan. Local CEO Mohira va Dilmurod allaqachon Telegramga ulangan; Jasurbekning amaldagi bir martalik havolasi .private/python-groups/TELEGRAM_LINKS.jsonda (0600), IDs/parollar Gitda yo‘q. Tashqi keyingi qadam: GitHub production environment SSH secretlarini haqiqiy server kaliti va tekshirilgan host identity bilan sozlash, private paketni serverga xavfsiz joylash va workflow qayta ishga tushirish. Production private paket hali serverga yuborilmagan; local havolalar hozirgi neoavlod_demo bazasiga tegishli. 076–080 local data dalillari saqlangan.
+2026-10-14 yangilanish: 001–099 bajarilgan,100 faol. 0010 durable import
+receipt, Python/English deploy hooklari admin tahrirlarini saqlaydi; hash o‘zgarishi,
+partial/provenance/history/batch yetishmasligi fail closed.316backend pytest,
+Ruff/mypy128,13agent,13deploy/actionlint va disposable production TLS/import/
+admin-edit preservation/backup/automatic+manual rollback passed. Development va
+backup/restore tasdiqlangan serving DB0010 head/model match; local118/462/22,
+English/baseline API ownership/preservation read-only passed, local worker stopped.
+User bergan credential bilan pinned SSH VPSga kirdi; real production hali
+1473595295200f935fae00916f7610db468a4649/0006,5staff/4groups/62students/
+388attendance/24batches/0parent/0outbox. Private production dump scratch restore
+counts matched. English3CSV+reviewedhash server private katalogga0600 yuborildi.
+Dedicated CI SSH key restricted forced-command bilan sozlandi; arbitrary command
+rad etishi va key authentication passed. Secret/key/password faqat ignored private.
+Keyingi100: public diff/PII/secret scan, reviewed commit/non-force push, exactSHA
+Actions success. GitHub SSH Git access bor; GitHub credential-helper PAT yo‘q,
+IAB GitHub signed out, connector secrets-write capability yo‘q. Repo Actions
+secrets:write token private file path foydalanuvchidan async so‘ralgan; javob hali
+yo‘q. CI secrets bo‘lmasa success deyilmaydi;101production acceptance boshlanmaydi.
+Public221file staged diff private credentials/capability links/98 actual pupil
+names/privatekeys/PAT/rawCSV/unrelatedoutput scan passed;gitdiffcheck/32PNG
+provenance/portal-scope/Node+Python cleanbuild checksum passed. Unrelated output/
+stage qilinmadi.100reviewed feature commit/non-force push va Actions follow-up.
+`scripts/agent_skills/task.sh resume`.
+
+2026-10-13: 001–098 bajarilgan; faol task 099 — production private import/deploy tayyorlov.
+Backend full309 pytest/Ruff/mypy124; final39 API/RBAC/CRUD audit va mypy114 src/tests;
+UI typecheck/lint va173 Vitest o‘tdi. Docker Chromium image tayyor:
+`browser.sh scripts/agent_skills/browser_messages.cjs` 1440/768/360px actual
+DOMni synthetic API bilan tekshirdi; visible error/overflow/JS exception yo‘q,
+focus trap ishlaydi. Annotated/private screenshots .private/ui-acceptance/.
+Local backup pre-admin-messages-20261013 restore bilan tasdiqlandi; 0009 local
+head/model match, 288 backend/167 frontend/13 agent test, ikki build va Node/Python
+checksum o‘tdi. Read-only API: 7 guruh/118 o‘quvchi, 0 ota-ona, 118 ulanmagan,
+0 campaign/delivery; old rows/credential/config saqlangan (faqat 0009 admin granti).
+Local worker production bot polling konflikti sababli to‘xtagan holda qoladi.
+095: TEST_PLAN.md matriks/case/dalil jadvali yozildi. Write→read dependency server
+va UIga moslashtirildi, frontend wildcard granti olib tashlandi. Group/student
+selectorlari minimal lookup APIga o‘tdi (phone/username/link/grant yo‘q); yangi
+21 API role/grant/creation/revocation case qo‘shildi. Fullgrant/clear/dependency
+va profile refocus/60s yangilanishi qoralamani saqlaydi. HTTP developmentda
+crypto.randomUUID yo‘qligi brauzerda topilib secure getRandomValues fallback bilan
+tuzatildi; screenshot review endi xatosiz. TEST_PLAN.md permission qabul natijasi
+qayd qilindi. 096: GuideView/adminTopics/types, admin sidebar/App routing yozildi;
+22 permission-filtered mavzu/73 qadam, all-of student+attendance stats,
+search/sections/alt/zoom/learned/destination bor. Full191 Vitest/typecheck/lint,
+final28 guide/nav/audit test o‘tdi.21 actual-UI synthetic PNG capture/asset audit
+yakunlandi; timer marker/crops reviewed. Browser superadmin22/fulladmin20/limited6,
+all22 topic image decode,3 viewport/no overflow/JS error; mobile header exit fully
+visible. Read-only Audit tarixi tab va attendance-only history fallback tuzatildi.
+GUIDES.md/TEST_PLAN updated. 097: teacherTopics(11 mavzu/34 qadam), teacher
+sidebar/App va ajratilgan AdminGuideView/TeacherGuideView wrappers yozildi.
+Unused portal assetsni tree-shake qilish uchun pure URL annotation bor;
+yakuniy build098da tekshiriladi.11 teacher actual-UI synthetic screenshots olindi,
+32PNG audit passed. Typecheck/lint va54 guide/teacher regressiya o‘tdi. Teacher
+modal matni ulangan parent/navbat/teacher2kun vs admincheksiz sabab bilan
+tuzatishga moslandi. Teacher header mobil chiqish tugmasi uchun moslandi.
+Teacher final capture11images, correction/save+finalize-count marker review
+yakunlandi. Browser11 topics/assets/search/zoom/destination/admin-denied,3viewports
+nooverflow/JSerror va exitfullyvisible passed. Full196 frontend/typecheck/lint;
+32PNG audit passed. Local worker stopped, serving0009/462attendance/22batches.
+098: full309 backend/Ruff/mypy124, clean npmci/typecheck/lint/196Vitest va ikki
+build passed;13agent+0009development head/model+real baseline/message read-only
+accepted. Runtime npm audit omitdev=0; dev tools9 advisory build warning alohida,
+production static/runtime depsga taalluqli emas (majorupgrade bu doirada qilinmadi).
+Buildda ikki portal guide PNGlari aralashgani topilib alohida packageexports/
+Vite entrypointlari bilan tuzatildi: admin21/teacher11 va teacherJSda admin grant/
+bot manual yo‘q. Final Node/Python checksum32asset audit passed.
+Clean npmci paytida devserver eski module cache sababli browserblank bo‘ldi;
+frontendlar force-recreate qilindi (backend/worker o‘zgarmadi); final3 browser
+script passed. TEST_PLAN receipts yozildi/098done.099: common.sh private hook
+Python-only strict import; English hook va admin-edits-safe deployment rerun
+kerak. ExistingGitmain1473595, origin GitHubSSH. VPS189.74.99.79 root SSH
+read-onlyprobe existingid_ed25519/pinnedknown_hosts bilan permissiondenied.
+Old Actions SSH_PRIVATE_KEY/SSH_KNOWN_HOSTS missing; hostghCLI yo‘q; GitHub
+connector workflow read/rerun bor, secret write tool topilmadi. Private server
+helperAST variable/import metadata (no secretvalues) tekshirilyapti. Secret/rawCSV
+Gitga chiqmasin; unrelatedoutput stage qilinmasin. Keyingi099private English
+deploy hook/SSH/VPS/rollback,100reviewedcommit/push/CI-CDsuccess,101production.
+096–101 rasmli admin/teacher qo‘llanmalar, test,
+production preparation/push/CI/CD/deploy foydalanuvchi so‘roviga ko‘ra yozildi.
+Real oilalarga test xabari yuborilmadi. Davom: `scripts/agent_skills/task.sh resume`.
+
+Quyidagi checkpointlar tarixiy.
+
+2026-10-13: 001–091 bajarilgan; faol task yo‘q, keyingi 092 kutilmoqda.
+OTP muddati 180 soniya: admin/teacher login/reset API deadline, Redis/in-memory
+TTL va Telegram 3 daqiqa matni mos; UI expired javobga yangi 5 daqiqalik
+fallback bermaydi. Docker full backend compile/Ruff/mypy 113 fayl, 264 pytest;
+frontend typecheck/lint, 154 Vitest, ikkala build/Node va Python release checksum,
+13 agent testi o‘tdi. 8 API expiry case: 179-soniyada success, 180-soniyada
+rad etish/replay; 8 UI case: 03:00 countdown, deadline yopilishi va expired
+javob darhol readonly. Real Redis challenge/active pointer TTL ham 179–180.
+Local serving OTP_TTL_SECONDS=180 va backend/admin/teacher HTTP200; read-only
+English/baseline acceptance eski ma’lumot/config saqlanganini tasdiqladi,
+worker to‘xtagan. Migratsiya kerak emas. Production o‘zgarmadi; keyingi 092
+release/push/deploy. Davom ettirish buyruq: `scripts/agent_skills/task.sh resume`.
+
+Quyidagi checkpointlar tarixiy.
+
+2026-10-13: 001–090 bajarilgan; faol task yo‘q, keyingi 091 kutilmoqda.
+English import acceptance yakunlandi (090): uchta fayl stemidan
+uchta guruh, ikki teacher (Asila Ibragimova/Jamshidbek Juraboev), 56 o‘quvchi
+(10/21/25). Beginner/Elementary bitta guruh; bir xil ism/telefon/sinfdagi
+takrorning ikkala original qatori saqlanib, bitta enrollment yaratildi.
+Foydalanuvchi aniqlashtirishi: Asila davomati umuman import qilinmadi, admin
+tekshiradi; Jamshidbek ikki guruhiga faqat sanasi aniq 98 k→present qoralama.
+K yo‘q kataklardan absent yaratilmagan. Batch/xabarnoma yaratilmagan, admin
+o‘tgan oy sanalarini to‘ldirib yakunlay oladi (read-only ASGI APIda tasdiqlandi).
+Source notes/telefon/sinf saqlangan, qolgan profil uydirilmagan. Username
+teacher_asila va teacher_jamshidbek; private credential `.private/english-groups/`
+(0600), xom CSV/secret Gitda yo‘q. New teachers real Start/OTP hali bajarilmagan.
+Docker compile/Ruff/mypy 112 fayl, 256 pytest va 13 agent testi o‘tdi;
+private pg_dump/restore countlari mos; local apply 2 staff/3 group/56 student/
+98 attendance, rerun barcha created=0. Importdan keyin barcha oldingi satr
+digestlari mos; keyingi Docker qayta startida local eski worker yoqilib,
+faqat SystemSettings.last_error/updated_at o‘zgardi. Worker yana to‘xtatildi;
+original pg_dump alohida scratch bazaga restore qilinib, original to‘liq digest
+va immutable bot config digesti tekshirildi. Token/username/version/offset/
+parameters, barcha boshqa eski model satrlari (parol/session/Python roster/
+davomat ham) saqlangan. Verification faqat shu ikki runtime diagnostika ustunini
+alohida qayd qiladi, config digestini majburiy tekshiradi. CSV/DB/API jadval va
+ownership mos. Local jami 6 staff, 7 guruh, 118 o‘quvchi, 462 davomat/22 batch.
+Admin/teacher/backend HTTP200, backend yana neoavlod_demo bazasiga ulangan;
+local worker polling production konflikti uchun to‘xtagan holda qoldi.
+Keyingi registry vazifasi 091 — release/push/production; bu import local,
+server ma’lumotlari o‘zgarmadi. Keyingi topshiriqda
+`scripts/agent_skills/task.sh resume`; release bilan English private fayllarini
+serverga alohida ko‘chirish/import kerak, mavjud Python deploy hooki o‘zgarmagan.
+Read-only qayta tekshiruv:
+`scripts/agent_skills/real_data.sh exec python /workspace/scripts/agent_skills/verify_english.py --baseline /workspace/.private/english-groups/before.json`.
+
+Quyidagi checkpointlar tarixiy.
+
+2026-10-13 bot sozlamalari yakunlandi: 001–089 bajarilgan; faol task yo‘q.
+Topilgan xatolar: username token bilan
+tekshirilmasdi; boshqa botda last_update_id eski qiymatda qolardi; eski botga
+ulangan hisoblar yangi bot uchun ham connected ko‘rinardi; worker pollingdan
+oldin active_versionni tasdiqlardi. GetMe bot ID/name tekshiruvi, serializatsiya,
+same-bot preservation, boshqa bot uchun offset reset + yangi capability link va
+telegram_reconnect_required (0008), OTP/outbox guard, stale-poll/status guard va
+haqiqiy heartbeat asosidagi UI yozildi. Docker 250 backend testi (8 bot switch
+flowi bilan), 146 frontend (7 settings UI testi), 13 agent testi, Ruff/mypy
+110 fayl, typecheck/lint, ikkala build/checksum va smoke o‘tdi. 0008 development
+va local serving DBda head/model match bilan qo‘llandi, Telegram IDs/parollar
+saqlandi. 4 guruh, 364 davomat/22 batch o‘zgarmagan; portallar/API HTTP200.
+Real getMe eduneo_admin_bot token/name mosligini read-only tasdiqladi;
+legacy config bot ID hali yo‘q (keyingi tekshirilgan update uni oladi).
+Local haqiqiy polling ataylab to‘xtagan (production bot bilan konflikt bo‘lmasin).
+Yangi production botga real Start/delivery sinovi uchun shu bot va user Start
+kerak; hozirgi isolated Telegram mocklari live delivery deb da’vo qilinmaydi.
+Push/deploy 090; ishlab turgan production sozlamalari o‘zgarmadi. Davom ettirish
+topshirig‘ida birinchi buyruq `scripts/agent_skills/task.sh resume`; yangi bot
+qo‘yilganda admin yangi havolalarni tarqatadi, userlar real Start bosadi, so‘ng
+real OTP/delivery tekshiriladi. Oldin tashqariga nusxalangan t.me URLni tizim
+masofadan o‘zgartirmaydi; qayta ochilgan profilda yangi bot URL olinadi.
+Quyidagi checkpointlar tarixiy.
+
+2026-10-13 sessiya tuzatishi yakunlandi: 001–088 bajarilgan; faol vazifa yo‘q.
+Access 15 daqiqa, refresh oilasi login paytidan mutlaq 7 kun. Frontend umumiy
+ApiClient expired accessda o‘z portalidagi refresh orqali bir marta yangilaydi
+va aynan o‘sha payloadni qayta yuboradi. Bir tabdagi single-flight, tablar
+orasida Web Lock va lockdan keyingi /me tekshiruvi parallel rotatsiyani oldini
+oladi; public auth/403 retry qilinmaydi. Logout/revocation/parol almashtirish
+chegaralari saqlangan; tokenlar storagega yozilmaydi. 7kun tugaganda davomat
+status/izohi dirty holda saqlanadi, yangi login zarur. Reopen va davomat saqlash
+UI flowlari hamda real backend expired access→refresh→save integratsiyasi o‘tdi.
+Docker: 242 backend / 143 frontend / 13 agent test, Ruff/mypy 108 fayl,
+typecheck/lint, ikkala production build/checksum, migration/model va smoke o‘tdi.
+Local serving API va ikkala portal HTTP200; 364 davomat/22 batch o‘zgarmagan.
+Local worker polling konflikti sabab avvalgidek to‘xtagan. Git commit/push va
+production deploy bajarilmadi. Navbatdagi 089 — ikkala o‘zgarishni serverga
+chiqarish; davom ettirish topshirig‘ida birinchi buyruq:
+`scripts/agent_skills/task.sh resume`. Quyidagi checkpointlar tarixiy.
+
+2026-10-13 joriy holat: 001–087 yakunlangan; faol vazifa yo‘q. 086 teacher muddatli
+tahriri va 087 admin/teacher umumiy davomat, sababli tuzatish, audit tarixi va
+pending darslar localda tayyor. Docker: 239 backend / 126 frontend / 13 agent
+testi, Ruff/mypy 107 fayl, typecheck/lint, ikkala production build/checksum o‘tdi.
+0007 migratsiya development va local serving bazada head/model mosligi bilan
+qo‘llandi; mavjud administratorlarga read/write permission berildi. Read-only
+serving API acceptance: 4 guruh, 1 administrator, 3 teacher; 364 davomat va
+22 batch o‘zgarmagan. Eski tarixga uydirma audit kiritilmadi (audit 0); keyingi
+portal o‘zgarishlari auditga yoziladi. API va ikkala portal HTTP 200; local worker
+avvalgi polling konfliktini oldini olish uchun to‘xtagan holda saqlandi.
+Productionga yangi kod chiqarilmadi, Git commit/push bajarilmadi. Navbatdagi
+vazifa 088 — push va backup bilan server deployment; davom ettirish topshirig‘ida
+aniq birinchi buyruq `scripts/agent_skills/task.sh resume`. Tashqi input faqat
+GitHub avtomatik deploy uchun mavjud SSH secretlarini sozlashda kerak; manual
+server tartibi oldingi dalillarda. Quyidagi checkpointlar tarixiy.
+
+Faol registry task: 086; 001–084 yakunlangan. Backend 235 test bilan yakunlandi; teacher UI va flow acceptance ishlanmoqda. test_super_admin production superadmin yaratildi; barcha RBAC huquqlari, password hash, fresh Telegram link va idempotent rerun tasdiqlandi. Credential .private/server-onboarding/TEST_SUPER_ADMIN.json va .md (0600) fayllarda; Gitda yo‘q. Production VPS 189.74.99.79 ga 1473595295200f935fae00916f7610db468a4649 Docker release backup va migrations bilan deploy qilindi; server bazasida 4 staff, 4 guruh, 62 o‘quvchi, 22 batch va 364 davomat bor. Foydalanuvchi bergan bot tokeni server DBda shifrlangan, real getMe va fresh singleton worker tekshirildi; local worker polling konflikti uchun to‘xtatildi. CEO Mohira va Dilmurod uchun ikki yangi alohida server havola, parol hash va bot credential delivery tasdiqlandi. Public HTTPS portallar 200, release marker mos. Hisoblar .private/server-onboarding/HISOBLAR.md va ACCOUNTS.json (0600); parol, token va capability URL Gitda yo‘q. Keyingi: foydalanuvchilar o‘z Telegramlaridan Start, so‘ng portal parol va OTP orqali login. Haqiqiy Start/OTP foydalanuvchi bajarmaguncha live linked deb da’vo qilinmaydi. GitHub avtomatik deploy SSH secretlari hali sozlanmagan; ushbu VPS deploy manual tekshirilgan.
 2026-10-09 educenter_data/ CSV haqiqiy davomat integratsiyasi (072–075) yakunlandi:
 - 10 ta guruh bo‘yicha 29 ta dars sanasi (YYYY-MM-DD) xaritalandi.
 - neoavlod_demo bazasiga 29 ta AttendanceBatch va 302 ta Attendance yozuvi (162 present, 140 absent, 28 izoh) qo‘llandi.
@@ -762,3 +973,74 @@ Qo‘llanma: `LOCAL_DEMO.md`; Docker socketi uchun sandbox escalation kerak bo�
 - [x] 082 — CEO va teacher Telegram ulanish havolalarini aniq holat bilan berish.
   - Qabul: serving local DB bot username va hisobning ulanganlik/muddati tekshiriladi; ulangan hisob uzilmaydi, Telegram ID uydirilmaydi. Ulanmagan xodimning amaldagi yoki zarur bo‘lsa yangilangan bir martalik havolasi beriladi; CEO/Dilmurod allaqachon ulangan bo‘lsa bu aniq aytiladi. Secret/parol/ID Gitga chiqmaydi; local/prod DB doirasi tushuntiriladi.
   - Dalil: Serving neoavlod_demo DB: ceo_mohira and teacher_dilmurod already linked (IDs not printed); teacher_jasurbek unlinked, active one-time staff deep link expires 2026-10-15, no rotation or unlink needed. Bot username eduneo_admin_bot; owner-only TELEGRAM_LINKS.json saved; no passwords, Telegram IDs or capability URLs added to Git. Links apply to the current local bot DB; production needs its own imported/configured data.
+
+### CEO va Dilmurod uchun qayta Telegram ulanishi (2026-10-09)
+
+- [x] 083 — Foydalanuvchi so‘roviga binoan ikki hisobga alohida yangi havola va tasdiqlangan login/parol berish.
+  - Qabul: foydalanuvchi aniqlashtirishiga ko‘ra serving production DB va haqiqiy bot tekshiriladi, berilgan token server DBda shifrlanadi. Kerakli release/migratsiya/import backup bilan qo‘llanadi; eski bog‘lanish bo‘lsa private backup, fresh bir martalik ikki link; rollar/guruhlar saqlanadi, eski session/OTP bekor qilinadi. Private mavjud parol hashga tekshiriladi yoki zarur bo‘lsa yangi vaqtinchalik parol yaratiladi; bot /start login/parol yetkazishga tayyor bo‘ladi. Link resolve, hash, muddat va worker holati tasdiqlanadi; haqiqiy /start foydalanuvchi bosmaguncha ulangan deb aytilmaydi. Parol va capability link faqat foydalanuvchiga/private faylga, Git/checkpointga chiqmaydi.
+  - Dalil: Production VPS Docker release 1473595 deployed with pre-migration backup, migrations head, reviewed import: 3 staff, 4 groups, 62 students, 22 batches, 364 attendance. Provided token encrypted in server DB, real getMe eduneo_admin_bot verified, active version matches, fresh healthy singleton polling; local worker stopped to avoid conflict. CEO and Dilmurod distinct fresh one-time links resolve to correct server accounts, password hashes and encrypted bot delivery verified after commit, sessions/OTPs revoked, credentials private 0600. Public admin/teacher HTTPS 200 and release marker matches. Actual user Start and OTP login remain user actions; no fake live linking claimed.
+
+- [x] 084 — Productionda test_super_admin superadmin hisobini yaratish va Telegram havolasini berish.
+  - Qabul: explicit superadmin rolida bitta faol hisob, username aniq; telefon uydirilmaydi, tasodifiy kuchli parol hash va shifrlangan vaqtinchalik credential bilan saqlanadi. Mavjud hisoblar o‘zgarmaydi; idempotent qayta tekshiruv, server link resolve/muddat/role/password va bot worker holati tasdiqlanadi. Login/parol va alohida Telegram havola foydalanuvchiga/private 0600 faylda beriladi; Gitga secret chiqmaydi. User Start/OTP login alohida foydalanuvchi harakati.
+  - Dalil: Production Docker created one active test_super_admin with SUPERADMIN role, null phone (no invented contact), strong Argon2 password and encrypted three-day temporary credential. Commit re-read verified role, password hash, admin portal access and fresh individual link resolution/expiry. Second execution created=false, same account/password/link; all catalogue RBAC permissions pass. Real getMe matches eduneo_admin_bot and production worker fresh/healthy. Credentials and link saved only in private 0600 files on server/local, existing accounts unchanged. User Start/OTP remains a user action.
+
+### O‘qituvchi uchun ikki kunlik davomat tahriri (2026-10-09)
+
+- [x] 085 — Backendda davomat yozish/tahrirlash muddati va yakunlangan davomat tuzatishi.
+  - Qabul: muddat Toshkent vaqtida, API editable/deadline/reason qaytaradi; faqat guruh egasi teacher yozadi, kelajak va yopilgan sanalar rad etiladi. Yakunlangan batchni saqlagan holda status/izoh atomik tuzatiladi, noto‘g‘ri student/duplicate va parallel so‘rovlar nazorat qilinadi; oylik statistikalar yangilanadi. Notification pending payload yangilanadi, zarur tuzatish xabari idempotent; no-op qo‘shimcha xabar yaratmaydi. Docker boundary/timezone, RBAC, rollback, concurrency va notification testlari o‘tadi.
+  - Dalil: Docker check_backend: Ruff/mypy 104 files, 235 pytest passed. Tashkent calendar deadline includes lesson day through lesson+2 at 23:59:59.999999; UTC boundary/future/closed/RBAC cases verified. Finalized correction preserves batch ID/time, updates monthly stats and pending outbox payload, delivered notification gets one labeled correction; identical concurrent retries create no duplicate. Invalid/duplicate/foreign items roll back and group row locks serialize writes. API returns can_edit/edit_deadline/edit_disabled_reason. No DB migration required.
+- [x] 086 — Teacher portalida muddatli davomat tahriri.
+  - Bog‘liq: 085. Qabul: server ruxsati asosida editable/readonly, deadline va sabab aniq; yakunlangan davomat uchun tuzatishni saqlash, holat/izoh va dirty-navigation ishlaydi. Muddati o‘tganda mutation boshqaruvi yopiladi, backend rad javobi ko‘rsatiladi; saqlangan sheet/statistikalar yangilanadi. Docker frontend typecheck/lint va meaningful flow testlari o‘tadi.
+  - Dalil: Docker frontend typecheck/lint passed; 12 teacher flow tests passed: finalized status/note correction, dirty state/navigation, deadline closure, readonly and backend rejection display.
+- [x] 087 — Administrator va o‘qituvchi uchun umumiy davomat hamda o‘zgarishlar tarixi.
+  - Manba: 2026-10-13 foydalanuvchi so‘rovi; 086 tugagach deploymentdan oldin yangi funksiyani kiritish.
+  - Qabul: admin Davomat bo‘limida barcha guruhlar uchun draft/finalize/correct; teacher faqat o‘z guruhiga va mavjud ikki kunlik muddatda yozadi. Bir xil unique yozuv va batch, atomik audit (actor/role/time/action/old/new/reason); admin mavjud yozuvni tuzatishda sabab majburiy. Tarix ikkala portalda ko‘rinadi; no-op/retry dublikat yaratmaydi; RBAC/CSRF/rollback/concurrency/notification regressiya va migratsiya, Docker backend/frontend/agent checks va production buildlar o‘tadi. Local acceptance; production deployment keyingi alohida vazifa.
+  - Dalil: Docker full backend: Ruff/mypy 107 files, 239 pytest passed; frontend typecheck/lint, 126 Vitest and both production builds passed; release checksum verified. 0007 upgrade/model check passed on development and serving local DB; 13 agent tests. Admin draft/finalize/correct, reason, RBAC/CSRF, atomic audit rollback, mixed-role concurrency/no-op and pending lessons verified. Read-only serving acceptance: 4 groups, 1 admin, 3 teachers, existing 364 records/22 batches preserved; API and both portals HTTP 200. Production not deployed.
+- [x] 088 — Yetti kunlik login sessiyasida access tokenni avtomatik yangilash.
+  - Manba: 2026-10-13 teacher davomatni saqlaganda 15 daqiqalik access tugab, login talab qilishi; bir hafta qayta login bo‘lmasligi so‘raldi.
+  - Qabul: admin/teacher protected API 401da o‘z portalidagi refresh cookie orqali bitta avtomatik yangilash va aynan o‘sha so‘rov/bodyni qayta yuborish; 7 kunlik mutlaq sessiya saqlanadi. Reload/reopen va davomat draft/finalize/correctda ishlaydi, lokal o‘zgarishlar yo‘qolmaydi. Bir vaqtdagi requestlar va tablar refresh rotatsiyasini bekor qilmaydi. Login/OTP/parol-reset/logout xatolarida refresh loop yo‘q, 403 retry qilinmaydi; revoked/expired sessiya yopiq qoladi; token/parollar storagega yozilmaydi. Docker frontend flow/concurrency va backend 7 kun/expiry/revocation/RBAC regressiya, lint/typecheck/build/checksum va local smoke o‘tadi.
+  - Dalil: Docker full backend Ruff/mypy 108 files, 242 pytest; frontend typecheck/lint, 143 Vitest, both production builds and release checksum passed. Shared ApiClient refreshes protected admin/teacher 401 once with portal-specific cookie/CSRF and exact request body; in-tab single-flight and cross-tab Web Lock/current-cookie probe prevent duplicate rotation. Attendance UI preserves status/note/dirty state; reopening portal restores profile. Backend tests prove 15min access, recovery at 6d23h, absolute 7day expiry, rejected expired mutation creates no audit, revocation/replay/RBAC remain enforced. Migration/model check and 13 agent tests passed; serving smoke API/portals HTTP200 and 364 historical records unchanged. Production not deployed.
+- [x] 089 — Superadmin bot almashishi, username va barcha onboarding havolalari.
+  - Manba: 2026-10-13 development botdan production botga admin panel orqali o‘tish so‘rovi.
+  - Qabul: token/getMe tekshiriladi, username shu tokenning botiga mos; staff/parent/student linklari yangi usernamega o‘tadi. Bir bot rename/token rotation ulanishlarni saqlaydi, boshqa botda offset reset va eski hisoblar uchun qayta Start/link holati (Telegram ID/parol/tarix o‘chmaydi). Worker hot reload, eski polling stale natijalarni qo‘llamasligi, haqiqiy readiness UI va noto‘g‘ri token/username rollback. Superadmin/RBAC/CSRF, OTP va outbox/current bot qayta ulanishi isolated Docker API/worker/frontend flow testlarda o‘tadi. Real konfiguratsiya faqat getMe read-only tekshiriladi; yangi production botga haqiqiy Start va delivery qo‘lda foydalanuvchi harakati, test mocki live delivery deb ko‘rsatilmaydi. Backend/frontend/migration/agent checks, production build/checksum va local smoke o‘tadi.
+  - Dalil: Docker full backend compile/Ruff/mypy 110 files and 250 pytest passed; frontend typecheck/lint, 146 Vitest, both production builds/checksum, 13 agent tests passed. 0008 migration/model match passed in development and serving local DB; existing Telegram IDs preserved. Superadmin API updates verified bot ID/name; mismatched username/bad token rollback, all staff/parent/student links, same-bot rename/rotation and legacy identity adoption tested. Different-bot offset reset, preserved IDs/passwords, reconnect Start, OTP/reset/outbox new-token delivery, stale polling/status guards and running-worker hot reload proven with isolated Telegram transport. Real read-only getMe verified eduneo_admin_bot, no messages sent; local real polling remains stopped to avoid production conflict. API/portals HTTP200 and 364 historical records unchanged. Production switch/real Start/delivery not performed.
+- [x] 090 — Uchta English CSV guruhi va ikki yangi ingliz tili o‘qituvchisini qo‘shish.
+  - Manba: 2026-10-13 foydalanuvchi so‘rovi; deploymentdan oldin kiritildi.
+  - Qabul: private CSV audit, aniq roster/jadval mappingi; Asila Ibragimova Dush/Chor/Jum 09:00–10:30, Jamshidbek Juraboev Sesh/Pay/Shan 15:00–16:30 va 16:30–18:00. Fayl stemidan uchta guruh; Beginner/Elementary bir guruh, bir xil ism+telefon takrorlari manba qatorlari saqlangan holda bitta o‘quvchi. Ikki teacher yaratiladi, berilmagan profil uydirilmaydi va admin keyin to‘ldiradi. Foydalanuvchi aniqlashtirishi: Asila davomati to‘liq bo‘sh; boshqa ikki guruh faqat sanasi aniq k→present qoralama, k yo‘q kataklar uchun yozuv yaratilmaydi; admin o‘tgan oylarni tekshirib yakunlaydi. Hash bilan himoyalangan atomik import, rollback va idempotent rerun Dockerda o‘tadi; keyingi admin profil/parol/davomat tahriri saqlanadi. Backup/restoredan so‘ng local serving DB apply, CSV/DB/API ownership/count/jadval va barcha oldingi ma’lumotlarning digestlari saqlanishi tekshiriladi; tashqi worker diagnostikasi alohida qayd qilinadi, bot config ham tekshiriladi. Secret/raw CSV Gitga chiqmaydi; production deploy alohida.
+  - Dalil: Docker compile/Ruff/mypy 112 files and 256 pytest, 13 agent tests passed. Private CSV audit: 3 file-stem groups, 56 pupils (10/21/25), one duplicate merged with both source rows. Backup pg_dump/restore counts matched. Local atomic apply created 2 English teachers, 3 groups, 56 students and 98 dated k-only present drafts; Asila attendance empty, no absent/batch/outbox created. Rerun created=0; admin later phone/password/attendance edits preserved in tests. CSV/DB/API schedules, teacher ownership, month-old admin editing and old Python history verified read-only; all prior data/config digests preserved. External Docker restart briefly enabled old local worker: only last_error/updated_at changed, worker stopped again and original backup restored to scratch proved unchanged immutable bot config; scratch removed. API/admin/teacher HTTP200. Production not deployed.
+- [x] 091 — Login va parol tiklash tasdiqlash kodini uch daqiqaga qisqartirish.
+  - Manba: 2026-10-13 foydalanuvchi so‘rovi.
+  - Qabul: admin/teacher login/reset OTP Redis TTL va API expires_at 180 soniya; Telegram matni 3 daqiqa. UI server muddatini ko‘rsatadi, expired javobga yangi muddat bermaydi. Dockerda ikkala portal/purpose bo‘yicha expiry chegarasi va UI countdown, backend/frontend tekshiruvlari, ikki build/checksum hamda local smoke o‘tadi. Production alohida.
+  - Dalil: Docker full backend compile/Ruff/mypy 113 files and 264 pytest passed; frontend typecheck/lint, 154 Vitest, both builds and Node/Python release checksum passed; 13 agent tests. Shared OTP TTL is 180 seconds for admin/teacher login and password reset, including generic unknown-user reset response; Telegram says 3 minutes. Eight API boundary cases prove success at 179 seconds, rejection at 180 seconds and replay rejection; real Redis challenge and active-pointer TTL 179-180 verified. Eight UI cases prove 03:00 countdown, deadline disables submission and expired API responses stay expired without fallback. Serving backend imports TTL180; API/admin/teacher HTTP200. Read-only English/baseline acceptance confirms existing data/config preserved; local worker remains stopped. No migration required; production not deployed.
+- [x] 092 — Administrator Telegram xabarlari uchun navbat, API va worker.
+  - Manba: 2026-10-13 foydalanuvchi ota-ona/o‘quvchilarga tanlab, guruh yoki hammaga yuborish so‘rovi.
+  - Qabul: messages:send permission, mavjud adminlarga grant; active parents/students selected/group/all audience, preview va stale guard, entity/chat dedup, idempotent request, immutable author/text/audience history va durable deliveries. Faqat amaldagi botga ulanganlar; dispatchda qayta tekshiruv, token hot reload/config lock, Telegram 4096 limit/plain text, 429 retry_after va rate pacing, transient retry, blocked/failed holat, restart recovery/cancel/retry deliveredni qaytarmaydi. Workerga ulanish, CSRF/Origin/RBAC/migration/concurrency/atomic API va dispatcher Docker testlarda o‘tadi. Sintetik Telegram transport; real oilalarga agent test xabari yubormaydi.
+  - Dalil: Docker compile/Ruff/mypy 122 files, 288 pytest passed. 0009 upgrade/head/model check passed on development DB; upgrade/downgrade and existing-admin messages:send grant preserve prior data. API selected/group/all active parent/student audiences, sibling/entity/chat dedup, no secret IDs exposed, stale preview guard, atomic concurrent request idempotence, immutable sender/text/target history, CSRF/Origin/RBAC and filtered pagination proven. Durable OutboxWorker dispatch tested: plain text/UTF16 limit, current recipient/group/permission recheck, no bot-switch send before reconnect, fresh token after verified rotation, config-send lock serialization, ten/sec shared budget and per-chat cooldown, persistent retry_after including newly enqueued campaigns, transient max-five-cycle failure/manual retry, blocked permanent failure, crash rollback/recovery, concurrent dispatch and in-flight cancel preserving acknowledged delivery. Telegram transport was synthetic; no real family messages sent. UI/local final acceptance follows 093/094.
+- [x] 093 — Admin panelda professional Xabarlar bo‘limi.
+  - Bog‘liq: 092. Qabul: permissionli sidebar, ota-ona/o‘quvchi/ikkalasi, selected search/pagination, to‘liq guruh(lar)/barchaga, matn/sarlavha va Telegram preview, qabul qiluvchilar/ulanmagan/dedup sonlari, yuborishni tasdiqlash. Request id saqlanishi, stale preview/recovery, status/history/delivery detail, failed retry va pending cancel, responsive/accessible UI; Docker typecheck/lint va meaningful flow testlari o‘tadi.
+  - Dalil: Docker typecheck/lint and 167 Vitest passed. Permission-gated Xabarlar sidebar/view, selected parent/student/both with search/filter/pagination and persistent selection, group/all audiences, templates/plain-text UTF16-limit preview and explicit confirmation, stale-preview invalidation preserving input and same-request retry/double-click guard verified. History/detail status filtering, failed retry and pending cancel confirmation tested. Shared dialogs named/described with focus trap/restore and nested scroll locks; 13 new flow/accessibility cases. Responsive grids implemented; actual Chromium viewport screenshots and final serving acceptance follow 094. No real family messages sent.
+- [x] 094 — Telegram Xabarlar bo‘limining yakuniy Docker va local qabuli.
+  - Bog‘liq: 093. Qabul: backend/frontend/agent/migration regressiya, ikki build/checksum; local backup/migration/head/model va API/portallar smoke, mavjud English/Python/credential/davomat saqlanishi. Live data faqat read-only audience/preview acceptance; haqiqiy xabar yuborish admin harakati, isolated delivery sinovi live delivery deb ko‘rsatilmaydi. Worker production polling konflikti uchun to‘xtagan; hujjat va checkpoint to‘liq.
+  - Dalil: Docker backend 288 pytest/compile/Ruff/mypy 122 files, frontend 167 Vitest/typecheck/lint, 13 agent tests, both production builds and Node/Python release checksum passed. Private pre-admin-messages-20261013 pg_dump restored with matching counts; serving/development 0009 head and model match. Read-only serving API confirms 7 groups/118 students/0 parents, all 118 presently unlinked, configured bot, 0 campaigns/deliveries, admin grant and teacher403. English baseline hashes preserve all prior rows/passwords/history/immutable config with only explicit 0009 messages:send grant normalized; attendance remains462, batches22. API/admin/teacher HTTP200; local real worker remains stopped. MESSAGES.md documents operation/delivery limits and local acceptance. Chromium visual image download remains in progress for final UI plan098; no real messages sent.
+- [x] 095 — Ruxsatlar auditi va frontend/backend test rejasini tuzish.
+  - Manba: 2026-10-13 foydalanuvchi rasmli qo‘llanma, permission audit, test va production so‘rovi.
+  - Bog‘liq: 094. Qabul: permission katalogi, portal/role/status/CSRF va UI/API actionlar matriksi yoziladi; superadmin full, admin aniq grant, teacher ownership tekshiriladi. Read/write va superadmin-only farqlari, full-admin hamda cheklangan admin oqimlari audit qilinadi; topilgan xatolar test bilan tuzatiladi. TEST_PLAN.md da feature/role/UI/backend/migration/delivery/release acceptance, sintetik/live chegarasi va dalil joylari yoziladi. Docker meaningful RBAC regressiya o‘tadi.
+  - Dalil: TEST_PLAN.md defines role/action matrix and 36+ release/backend/UI/guide/data/CI/CD cases with synthetic/live boundaries. Audit fixed group creator/editor selector403 and student selector/filter403 through permission-scoped minimal lookups (no phone/username/credentials/links/grants); action write implies module read consistently on server/UI and saved grants. Removed frontend wildcard mismatch; full catalogue still cannot manage bot or admin accounts; superadmin full-grant/clear controls and dependency toggle tested. Auth profile refocus/visible/60s refresh updates revoked grants without clearing drafts, 401/403 closes account and 503 preserves it. Full backend309 passed (Ruff/mypy124); final39 real route/grant/role/creation/revocation/CRUD cases and mypy114 src/tests passed. Frontend173 Vitest/typecheck/lint passed. Actual Docker Chromium message app1440/768/360 confirmed no overflow/JS or visible action errors and focus trap; secure UUID fallback fixed HTTP-context failure. No real messages or serving mutations.
+- [x] 096 — Admin va superadmin uchun ruxsatga mos rasmli Qo‘llanma bo‘limi.
+  - Bog‘liq: 095. Qabul: admin portal sidebar va professional searchable/sectioned qo‘llanma. Superadmin barcha o‘ziga tegishli mavzular; administrator faqat berilgan action/permission mavzularini ko‘radi, full admin barcha admin ruxsat mavzularini ko‘radi; bot/superadmin-only huquq rolga mos. Haqiqiy frontend komponentlaridan sintetik ma’lumot bilan screenshotlar, raqamli markerlar/aniq qadamlar, alt text va matnli tushuntirish; public assetda real PII/token/parol/link yo‘q. Docker UI/permission/guide flow tests va rasm audit o‘tadi.
+  - Dalil: Admin Qo‘llanma sidebar/routing and22 permission-filtered topics with73 numbered text steps, searchable sections, images/alt/zoom, learned state and allowed destination implemented. Superadmin22/full-admin20/limited groups-reader6; no bot/admin-grant topic for full-admin; statistics requires both student+attendance read; revoked article/zoom closes.21 actual frontend PNGs captured solely through closed synthetic API fixtures and numbered DOM overlays; modal crops and timer marker reviewed, real PII/token/password/Telegram links excluded. Asset PNG dimensions/checksum/provenance audit passed. Docker typecheck/lint and full191 Vitest; final28 guide/nav/audit cases passed. Actual Chromium all22 topic images decoded, role/search/zoom and1440/768/360 no overflow/JS error; mobile header exit button fully visible. Guide validation fixed attendance-only history selector and exposed immutable Audit tarixi tab to read-only admins; no writes in audit regression. GUIDES.md/TEST_PLAN updated; production follows099–101.
+- [x] 097 — Teacher portal uchun to‘liq rasmli Qo‘llanma bo‘limi.
+  - Bog‘liq: 096. Qabul: teacher sidebar professional qo‘llanma, o‘z guruh/o‘quvchi, draft/finalize/tuzatish, ikki kun/Toshkent vaqt chegarasi, tarix/statistika, profil/parol/Telegram/3-min OTP/7-kun session mavzulari. Admin amallari teacherga ochilmaydi. Annotated haqiqiy frontend screenshots, qadamlar/alt text/mobil responsive, UI flow tests va synthetic asset audit Dockerda o‘tadi.
+  - Dalil: Teacher Qo‘llanma sidebar/App and isolated portal wrappers implemented with11 teacher-only topics/34 steps. Covers private Telegram onboarding/login,180s OTP/absolute7day session, own groups/pupils/stats, drafts/finalize, Tashkent lesson+2days correction, history/immutable audit and own profile/avatar/password; admin actions not exposed.11 actual teacher app PNGs captured using only closed synthetic API fixtures and numbered DOM markers; final correction/save and finalize-count markers reviewed;32 combined PNG checksum/dimension/provenance audit passed. Shared finalize notice now correctly distinguishes teacher2day deadline vs administrator reason-based correction and only linked parent notification queue. Docker typecheck/lint,54 focused guide/teacher tests and full196 Vitest passed. Actual Chromium11 decoded images, exact correction-boundary search, zoom/destination, admin-role forbidden,1440/768/360 no overflow/JS errors and mobile exit fully visible. GUIDES.md/TEST_PLAN updated; no real Telegram sends.
+- [x] 098 — Test rejasi bo‘yicha yakuniy UI/backend/qo‘llanma/release qabuli.
+  - Bog‘liq: 097. Qabul: TEST_PLAN.md barcha kerakli case/dalillar: role permission, yangi Xabarlar, qo‘llanmalar visibility/qidiruv/qadamlar/screenshots, desktop/tablet/mobile vizual va brauzer oqimlari; backend/frontend/migration/agent/Docker regression. Ikki build/checksum, local real-data read-only smoke/preservation, fake Telegram bilan delivery; fake login/delivery live deb ko‘rsatilmaydi. Xatolar tuzatiladi, acceptance natijalari qayd qilinadi.
+  - Dalil: TEST_PLAN feature/role/UI/backend/data/release receipts recorded. Docker full309pytest/compile/Ruff/mypy124,clean npmci/typecheck/lint/full196Vitest,13agent,0009development head/model match passed. Both production builds and Node/Python source/assets checksums passed. Build revealed mixed portal guide assets, fixed through explicit package/Vite guide entrypoints:admin21PNG/teacher11PNG and no admin grant/bot manual in teacherJS;32PNG dimension/checksum/synthetic provenance audit passed. Runtime npm audit omitdev0;9 dev-tool advisories remain as recorded maintenance limitation. After clean install devserver cache reset, final Chromium message/admin-guide/teacher-guide scripts passed1440/768/360,all33 topic images decode,role/search/zoom/destination/no overflow/visible action error/JS exception and keyboard/focus/header controls. Serving read-only English baseline preserves historical rows/credentials/config except exact0009 admin grant;7groups/118students/462attendance/22batches,Asila empty/Jamshid98drafts;0parent/118unlinked/0campaign/delivery. API/portalsHTTP200;real local worker stopped. Production/Python-English deployment and CI/CD follow099–101.
+- [x] 099 — English private ma’lumotlari va yangi release uchun production deployment tayyorlash.
+  - Bog‘liq: 098. Qabul: production private English CSV/profile import rejasi, hash/backup/atomik rerun va CI/deploy hook; mavjud hisob/parol/Telegram link/tarix saqlanadi, admin keyingi tahriri importda bosib ketmaydi. VPS/runtime/release/SSH identity va GitHub Actions deployment talablari secretlarni chiqarmasdan tekshiriladi; deploy konfiguratsiyasi Dockerda testlanadi, server backup/rollback tartibi reviewable bo‘ladi. Real ma’lumotlar faqat private/serverga, Gitga chiqmaydi.
+  - Dalil: Docker316pytest/Ruff/mypy128;13agent;13deploy/actionlint;0010dev+serving head/model;local backup/restore and English/baseline readonly preserved;real disposable production Python+English receipts/admin-edits/second-release/TLS/backup/automatic+manual rollback passed. Pinned root SSH VPS verified current1473595/0006 and5staff/4groups/62students/388attendance/24batches;private VPS dump restored/counts matched. Private English3CSV+reviewedhash0600 uploaded;dedicated CI key forced-command arbitrary-command rejection verified. No production runtime/data changes;GitHub secrets-write auth dependency recorded for100.
+- [/] 100 — Tekshirilgan release’ni GitHubga professional commit/push va CI/CD ishlashini tasdiqlash.
+  - Bog‘liq: 099. Qabul: remote/base/non-force branch, public diff, secret/PII/unrelated artifact tekshiruvi; yangi qo‘llanma assetlari va ikki release checksum mos. User bergan push/deploy authorization doirasida professional commit va non-force push exact SHA bilan; GitHub Actions test/build/deploy runi topilib real natija qayd qilinadi. Kerakli server/secrets konfiguratsiyasi mavjud ruxsatli credentialdan xavfsiz sozlanadi; yo‘q dependency ishlagan deb ko‘rsatilmaydi.
+  - Dalil: Acceptance yakunida Docker task manager qayd qiladi.
+- [ ] 101 — Production deployment va oxirgi read-only UI/API/data qabuli.
+  - Bog‘liq: 100. Qabul: backupdan keyin exact verified release SHA, migratsiyalar/import va singleton worker sog‘lom; HTTPS admin/teacher/guide assets/API/release marker va rol/permission/window/OTP/Xabarlar imkoniyati read-only tekshiriladi. English guruhlari/ikki teacher/Asila bo‘sh davomat/Jamshidbek k-only va oldingi Python/credential/history saqlanadi. Real oilalarga agent tomonidan test xabari yuborilmaydi; deploy xatosida rollback va aniq evidence. CI/CD deploy haqiqatan success bo‘ladi, cheklovlar yashirilmaydi.
+  - Dalil: Acceptance yakunida Docker task manager qayd qiladi.

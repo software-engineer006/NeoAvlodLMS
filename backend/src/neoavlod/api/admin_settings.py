@@ -19,9 +19,13 @@ class BotSettingsOut(BaseModel):
     active_version: int
     last_error: str | None
     reload_in_progress: bool
+    bot_id: int | None = None
+    worker_ready: bool = False
+    reconnect_required: int = 0
 
     @classmethod
     def of(cls, record: SystemSettings) -> "BotSettingsOut":
+        bot_id = record.parameters.get("bot_id")
         return cls(
             configured=record.bot_token_encrypted is not None,
             bot_username=record.bot_username,
@@ -29,6 +33,8 @@ class BotSettingsOut(BaseModel):
             active_version=record.active_version,
             last_error=record.last_error,
             reload_in_progress=record.version > record.active_version,
+            bot_id=bot_id if isinstance(bot_id, int) else None,
+            worker_ready=service.worker_ready(record),
         )
 
 
@@ -48,7 +54,9 @@ async def get_bot_settings(
     session: SessionDependency,
 ) -> BotSettingsOut:
     record = await service.get_bot_settings(session)
-    return BotSettingsOut.of(record)
+    return BotSettingsOut.of(record).model_copy(
+        update={"reconnect_required": await service.reconnect_count(session)}
+    )
 
 
 @router.post("/bot", response_model=BotSettingsOut)
@@ -67,7 +75,9 @@ async def update_bot_token(
         changed_by=superadmin.staff.id,
         transport=transport,
     )
-    return BotSettingsOut.of(record)
+    return BotSettingsOut.of(record).model_copy(
+        update={"reconnect_required": await service.reconnect_count(session)}
+    )
 
 
 class BotUsernameUpdate(BaseModel):
@@ -80,9 +90,14 @@ async def update_bot_username(
     body: BotUsernameUpdate,
     superadmin: SuperadminDependency,
     session: SessionDependency,
+    request: Request,
 ) -> BotSettingsOut:
     record = await service.set_bot_username(
-        session, body.bot_username, changed_by=superadmin.staff.id
+        session,
+        body.bot_username,
+        changed_by=superadmin.staff.id,
+        settings_config=cast(Settings, request.app.state.settings),
+        transport=getattr(request.app.state, "telegram_transport", None),
     )
     return BotSettingsOut.of(record)
 

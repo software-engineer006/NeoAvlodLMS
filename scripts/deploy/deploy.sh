@@ -68,6 +68,7 @@ RUNTIME_TOUCHED=1
 compose_release "$RELEASE_ID" stop api worker
 compose_release "$RELEASE_ID" run --rm -T --no-deps migrations </dev/null
 import_educenter "$RELEASE_ID"
+import_english "$RELEASE_ID"
 compose_release "$RELEASE_ID" up -d --no-deps --no-build --force-recreate --wait --wait-timeout 120 api worker
 activate_links "$RELEASE_ID"
 install_nginx "$RELEASE_ID"

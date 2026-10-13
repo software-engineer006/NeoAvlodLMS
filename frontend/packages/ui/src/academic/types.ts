@@ -8,6 +8,12 @@ export interface SubjectItem {
   created_at: string;
 }
 
+export interface GroupOptions {
+  subjects: Pick<SubjectItem, "id" | "name" | "is_active">[];
+  teachers: Pick<TeacherSummary, "id" | "first_name" | "last_name" | "status">[];
+}
+export type StudentGroupOption = Pick<GroupItem, "id" | "name" | "current_students" | "max_students">;
+
 export interface SubjectListResponse {
   items: SubjectItem[];
   total: number;

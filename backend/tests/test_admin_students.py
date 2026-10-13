@@ -102,14 +102,14 @@ async def test_student_permissions_and_role_access(model_database: Database) -> 
 
     # Creator can create
     async with client_for(creator) as client:
-        assert (await client.get(BASE)).status_code == 403
+        assert (await client.get(BASE)).status_code == 200
         res = await client.post(BASE, json=payload)
         assert res.status_code == 201
         created_id = res.json()["id"]
 
-    # Editor can edit and delete, but cannot list or create
+    # Editor can list, edit and delete, but cannot create.
     async with client_for(editor) as client:
-        assert (await client.get(BASE)).status_code == 403
+        assert (await client.get(BASE)).status_code == 200
         assert (await client.post(BASE, json=payload)).status_code == 403
         patch_res = await client.patch(f"{BASE}/{created_id}", json={"age": 16})
         assert patch_res.status_code == 200

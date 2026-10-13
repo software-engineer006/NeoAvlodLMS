@@ -11,6 +11,8 @@ from neoavlod import __version__
 from neoavlod.api.admin_attendance import router as admin_attendance_router
 from neoavlod.api.admin_dashboard import router as admin_dashboard_router
 from neoavlod.api.admin_groups import router as admin_groups_router
+from neoavlod.api.admin_lookups import router as admin_lookups_router
+from neoavlod.api.admin_messages import router as admin_messages_router
 from neoavlod.api.admin_settings import router as admin_settings_router
 from neoavlod.api.admin_staff import router as admin_staff_router
 from neoavlod.api.admin_students import router as admin_students_router
@@ -79,6 +81,8 @@ def create_app(
     app.include_router(admin_staff_router)
     app.include_router(admin_subjects_router)
     app.include_router(admin_groups_router)
+    app.include_router(admin_lookups_router)
+    app.include_router(admin_messages_router)
     app.include_router(admin_students_router)
     app.include_router(admin_attendance_router)
     app.include_router(admin_settings_router)

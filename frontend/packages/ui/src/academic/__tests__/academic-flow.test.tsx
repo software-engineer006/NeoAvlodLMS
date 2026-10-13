@@ -267,6 +267,9 @@ describe("Academic: Subject & Group Management (Task 030)", () => {
   describe("GroupModal Component", () => {
     it("validates time order when start_time >= end_time", async () => {
       vi.spyOn(apiClient, "get").mockImplementation((url: string) => {
+        if (url.includes("/api/v1/admin/lookups/group-options")) {
+          return Promise.resolve({ subjects: sampleSubjects, teachers: [{ id: "tch-1", first_name: "Dilshod", last_name: "Raximov", status: "active" }] });
+        }
         if (url.includes("/api/v1/admin/subjects")) {
           return Promise.resolve({ items: sampleSubjects });
         }
@@ -317,6 +320,9 @@ describe("Academic: Subject & Group Management (Task 030)", () => {
   describe("GroupsManagementView & RBAC Permission Handling", () => {
     beforeEach(() => {
       vi.spyOn(apiClient, "get").mockImplementation((url: string) => {
+        if (url.includes("/api/v1/admin/lookups/group-options")) {
+          return Promise.resolve({ subjects: sampleSubjects, teachers: [{ id: "tch-1", first_name: "Dilshod", last_name: "Raximov", status: "active" }] });
+        }
         if (url.includes("/api/v1/admin/subjects")) {
           return Promise.resolve({ items: sampleSubjects, total: 2, page: 1, page_size: 10 });
         }

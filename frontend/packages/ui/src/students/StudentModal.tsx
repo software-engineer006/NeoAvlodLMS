@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import type { StudentItem, StudentDetailItem, StudentCreateInput, StudentUpdateInput } from "./types";
-import type { GroupItem } from "../academic/types";
+import type { StudentGroupOption } from "../academic/types";
 import { apiClient } from "../api/client";
 import { ApiError } from "../api/errors";
 import { Modal } from "../components/Modal";
@@ -40,7 +40,7 @@ export const StudentModal: React.FC<StudentModalProps> = ({
   const [parentPhone, setParentPhone] = useState<string>("");
 
   // Group options
-  const [groups, setGroups] = useState<GroupItem[]>([]);
+  const [groups, setGroups] = useState<StudentGroupOption[]>([]);
   const [isLoadingGroups, setIsLoadingGroups] = useState<boolean>(false);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -53,9 +53,7 @@ export const StudentModal: React.FC<StudentModalProps> = ({
     const loadGroups = async () => {
       setIsLoadingGroups(true);
       try {
-        const res = await apiClient.get<{ items: GroupItem[] }>("/api/v1/admin/groups", {
-          params: { page_size: 100, status: "active" },
-        });
+        const res = await apiClient.get<{ items: StudentGroupOption[] }>("/api/v1/admin/lookups/student-groups");
         setGroups(res.items);
         if (initialGroupId) {
           setGroupId(initialGroupId);
@@ -63,7 +61,7 @@ export const StudentModal: React.FC<StudentModalProps> = ({
           setGroupId(res.items[0].id);
         }
       } catch {
-        // Fallback
+        setError("Guruh tanlovlarini yuklab bo‘lmadi. Formani qayta oching.");
       } finally {
         setIsLoadingGroups(false);
       }

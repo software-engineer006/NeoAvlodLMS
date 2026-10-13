@@ -44,19 +44,47 @@ async def main() -> None:
                 p.username: p for p in (await session.scalars(select(Staff))).all()
             }
             groups = {
-                g.source_key: g for g in (await session.scalars(select(Group))).all()
+                g.source_key: g
+                for g in (
+                    await session.scalars(
+                        select(Group).where(
+                            Group.source_key.in_([g.key for g in plan.roster.groups])
+                        )
+                    )
+                ).all()
             }
             students = {
-                s.source_key: s for s in (await session.scalars(select(Student))).all()
+                s.source_key: s
+                for s in (
+                    await session.scalars(
+                        select(Student).where(
+                            Student.source_key.in_(
+                                [p.key for p in plan.roster.students]
+                            )
+                        )
+                    )
+                ).all()
             }
             assert len(groups) == 4 and len(students) == 62
-            records = (await session.scalars(select(Attendance))).all()
+            records = (
+                await session.scalars(
+                    select(Attendance).where(
+                        Attendance.group_id.in_([g.id for g in groups.values()])
+                    )
+                )
+            ).all()
             record_map = {
                 (r.group_id, r.student_id, r.date.isoformat()): r for r in records
             }
             assert len(records) == 364
             assert (
-                await session.scalar(select(func.count()).select_from(AttendanceBatch))
+                await session.scalar(
+                    select(func.count())
+                    .select_from(AttendanceBatch)
+                    .where(
+                        AttendanceBatch.group_id.in_([g.id for g in groups.values()])
+                    )
+                )
                 == 22
             )
             assert (
@@ -113,7 +141,12 @@ async def main() -> None:
                 transport=httpx.ASGITransport(app=app), base_url="http://test"
             ) as client:
                 stats = (await client.get("/api/v1/admin/dashboard/stats")).json()
-                assert stats["groups_count"] == 4 and stats["students_count"] == 62
+                assert stats["groups_count"] == await session.scalar(
+                    select(func.count()).select_from(Group)
+                )
+                assert stats["students_count"] == await session.scalar(
+                    select(func.count()).select_from(Student)
+                )
                 for spec in plan.roster.groups:
                     g = groups[spec.key]
                     history_total = 0

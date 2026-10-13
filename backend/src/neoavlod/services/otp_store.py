@@ -13,7 +13,7 @@ from neoavlod.errors import DomainError
 from neoavlod.models.auth import OTPPurpose, Portal
 from neoavlod.settings import Settings
 
-OTP_TTL_SECONDS = 300
+OTP_TTL_SECONDS = 180
 MAX_ATTEMPTS = 5
 _PREFIX = "neoavlod:otp:"
 _ACTIVE_PREFIX = "neoavlod:otp-active:"

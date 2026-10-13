@@ -116,3 +116,90 @@ CI haqiqiy PIIga bog‘lanmagan: backend sintetik PostgreSQL testlari va real
 disposable production deploy ikki marta importni, sonlar o‘zgarmasligini,
 import xatosida rollbackni tekshiradi. Haqiqiy VPS va GitHub Actions runi
 local tekshiruvdan alohida tasdiqlanadi.
+
+## English guruhlari — 2026-10-13
+
+English import alohida `neoavlod.english_import` CLI orqali bajariladi;
+Python importining source hash va profil fayllari o‘zgarmaydi. Ushbu import
+local `neoavlod_demo` bazasiga qo‘llandi; productionga hali yuborilmadi.
+
+| CSV fayl stemidagi guruh | O‘qituvchi | Kunlar | Vaqt | O‘quvchi |
+|---|---|---|---|---:|
+| English_Elementry&Beginer_1_gruh | Asila Ibragimova | Dush/Chor/Jum | 09:00–10:30 | 10 |
+| English_Pre_intermediate_2_gruh | Jamshidbek Juraboev | Sesh/Pay/Shan | 15:00–16:30 | 21 |
+| English_Elementry&Beginer_3_gruh | Jamshidbek Juraboev | Sesh/Pay/Shan | 16:30–18:00 | 25 |
+
+Audit: birinchi fayl comma, qolganlari semicolon. Beginner/Elementary
+bo‘limlari foydalanuvchi talabiga ko‘ra bitta fayl/bitta guruhga birlashtirildi.
+1-fayldagi Pre-inter qatori ham fayl ro‘yxatida saqlandi; manba bo‘limi izohda
+ko‘rinadi. 3-faylda ism/telefon/sinf mos kelgan bitta o‘quvchi ikki bo‘limda
+takrorlangan: bitta enrollment, ikkala original qator va izoh saqlandi.
+57 source qatoridan 56 alohida guruh o‘quvchisi yaratildi.
+
+Xodimlar `teacher_asila` va `teacher_jamshidbek` username bilan teacher rolida
+yaratildi. Telefon berilmagani sabab null; fan guruhlar orqali «Ingliz tili».
+Xonasi, narxi, o‘quvchining yoshi va ota-onasi uydirilmadi. Admin profilni
+keyin to‘ldiradi; qayta import kiritilgan telefon/parolni o‘zgartirmaydi.
+
+Davomat siyosati foydalanuvchi aniqlashtirishiga mos:
+
+- Asilaning 1-guruhi davomati **to‘liq bo‘sh**; 15 ta raw k belgisi manbada
+  saqlandi, shundan 7 tasining sanasi yozilmagan. Admin o‘zi tekshiradi.
+- 2-guruh: 29-sentabr va 3/6/8/10-oktabr 2026, faqat k → present.
+- 3-guruh: 3/6/8/10-oktabr 2026; ikki bo‘lim bitta guruh kalendarida, faqat k.
+- Jami 98 present **qoralama** yaratildi. Bo‘sh/text kataklardan absent yoki
+  taxminiy sana yaratilmaydi. Batch/finalization/xabarnoma yaratilmaydi;
+  admin Davomatdan sanani tanlab qolganlarini tekshiradi va yakunlaydi.
+  Oylik tarix/statistika yakunlangach hisoblaydi. Admin o‘tgan oy sanalarini
+  ham tahrirlay oladi, teacher muddati mavjud ikki kunlik qoidada qoladi.
+- Qayta import mavjud davomatni, jumladan admin tuzatishini bosib ketmaydi;
+  source/jadval yoki talaba boshqa guruhga ko‘chirilgan bo‘lsa review talab qiladi.
+
+Private reja/credential/baseline `.private/english-groups/` (0600),
+backup `.private/real-data/backup/pre-english-groups-20261013.dump`.
+Dry-run DBni o‘zgartirmaydi. Apply uchun stdoutdagi aynan tekshirilgan hash
+kerak; boshqa CSV/profile tarkibi yangi review talab qiladi.
+
+```bash
+scripts/agent_skills/real_data.sh exec python -m neoavlod.english_import \
+  --source /workspace/educenter_data \
+  --credentials /workspace/.private/english-groups/accounts.json \
+  --report /workspace/.private/english-groups/plan.json
+# Backupdan keyin ayni buyruqqa --apply --expected-plan REVIEWED_SHA256 qo‘shiladi.
+scripts/agent_skills/real_data.sh exec python \
+  /workspace/scripts/agent_skills/verify_english.py \
+  --baseline /workspace/.private/english-groups/before.json
+```
+
+Backend 256 test, private backup/restore, apply/rerun created=0, oldingi barcha
+model satrlari digestlari o‘zgarmasligi, CSV/DB/API/jadval/teacher ownership,
+admin o‘tgan oy editable va local portallar HTTP200 tasdiqlandi. Haqiqiy yangi
+teacher Telegram Start/OTP login bu read-only ASGI acceptance o‘rniga da’vo
+qilinmaydi. Productiondagi singleton worker uchun local polling to‘xtagan.
+Keyingi Docker qayta startida eski local worker qisqa muddat yoqilgan:
+SystemSettings.last_error/updated_at o‘zgardi, worker yana to‘xtatildi. Original
+backupni alohida scratch bazaga restore qilish bilan token/username/version/
+offset/parameters hamda qolgan barcha oldingi satrlar o‘zgarmagani tekshirildi.
+Baseline original hashni saqlaydi; faqat shu ikki diagnostika maydonidan
+mustaqil config hash ham backupdan tasdiqlandi. Verification bu farqni
+`worker_diagnostics_changed` bilan aniq qayd qiladi.
+
+## Deploymentda bir martalik import va admin tahrirlarini saqlash
+
+Har ikki server import hooki `--deployment-receipt` ishlatadi. 0010 migratsiya
+`import_receipts` jadvalini yaratadi. Birinchi qo‘llash roster, davomat va receiptni
+bitta tranzaksiyada yozadi. Avval import qilingan serverda barcha original source
+key, immutable source_data, davomat sanalari va Python batchlari to‘liqligi
+tekshiriladi; mos ma’lumotlar qayta yozilmasdan `adopted` receipt olinadi.
+Keyingi ayni reviewed hash deployi importni o‘tkazib yuboradi. Administrator
+o‘zgartirgan jadval, nom, enrollment, davomat, parol va Telegram ulanishi saqlanadi;
+credential/link fayllari qayta yaratilmaydi. Parallel deploy importlari DB lock
+orqali ketma-ket bajariladi. Hash o‘zgarsa yoki dastlabki ma’lumot qisman bo‘lsa,
+deploy to‘xtaydi va alohida reconciliation kerak. Oddiy manual CLI flagisiz avvalgi
+qat’iy conflict tekshiruvini saqlaydi.
+
+English server manbasi `/opt/neoavlod/private/english_data/`: faqat uchta CSV va
+reviewed `plan.sha256`; `ENGLISH_DATA_DIR` bilan boshqa private katalog tanlanadi.
+Natija `/opt/neoavlod/private/english-state/`da 0700/0600 saqlanadi. Tartib:
+backup → migratsiya → Python import/adoption → English import → API/worker/TLS.
+Local credential paketini mavjud server hisoblari ustiga ko‘chirmang.

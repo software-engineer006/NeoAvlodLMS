@@ -17,7 +17,7 @@ from neoavlod.models import (
 )
 from neoavlod.models.common import Status
 
-pytestmark = pytest.mark.anyio
+pytestmark = [pytest.mark.anyio, pytest.mark.usefixtures("attendance_clock")]
 TEACHER_BASE = "/api/v1/teacher/groups"
 ADMIN_BASE = "/api/v1/admin/attendance"
 

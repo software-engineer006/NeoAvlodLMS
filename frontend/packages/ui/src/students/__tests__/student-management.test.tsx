@@ -368,7 +368,7 @@ describe("Student & Parent Management (Task 031)", () => {
   describe("StudentsManagementView & RBAC Permission Handling", () => {
     beforeEach(() => {
       vi.spyOn(apiClient, "get").mockImplementation((url: string) => {
-        if (url.includes("/api/v1/admin/groups")) {
+        if (url.includes("/api/v1/admin/lookups/student-groups")) {
           return Promise.resolve({ items: sampleGroups, total: 2, page: 1, page_size: 10 });
         }
         if (url.includes("/api/v1/admin/students")) {

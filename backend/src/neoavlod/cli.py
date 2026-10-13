@@ -27,7 +27,7 @@ async def run_bootstrap(inputs: BootstrapInput, password: str) -> dict[str, obje
                 "username": result.staff.username,
                 "created": result.created,
                 "onboarding_payload": f"staff_{result.staff.auth_uuid}",
-                "telegram_connected": result.staff.telegram_id is not None,
+                "telegram_connected": result.staff.telegram_connected,
             }
     finally:
         await database.close()
@@ -78,7 +78,7 @@ def main() -> int:
     )
 
     outbox_cmd = commands.add_parser(
-        "outbox-worker", help="Run attendance notification outbox worker"
+        "outbox-worker", help="Run attendance and administrator message queue worker"
     )
     outbox_cmd.add_argument(
         "--once", action="store_true", help="Process pending notifications once and exit"

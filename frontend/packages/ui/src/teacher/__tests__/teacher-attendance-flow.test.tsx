@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { TeacherAttendanceView } from "../TeacherAttendanceView";
 import type { TeacherGroupItem, TeacherAttendanceSheet } from "../types";
 import { apiClient } from "../../api/client";
@@ -31,6 +31,9 @@ describe("Teacher Attendance Flow (Task 036)", () => {
     date: "2026-03-15",
     finalized: false,
     finalized_at: null,
+    can_edit: true,
+    edit_deadline: "2026-03-17T23:59:59+05:00",
+    edit_disabled_reason: null,
     items: [
       {
         student_id: "std-1",
@@ -56,6 +59,9 @@ describe("Teacher Attendance Flow (Task 036)", () => {
     date: "2026-03-15",
     finalized: true,
     finalized_at: "2026-03-15T15:30:00Z",
+    can_edit: false,
+    edit_deadline: "2026-03-17T23:59:59+05:00",
+    edit_disabled_reason: "Davomatni tahrirlash uchun 2 kunlik muddat tugagan",
     items: [
       {
         student_id: "std-1",
@@ -77,10 +83,14 @@ describe("Teacher Attendance Flow (Task 036)", () => {
   };
 
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-03-15T12:00:00Z"));
     vi.clearAllMocks();
     localStorage.clear();
     sessionStorage.clear();
   });
+
+  afterEach(() => { vi.useRealTimers(); });
 
   describe("Attendance Sheet Loading & Status Marking", () => {
     it("renders group attendance sheet, marks Bor/Yo‘q/Kechikdi and edits notes", async () => {
@@ -251,7 +261,9 @@ describe("Teacher Attendance Flow (Task 036)", () => {
 
     it("finalizes attendance when all students are marked and transitions to readonly", async () => {
       vi.spyOn(apiClient, "get").mockResolvedValue(sampleSheetDraft);
-      const postSpy = vi.spyOn(apiClient, "post").mockResolvedValueOnce(sampleSheetFinalized);
+      const postSpy = vi.spyOn(apiClient, "post").mockResolvedValueOnce({
+        ...sampleSheetFinalized, can_edit: true, edit_disabled_reason: null,
+      });
 
       render(
         <TeacherAttendanceView
@@ -289,12 +301,42 @@ describe("Teacher Attendance Flow (Task 036)", () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText(/Davomat yakunlangan \(Readonly\)/i)).toBeDefined();
+        expect(screen.getByRole("button", { name: "Tuzatishni saqlash" })).toBeDefined();
       });
     });
   });
 
   describe("Finalized Readonly State", () => {
+    it("saves finalized status and note corrections and clears dirty state", async () => {
+      const editable = { ...sampleSheetFinalized, can_edit: true, edit_disabled_reason: null };
+      vi.spyOn(apiClient, "get").mockResolvedValue(editable);
+      const post = vi.spyOn(apiClient, "post").mockResolvedValue({
+        ...editable, items: [{ ...editable.items[0], status: "absent", note: "Aniqlashtirildi" }, editable.items[1]],
+      });
+      render(<TeacherAttendanceView groups={sampleGroups} initialDate="2026-03-15" />);
+      await screen.findByText("Sherzod Bekov");
+      fireEvent.click(screen.getAllByRole("button", { name: "Kelmadi" })[0]);
+      fireEvent.change(screen.getAllByPlaceholderText(/Izoh yozish/)[0], { target: { value: "Aniqlashtirildi" } });
+      fireEvent.click(screen.getByRole("button", { name: "Tuzatishni saqlash" }));
+      await screen.findByText("Davomat tuzatishlari muvaffaqiyatli saqlandi.");
+      expect(post).toHaveBeenCalledWith("/api/v1/teacher/groups/grp-1/attendance/correct", expect.objectContaining({
+        items: expect.arrayContaining([expect.objectContaining({ student_id: "std-1", status: "absent", note: "Aniqlashtirildi" })]),
+      }));
+      expect(screen.queryByText("Saqlanmagan o‘zgarishlar bor")).toBeNull();
+    });
+
+    it("closes mutation controls when the deadline passes while the sheet is open", async () => {
+      vi.spyOn(apiClient, "get").mockResolvedValue({
+        ...sampleSheetFinalized, can_edit: true, edit_disabled_reason: null,
+        edit_deadline: "2026-03-15T12:00:01Z",
+      });
+      render(<TeacherAttendanceView groups={sampleGroups} initialDate="2026-03-15" />);
+      await screen.findByRole("button", { name: "Tuzatishni saqlash" });
+      await act(async () => { await new Promise((resolve) => window.setTimeout(resolve, 1100)); });
+      expect(screen.queryByRole("button", { name: "Tuzatishni saqlash" })).toBeNull();
+      expect(screen.getByText("Davomat faqat o‘qish rejimida")).toBeDefined();
+    });
+
     it("renders finalized attendance sheet in strict readonly mode without mutation controls", async () => {
       vi.spyOn(apiClient, "get").mockResolvedValue(sampleSheetFinalized);
 
@@ -310,9 +352,9 @@ describe("Teacher Attendance Flow (Task 036)", () => {
         expect(screen.getByText("Sherzod Bekov")).toBeDefined();
       });
 
-      expect(screen.getByText(/Davomat yakunlangan \(Readonly\)/i)).toBeDefined();
+      expect(screen.getByText("Davomat faqat o‘qish rejimida")).toBeDefined();
       expect(
-        screen.getByText(/uchun davomat yakunlangan va ota-onalarga Telegram/i)
+        screen.getByText(/Davomatni tahrirlash uchun 2 kunlik muddat tugagan/i)
       ).toBeDefined();
 
       // Status buttons are disabled

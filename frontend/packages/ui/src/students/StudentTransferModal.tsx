@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import type { StudentItem, StudentDetailItem, StudentTransferInput } from "./types";
-import type { GroupItem } from "../academic/types";
+import type { StudentGroupOption } from "../academic/types";
 import { apiClient } from "../api/client";
 import { ApiError } from "../api/errors";
 import { Modal } from "../components/Modal";
@@ -23,7 +23,7 @@ export const StudentTransferModal: React.FC<StudentTransferModalProps> = ({
   onSuccess,
 }) => {
   const [targetGroupId, setTargetGroupId] = useState<string>("");
-  const [groups, setGroups] = useState<GroupItem[]>([]);
+  const [groups, setGroups] = useState<StudentGroupOption[]>([]);
   const [isLoadingGroups, setIsLoadingGroups] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,9 +35,7 @@ export const StudentTransferModal: React.FC<StudentTransferModalProps> = ({
       setIsLoadingGroups(true);
       setError(null);
       try {
-        const res = await apiClient.get<{ items: GroupItem[] }>("/api/v1/admin/groups", {
-          params: { page_size: 100, status: "active" },
-        });
+        const res = await apiClient.get<{ items: StudentGroupOption[] }>("/api/v1/admin/lookups/student-groups");
         // Filter out current group
         const available = res.items.filter((g) => g.id !== student.group_id);
         setGroups(available);

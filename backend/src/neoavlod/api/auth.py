@@ -23,6 +23,7 @@ from neoavlod.security.sessions import (
     token_hash,
 )
 from neoavlod.services.login import begin_login, confirm_login, rate_limit
+from neoavlod.services.otp_store import OTP_TTL_SECONDS
 from neoavlod.services.passwords import change_password, reset_password, send_reset
 from neoavlod.services.staff import delete_avatar, save_avatar, update_profile
 from neoavlod.services.telegram import DatabaseTelegramSender, TelegramSender
@@ -42,6 +43,8 @@ class StaffProfile(BaseModel):
     status: Status
     permissions: list[str]
     telegram_id: int | None
+    telegram_connected: bool = False
+    telegram_reconnect_required: bool = False
     must_change_password: bool = False
     avatar_url: str | None = None
 
@@ -83,7 +86,11 @@ def telegram_sender(request: Request, session: SessionDependency) -> TelegramSen
     override = getattr(request.app.state, "telegram_sender", None)
     if override is not None:
         return cast(TelegramSender, override)
-    return DatabaseTelegramSender(session, cast(Settings, request.app.state.settings))
+    return DatabaseTelegramSender(
+        session,
+        cast(Settings, request.app.state.settings),
+        transport=getattr(request.app.state, "telegram_transport", None),
+    )
 
 
 SenderDependency = Annotated[TelegramSender, Depends(telegram_sender)]
@@ -157,7 +164,7 @@ async def password_reset_request(
     await rate_limit(
         session, settings, username, request.client.host if request.client else "unknown", "reset"
     )
-    challenge_id, expires = uuid.uuid4(), datetime.now(UTC) + timedelta(minutes=5)
+    challenge_id, expires = uuid.uuid4(), datetime.now(UTC) + timedelta(seconds=OTP_TTL_SECONDS)
     override = cast(TelegramSender | None, getattr(request.app.state, "telegram_sender", None))
     background.add_task(
         send_reset,
@@ -169,6 +176,7 @@ async def password_reset_request(
         challenge_id,
         expires,
         override,
+        getattr(request.app.state, "telegram_transport", None),
     )
     return ChallengeResponse(challenge_id=challenge_id, expires_at=expires)
 

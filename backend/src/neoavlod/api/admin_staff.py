@@ -47,7 +47,7 @@ class StaffOut(BaseModel):
             role=person.role,
             status=person.status,
             permissions=list(person.permissions),
-            telegram_connected=person.telegram_id is not None,
+            telegram_connected=person.telegram_connected,
             must_change_password=person.must_change_password,
             avatar_url=person.avatar_url,
             created_at=person.created_at,

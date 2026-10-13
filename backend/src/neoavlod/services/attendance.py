@@ -1,12 +1,12 @@
 import calendar
 import uuid
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, time, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import httpx
 from sqlalchemy import ColumnElement, func, select
-from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -15,16 +15,25 @@ from neoavlod.errors import DomainError
 from neoavlod.models import (
     Attendance,
     AttendanceBatch,
+    AttendanceChange,
     AttendanceStatus,
     Group,
     NotificationOutbox,
     OutboxStatus,
+    Portal,
+    Role,
     Staff,
     Student,
     SystemSettings,
 )
 from neoavlod.models.common import Status
-from neoavlod.security.rbac import ensure_group_owner
+from neoavlod.security.rbac import (
+    Permission,
+    ensure_group_owner,
+    ensure_permissions,
+    ensure_portal_session,
+    has_permission,
+)
 from neoavlod.security.sessions import Identity
 from neoavlod.services.outbox import dispatch_pending_outbox
 
@@ -45,6 +54,9 @@ class AttendanceSheet:
     date: date
     finalized: bool
     finalized_at: datetime | None
+    can_edit: bool
+    edit_deadline: datetime | None
+    edit_disabled_reason: str | None
     items: list[AttendanceEntry]
 
 
@@ -131,6 +143,143 @@ class GroupMonthlyAttendanceHistory:
     summary: GroupMonthlyAttendanceSummary
 
 
+TASHKENT = ZoneInfo("Asia/Tashkent")
+
+
+def attendance_now() -> datetime:
+    return datetime.now(TASHKENT)
+
+
+def edit_window(target_date: date) -> tuple[bool, datetime, str | None]:
+    now = attendance_now().astimezone(TASHKENT)
+    deadline = datetime.combine(target_date + timedelta(days=2), time.max, TASHKENT)
+    if target_date > now.date():
+        return False, deadline, "Kelajakdagi sana uchun davomatni o‘zgartirib bo‘lmaydi"
+    if now > deadline:
+        return False, deadline, "Davomatni tahrirlash uchun 2 kunlik muddat tugagan"
+    return True, deadline, None
+
+
+async def ensure_attendance_access(
+    session: AsyncSession, actor: Identity, group_id: uuid.UUID, *, write: bool = False
+) -> None:
+    if actor.staff.role == Role.TEACHER:
+        ensure_portal_session(actor, Portal.TEACHER)
+        await ensure_group_owner(session, actor, group_id)
+    else:
+        ensure_portal_session(actor, Portal.ADMIN)
+        required = [Permission.ATTENDANCE_READ]
+        if write:
+            required.append(Permission.ATTENDANCE_WRITE)
+        ensure_permissions(actor, required)
+        if await session.get(Group, group_id) is None:
+            raise DomainError("Guruh topilmadi", 404)
+
+
+def actor_edit_window(
+    actor: Identity, target_date: date
+) -> tuple[bool, datetime | None, str | None]:
+    if actor.staff.role == Role.TEACHER:
+        return edit_window(target_date)
+    if target_date > attendance_now().astimezone(TASHKENT).date():
+        return False, None, "Kelajakdagi sana uchun davomatni o‘zgartirib bo‘lmaydi"
+    if not has_permission(actor.staff, Permission.ATTENDANCE_WRITE):
+        return False, None, "Davomatni belgilash uchun ruxsat yo‘q"
+    return True, None, None
+
+
+async def _lock_editable_group(
+    session: AsyncSession, teacher: Identity, group_id: uuid.UUID, target_date: date
+) -> None:
+    await ensure_attendance_access(session, teacher, group_id, write=True)
+    query = select(Group.id).where(Group.id == group_id)
+    if teacher.staff.role == Role.TEACHER:
+        query = query.where(Group.teacher_id == teacher.staff.id)
+    owned = await session.scalar(query.with_for_update())
+    if owned is None:
+        raise DomainError("Guruh topilmadi", 404)
+    editable, _, reason = actor_edit_window(teacher, target_date)
+    if not editable:
+        raise DomainError(reason or "Davomatni tahrirlash mumkin emas", 409)
+
+
+def _audit(
+    session: AsyncSession,
+    actor: Identity,
+    record: Attendance,
+    action: str,
+    old_status: str | None,
+    old_note: str | None,
+    reason: str | None,
+) -> None:
+    session.add(
+        AttendanceChange(
+            attendance_id=record.id,
+            actor_id=actor.staff.id,
+            actor_name=f"{actor.staff.first_name} {actor.staff.last_name or ''}".strip(),
+            actor_role=actor.staff.role.value,
+            action=action,
+            old_status=old_status,
+            new_status=record.status.value,
+            old_note=old_note,
+            new_note=record.note,
+            reason=reason,
+        )
+    )
+
+
+def _require_reason(actor: Identity, reason: str | None) -> None:
+    if actor.staff.role != Role.TEACHER and not (reason and reason.strip()):
+        raise DomainError("Administrator tuzatish sababini kiritishi shart", 422)
+
+
+async def _upsert_items(
+    session: AsyncSession,
+    actor: Identity,
+    group_id: uuid.UUID,
+    target_date: date,
+    items: list[DraftItem],
+    reason: str | None,
+) -> None:
+    for item in items:
+        note = item.note.strip() or None if item.note else None
+        record = await session.scalar(
+            select(Attendance)
+            .where(
+                Attendance.group_id == group_id,
+                Attendance.student_id == item.student_id,
+                Attendance.date == target_date,
+            )
+            .execution_options(populate_existing=True)
+        )
+        if record and record.status == item.status and record.note == note:
+            continue
+        old_status, old_note = (record.status.value, record.note) if record else (None, None)
+        if record:
+            _require_reason(actor, reason)
+            record.status, record.note = item.status, note
+            record.marked_by, record.updated_at = actor.staff.id, attendance_now()
+        else:
+            record = Attendance(
+                group_id=group_id,
+                student_id=item.student_id,
+                date=target_date,
+                status=item.status,
+                note=note,
+                marked_by=actor.staff.id,
+            )
+            session.add(record)
+        await session.flush()
+        _audit(session, actor, record, "draft", old_status, old_note, reason)
+
+
+def _validate_items(items: list[DraftItem], valid_ids: set[uuid.UUID]) -> None:
+    if len({item.student_id for item in items}) != len(items):
+        raise DomainError("Bir o‘quvchi davomatda bir marta ko‘rsatilishi kerak", 422)
+    if any(item.student_id not in valid_ids for item in items):
+        raise DomainError("O‘quvchi ushbu guruhga tegishli emas yoki faol emas", 422)
+
+
 async def is_date_finalized(
     session: AsyncSession, group_id: uuid.UUID, target_date: date
 ) -> tuple[bool, datetime | None]:
@@ -151,8 +300,9 @@ async def get_attendance_sheet(
     group_id: uuid.UUID,
     target_date: date,
 ) -> AttendanceSheet:
-    await ensure_group_owner(session, teacher, group_id)
+    await ensure_attendance_access(session, teacher, group_id)
     finalized, finalized_at = await is_date_finalized(session, group_id, target_date)
+    can_edit, edit_deadline, edit_disabled_reason = actor_edit_window(teacher, target_date)
 
     students = list(
         (
@@ -195,6 +345,9 @@ async def get_attendance_sheet(
         date=target_date,
         finalized=finalized,
         finalized_at=finalized_at,
+        can_edit=can_edit,
+        edit_deadline=edit_deadline,
+        edit_disabled_reason=edit_disabled_reason,
         items=entries,
     )
 
@@ -205,8 +358,9 @@ async def save_attendance_draft(
     group_id: uuid.UUID,
     target_date: date,
     items: list[DraftItem],
+    reason: str | None = None,
 ) -> AttendanceSheet:
-    await ensure_group_owner(session, teacher, group_id)
+    await _lock_editable_group(session, teacher, group_id, target_date)
     finalized, _ = await is_date_finalized(session, group_id, target_date)
     if finalized:
         raise DomainError("Ushbu sana uchun davomat allaqachon yakunlangan", 409)
@@ -222,36 +376,9 @@ async def save_attendance_draft(
         ).all()
     )
 
-    for item in items:
-        if item.student_id not in valid_ids:
-            msg = f"Talaba ({item.student_id}) ushbu guruhga tegishli emas yoki faol emas"
-            raise DomainError(msg, 422)
+    _validate_items(items, valid_ids)
 
-        note_clean = item.note.strip() if item.note else None
-        if note_clean == "":
-            note_clean = None
-
-        stmt = (
-            insert(Attendance)
-            .values(
-                group_id=group_id,
-                student_id=item.student_id,
-                date=target_date,
-                status=item.status,
-                note=note_clean,
-                marked_by=teacher.staff.id,
-            )
-            .on_conflict_do_update(
-                constraint="uq_attendance_group_student_date",
-                set_={
-                    "status": item.status,
-                    "note": note_clean,
-                    "marked_by": teacher.staff.id,
-                    "updated_at": func.now(),
-                },
-            )
-        )
-        await session.execute(stmt)
+    await _upsert_items(session, teacher, group_id, target_date, items, reason)
 
     await session.commit()
     return await get_attendance_sheet(session, teacher, group_id, target_date)
@@ -263,8 +390,9 @@ async def finalize_attendance(
     group_id: uuid.UUID,
     target_date: date,
     items: list[DraftItem] | None = None,
+    reason: str | None = None,
 ) -> AttendanceSheet:
-    await ensure_group_owner(session, teacher, group_id)
+    await _lock_editable_group(session, teacher, group_id, target_date)
 
     # 1. Idempotent check: if already finalized, return current sheet
     finalized, _ = await is_date_finalized(session, group_id, target_date)
@@ -283,36 +411,8 @@ async def finalize_attendance(
                 )
             ).all()
         )
-        for item in items:
-            if item.student_id not in valid_ids:
-                msg = f"Talaba ({item.student_id}) ushbu guruhga tegishli emas yoki faol emas"
-                raise DomainError(msg, 422)
-
-            note_clean = item.note.strip() if item.note else None
-            if note_clean == "":
-                note_clean = None
-
-            stmt = (
-                insert(Attendance)
-                .values(
-                    group_id=group_id,
-                    student_id=item.student_id,
-                    date=target_date,
-                    status=item.status,
-                    note=note_clean,
-                    marked_by=teacher.staff.id,
-                )
-                .on_conflict_do_update(
-                    constraint="uq_attendance_group_student_date",
-                    set_={
-                        "status": item.status,
-                        "note": note_clean,
-                        "marked_by": teacher.staff.id,
-                        "updated_at": func.now(),
-                    },
-                )
-            )
-            await session.execute(stmt)
+        _validate_items(items, valid_ids)
+        await _upsert_items(session, teacher, group_id, target_date, items, reason)
         await session.flush()
 
     # 3. Fetch all active students in this group
@@ -359,6 +459,7 @@ async def finalize_attendance(
     for s in active_students:
         att = records_by_student[s.id]
         att.batch_id = batch.id
+        _audit(session, teacher, att, "finalize", att.status.value, att.note, reason)
 
         idem_key = f"att_{att.id}"
         existing_outbox = await session.scalar(
@@ -390,6 +491,198 @@ async def finalize_attendance(
 
     await session.commit()
     return await get_attendance_sheet(session, teacher, group_id, target_date)
+
+
+async def correct_attendance(
+    session: AsyncSession,
+    teacher: Identity,
+    group_id: uuid.UUID,
+    target_date: date,
+    items: list[DraftItem],
+    reason: str | None = None,
+) -> AttendanceSheet:
+    await _lock_editable_group(session, teacher, group_id, target_date)
+    batch = await session.scalar(
+        select(AttendanceBatch).where(
+            AttendanceBatch.group_id == group_id, AttendanceBatch.date == target_date
+        )
+    )
+    if batch is None:
+        raise DomainError("Avval davomatni yakunlang yoki qoralama sifatida saqlang", 409)
+    students = list(
+        (
+            await session.scalars(
+                select(Student)
+                .options(joinedload(Student.parent), joinedload(Student.group))
+                .where(Student.group_id == group_id, Student.status == Status.ACTIVE)
+            )
+        ).all()
+    )
+    by_student = {s.id: s for s in students}
+    _validate_items(items, set(by_student))
+    records = list(
+        (
+            await session.scalars(
+                select(Attendance)
+                .where(Attendance.group_id == group_id, Attendance.date == target_date)
+                .execution_options(populate_existing=True)
+            )
+        ).all()
+    )
+    by_record = {r.student_id: r for r in records}
+    for item in items:
+        note = item.note.strip() or None if item.note else None
+        record = by_record.get(item.student_id)
+        if record is not None and record.status == item.status and record.note == note:
+            continue
+        _require_reason(teacher, reason)
+        old_status, old_note = (record.status.value, record.note) if record else (None, None)
+        if record is None:
+            record = Attendance(
+                group_id=group_id,
+                student_id=item.student_id,
+                date=target_date,
+                status=item.status,
+                note=note,
+                marked_by=teacher.staff.id,
+                batch_id=batch.id,
+            )
+            session.add(record)
+        else:
+            record.status = item.status
+            record.note = note
+            record.marked_by = teacher.staff.id
+            record.batch_id = batch.id
+            record.updated_at = attendance_now()
+        await session.flush()
+        _audit(session, teacher, record, "correct", old_status, old_note, reason)
+        learner = by_student[item.student_id]
+        if learner.parent is None:
+            continue
+        labels = {
+            AttendanceStatus.PRESENT: "Bor",
+            AttendanceStatus.ABSENT: "Yo‘q",
+            AttendanceStatus.LATE: "Kechikdi",
+        }
+        payload: dict[str, object] = {
+            "student_name": f"{learner.first_name} {learner.last_name or ''}".strip(),
+            "group_name": learner.group.name,
+            "date": target_date.isoformat(),
+            "status": record.status.value,
+            "status_label": labels[record.status],
+            "note": record.note,
+            "correction": True,
+        }
+        latest = await session.scalar(
+            select(NotificationOutbox)
+            .where(NotificationOutbox.attendance_id == record.id)
+            .order_by(NotificationOutbox.created_at.desc(), NotificationOutbox.id.desc())
+            .limit(1)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        if latest is not None and latest.status in (
+            OutboxStatus.PENDING,
+            OutboxStatus.SKIPPED,
+            OutboxStatus.FAILED,
+        ):
+            latest.payload = payload
+            latest.telegram_id = learner.parent.telegram_id
+            latest.parent_id = learner.parent.id
+            latest.status = OutboxStatus.PENDING if latest.telegram_id else OutboxStatus.SKIPPED
+            latest.attempts = 0
+            latest.available_at = attendance_now()
+            latest.last_error = None
+        else:
+            session.add(
+                NotificationOutbox(
+                    idempotency_key=f"att_{record.id}_correction_{uuid.uuid4()}",
+                    attendance_id=record.id,
+                    parent_id=learner.parent.id,
+                    telegram_id=learner.parent.telegram_id,
+                    payload=payload,
+                    status=OutboxStatus.PENDING
+                    if learner.parent.telegram_id
+                    else OutboxStatus.SKIPPED,
+                )
+            )
+    await session.commit()
+    return await get_attendance_sheet(session, teacher, group_id, target_date)
+
+
+async def attendance_groups(
+    session: AsyncSession, pending_date: date | None = None
+) -> list[dict[str, object]]:
+    query = select(Group, Staff).join(Staff, Staff.id == Group.teacher_id)
+    if pending_date is not None:
+        query = query.where(
+            Group.status == Status.ACTIVE,
+            Group.days_of_week.contains([pending_date.isoweekday()]),
+            ~select(AttendanceBatch.id)
+            .where(AttendanceBatch.group_id == Group.id, AttendanceBatch.date == pending_date)
+            .exists(),
+        )
+    rows = (await session.execute(query.order_by(func.lower(Group.name)))).all()
+    return [
+        {
+            "id": g.id,
+            "name": g.name,
+            "teacher_id": t.id,
+            "teacher_name": f"{t.first_name} {t.last_name or ''}".strip(),
+            "days_of_week": list(g.days_of_week),
+        }
+        for g, t in rows
+    ]
+
+
+async def list_attendance_changes(
+    session: AsyncSession,
+    actor: Identity,
+    group_id: uuid.UUID,
+    target_date: date,
+    *,
+    page: int = 1,
+    page_size: int = 20,
+) -> dict[str, object]:
+    await ensure_attendance_access(session, actor, group_id)
+    query = (
+        select(AttendanceChange, Student)
+        .join(Attendance, Attendance.id == AttendanceChange.attendance_id)
+        .join(Student, Student.id == Attendance.student_id)
+        .where(Attendance.group_id == group_id, Attendance.date == target_date)
+    )
+    total = await session.scalar(select(func.count()).select_from(query.subquery())) or 0
+    rows = (
+        await session.execute(
+            query.order_by(AttendanceChange.changed_at.desc(), AttendanceChange.id.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+    ).all()
+    items = [
+        {
+            **{
+                key: getattr(change, key)
+                for key in (
+                    "id",
+                    "attendance_id",
+                    "actor_id",
+                    "actor_name",
+                    "actor_role",
+                    "action",
+                    "old_status",
+                    "new_status",
+                    "old_note",
+                    "new_note",
+                    "reason",
+                    "changed_at",
+                )
+            },
+            "student_name": f"{student.first_name} {student.last_name or ''}".strip(),
+        }
+        for change, student in rows
+    ]
+    return {"items": items, "total": total, "page": page, "page_size": page_size}
 
 
 async def list_admin_attendance(
