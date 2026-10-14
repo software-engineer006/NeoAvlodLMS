@@ -11,7 +11,7 @@ from neoavlod.models.attendance import (
     AttendanceStatus,
 )
 from neoavlod.models.attendance_template import AttendanceMessageTemplate
-from neoavlod.models.audit import AuditEvent, AuditSegment
+from neoavlod.models.audit import AuditActivation, AuditEvent, AuditSegment
 from neoavlod.models.auth import (
     AuthRateLimit,
     AuthSession,
@@ -38,6 +38,7 @@ __all__ = [
     "AttendanceChange",
     "AttendanceStatus",
     "AuditEvent",
+    "AuditActivation",
     "AuditSegment",
     "AuthSession",
     "AuthRateLimit",

@@ -136,6 +136,21 @@ invariantlari tekshiruvdan o‘tdi.
 
 ## Davom ettirish checkpoint
 
+2026-10-15 YANGI TALAB: local Docker va productiondagi barcha eski/test/business/
+auth ma’lumotlari hamda eski loglar to‘liq o‘chirilishi aniq authorized. Bu avvalgi
+audit-retention talabining bir martalik owner-operated istisnosi; ilovada delete
+huquqi/API yo‘q. Foydalanuvchi keyin backup ham qolmasligini aniq buyurdi.
+Eski recovery nusxalari o‘chirildi. Faqat4haqiqiy teacher+Mohira
+CEO(superadmin),7CSV(95profil/7guruh/116membership/443source draft),217xona va
+yangi verifiedbot qoladi. Eski credentials/session/link ko‘chmaydi. Audit
+Mohiraning haqiqiy Telegram Start ulanishidan tranzaksion boshlanadi. FaqatCEO
+havolasi topshiriladi.135–137 bajarildi,138faol: local fresh5/95/7/116/443,
+old archive/session/queue/audit0, schema0018, requestedbot, workerstopped.
+413backend/Ruff/mypy177 va276frontend/type/lint/build,13agent va nativeguide
+3viewport pass. Production final greenCI/deploy/full reset hali bajarilmagan;
+secret/private snapshot Gitga chiqmaydi. User EDUCENTER_IMPORT.md deletion
+stays unstaged. CEO Startni agent bajarmaydi, capability faqat finalda.
+
 2026-10-15 YAKUNIY:001–134 bajarilgan; faol vazifa yo‘q. Development va
 production updated seven-CSV dataset bilan ishlaydi:95ta alohida profil,
 116ta guruhga biriktirish,7ta guruh,443ta aniq «k» manba qoralamasi;
@@ -1425,3 +1440,24 @@ No source push/deploy yet;no external user input needed.
 - [x] 134 — Production bazasini yangilash, release push/deploy va yakuniy qabuli.
   - Bog‘liq:133. Qabul: private production backup/audit/key/data baseline; staged exact7CSV manifest, reviewed diff/secret/PII scan/non-force push/exactSHA green CI/CD. Production authorized current dataset replacement with idempotent receipt, legacy/current isolation, all metadata/7group/217room/family reconciliation and staff/bot/audit preservation. TLS assets/API/worker/archive health, production-loaded UI/RBAC/guide and fake delivery evidence; real family test xabari yo‘q, TASKS/docs yakuniy.
   - Dalil: Production private DB/env/audit backup restored to owned scratch DB before replacement; original9staff/auth/bot/keys,8oldgroups/119oldpupils/487attendance/25batches/4immutable attendance changes and424logical audit bodies retained. Exact reviewed private seven-file dataset verified95profiles/7groups/116memberships/443source drafts/all school-level-MyGov-notes/teacher schedules/four217room, no absence inference/new messages. Initial f1 private owner/macOS sidecar failure fixed without source hotpatch: strict metadata rejection retained, source owner UID/GID and DB-free preflight before writer shutdown added, old-runtime archive guard retained. Final source3faa80adac8686910f263a3bd1d1ef5bc6f8fa8c non-force pushed; Actions38630875859 test116081865340 and deploy116085581706 SUCCESS:408backend/Ruff/mypy173,276frontend/type/lint/reproducible builds/checksums,13agent/19deploy/disposableTLS rollback. CI preflight source_validated and import already_applied created0. Final remote manifest/provenance/legacy/auth/bot/audit proof passed (1459current logical bodies,424original exact), owner schema0017 and env hash unchanged, worker ready/singleton/API+archive healthy. Private in-process55read-only role checks with explicit auth dependency overrides (synthetic full-grant admin, no live login/business writes) prove admin/teacher logs403, superadmin200, ownership/current counts and old IDs404; API role remains restricted. Actual production HTTPS bundles passed all new flows/native admin25/full21/limited6/teacher10 guides/dates1440/768/360/LA-Kiritimati-UTC with closed fixtures/no real sends/no overflow or JS errors; screenshots reviewed. Final external both release markers/all10assets exactSHA/TLS health-ready200/anonymous logs401 pass. Public95-pupil/secret scan passed, raw/private inputs not committed, user EDUCENTER_IMPORT.md deletion preserved unstaged. Documentation-only final evidence commit follows[skip ci], serving source stays3faa80a.
+
+- [x] 135 — To‘liq yangi start uchun private manba, hisoblar va recovery tayyorlovi.
+  - Dalil: Authorized full reset scope recorded, private recovery retained; local actual and production dumps restored to owned scratch DBs then scratch dropped, env/audit private backups saved. Exact profile-only snapshot one CEO/four teachers, no credentials. Telegram getMe verified requested bot identity, token withheld.7CSV approved digest unchanged:95profiles/7groups/116memberships/443source drafts/12reviewflags. No live data deleted.
+
+  - Qabul: authorized scope qayd etilgan;7CSV digest/counts o‘zgarmagan; faqat4teacher+Mohira haqiqiy profil maydonlari private olinadi, eski credentials/session/link ko‘chmaydi. Yangi bot getMe identity tekshiriladi. Ikkala DB/env/audit private backup va restore dalili bor; hali jonli ma’lumot o‘chirilmaydi.
+- [x] 136 — CEO Start bilan auditni bir martalik boshlashni yaratish va tekshirish.
+  - Dalil: Owner-only empty installation creates exactly approved5staff with new random Argon2/encrypted temporary credentials and CSV import, no deletion API.0018 protected audit activation has no row/default-on for existing installs; owner-armed new installs audit0 until designated active CEO successful Start. Teacher/wrong context/repeated link/send failure/rollback cannot activate/reset; transactional audit.activated and account_linked verified without capability leaks, app gate/event mutation denied. Full Docker Ruff/mypy177/413backend pass;11focused activation+migration tests pass,276frontend/type/lint/build/checksum and13agent pass. Native guide25/21/6 scenes1440/768/360 no overflow/JSerror. User backup rejection recorded and old DB/audit recovery copies deleted; no live reset yet.
+  - Bog‘liq:135. Qabul: yangi empty DB owner-only provisioning, yangi5hisob random encrypted temporary password bilan; audit gate protected va default existing deployments unchanged. Faqat belgilangan faol CEOning haqiqiy Telegram bog‘lanishi auditni atomik yoqadi; invalid/teacher/retry/send failure/rollback yoqmaydi. Keyingi audit immutable, runtime gate reset/delete qila olmaydi; meaningful Docker tests/lint/types/migrations o‘tadi.
+- [x] 137 — Local Docker bazalarini to‘liq tozalash va yangi datasetni tekshirish.
+  - Dalil: User-authorized full DROP/recreate of actual local neoavlod_demo and base neoavlod, schema0018; old DB/audit/media/cache removed and no backup retained. Actual local owner reconciliation raw95students/7groups/116memberships/443source k drafts/5freshstaff/room217/2subjects matches every profile school/phone/course MyGov/level/notes/raw provenance/date and schedule; archived rows0,parents/old sessions/refresh/rate-limit/queues/changes/batches0,audit events+segments0,CEO gate pending,requested bot verified/encrypted. Base DB staff0. Normal portals health/ready200,PG18.6; disabled demo seeding/auth bypass; local realworker false and no real messages or shared employee links.
+  - Bog‘liq:136. Qabul: backup restore rehearsal, actual local va empty base DB eski rows/logs yo‘q, actual local5staff/95students/7groups/116memberships/443source drafts, eski sessions/OTP/queues/links/parents0,217room, audit0 va CEO gate pending. Local real bot polling o‘chiq; hech kimga havola/xabar yuborilmaydi. Portal normal auth bilan ishlaydi, demo bypass o‘chiq.
+- [/] 138 — Release push/deploy, production clean start va CEO havolasini topshirish.
+  - Dalil: Kutilmoqda.
+  - Bog‘liq:137. Qabul: private/PII/secret scan, greenCI/CD va exactSHA; writers stopped/backed up, production owner-authorized clean DB/audit/live cache/media reset,5staff va7CSV exact import, yangi verified defaultbot, no test/legacy rows/session/queue. Runtime restrictedroles/immutableaudit/ready/TLS/asset checks pass; audit0 pending actualCEOStart, onlyCEO link valid privately, teacher links not shared/no unsolicited messages. TASKS acceptance/checkpoint final.
+
+2026-10-15 135dan keyingi aniqlashtirish: foydalanuvchi private backup ham
+qolmasligini talab qildi. Yuqoridagi recovery-retention qismi bekor qilindi;
+135da olingan va avvalgi DB/log recovery nusxalari clean-start jarayonida
+butunlay olib tashlanadi.136–138 qabulida backup saqlash talab qilinmaydi.
+Runtime secretlari/SSH deploy kalitlari va yangi7CSV manbasi saqlanadi,
+eski data/audit backup yoki faol test hisoblari saqlanmaydi.

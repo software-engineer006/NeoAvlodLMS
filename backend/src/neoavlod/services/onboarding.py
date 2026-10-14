@@ -3,7 +3,7 @@ import uuid
 from datetime import UTC, datetime
 
 from pydantic import BaseModel, SecretStr
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from neoavlod.audit_context import bind_actor, bind_source, emit
@@ -178,6 +178,12 @@ async def link_telegram_account(
     entity.telegram_reconnect_required = False
     entity.auth_used_at = datetime.now(UTC)
     await session.flush()
+    if isinstance(entity, Staff) and entity.role == Role.SUPERADMIN:
+        activated = await session.scalar(
+            text("SELECT audit.activate_onboarding(:ident)"), {"ident": entity.id}
+        )
+        if activated:
+            await emit(session, "audit.activated", entity_type="staff", entity_id=entity.id)
     await emit(
         session, "telegram.account_linked", entity_type=entity_kind(entity), entity_id=entity.id
     )

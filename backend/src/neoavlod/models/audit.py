@@ -21,6 +21,14 @@ from neoavlod.database import Base
 from neoavlod.models.common import UUIDPrimaryKey
 
 
+class AuditActivation(Base):
+    __tablename__ = "activation"
+    __table_args__ = (CheckConstraint("id = 1", name="singleton"), {"schema": "audit"})
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ceo_id: Mapped[uuid.UUID]
+    activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class AuditEvent(Base):
     __tablename__ = "events"
     __table_args__ = (

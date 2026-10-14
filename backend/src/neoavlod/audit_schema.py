@@ -192,6 +192,9 @@ CREATE OR REPLACE FUNCTION audit.emit(
 SET search_path = pg_catalog, audit AS $$
 DECLARE ctx jsonb; who jsonb; at timestamptz; day date; seq bigint; document jsonb;
 BEGIN
+  IF EXISTS(SELECT 1 FROM audit.activation WHERE id=1 AND activated_at IS NULL) THEN
+    RETURN 0;
+  END IF;
   ctx := COALESCE(NULLIF(current_setting('neoavlod.audit_context',true),'')::jsonb,'{}');
   who := NULLIF(ctx->'actor','null'::jsonb);
   IF actor_override IS NOT NULL THEN
@@ -449,9 +452,12 @@ def register_metadata(metadata: MetaData) -> None:
 
     @event.listens_for(metadata, "after_create")
     def observers(_: MetaData, connection: Connection, **kw: Any) -> None:
+        from neoavlod.audit_activation import ACTIVATION_SQL
         from neoavlod.audit_archive_sql import ARCHIVE_SQL
 
         for statement in installation_sql():
             connection.exec_driver_sql(statement)
         for statement in sql_statements(ARCHIVE_SQL):
+            connection.exec_driver_sql(statement)
+        for statement in sql_statements(ACTIVATION_SQL):
             connection.exec_driver_sql(statement)

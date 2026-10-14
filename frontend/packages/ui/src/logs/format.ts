@@ -29,6 +29,7 @@ const actions: Record<string, string> = {
   "auth.challenge_delivery_failed": "Tasdiqlash yetkazilmadi",
   "http.request": "Panel amallari", "audit.download": "Kunlik log yuklab olindi",
   "telegram.account_linked": "Telegram hisobi ulandi",
+  "audit.activated": "CEO Telegramga ulandi; log yuritish boshlandi",
 };
 export const logActionLabel = (action: string) => {
   if (actions[action]) return actions[action];

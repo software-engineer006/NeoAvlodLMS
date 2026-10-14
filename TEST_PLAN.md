@@ -378,3 +378,21 @@ matrix at1440LA/768Kiritimati/360UTC successfully; no overflow/JS errors,
 mobile screenshots reviewed. This UI verification is not a live OTP login;
 no real customer test writes or Telegram messages. Production currentSHA,
 API/archive healthy and realworker singleton confirmed read-only.
+
+## Toza ishga tushirish va CEO Start (135–138)
+
+- Empty owner-only provisioning: approved five accounts, new random credentials,
+  no prior Telegram/session/queue rows, exact reviewed seven-file digest/counts.
+- Pending audit suppresses imports/HTTP noise; only designated active CEO link
+  activates. Teacher, wrong context, repeated link and failed Telegram delivery
+  cannot activate or reset it; transaction rollback preserves capability and
+  encrypted temporary password for a safe retry.
+- After activation actor/time/source are exact and event/gate mutation denied
+  to runtime role. Existing installation with no activation row stays audited.
+- Actual local/prod row counts include archived rows (must be zero archived),
+  room217/schedule mapping and CSV drafts reconciled; no actual test /start,
+  no teacher links disclosed, no parent messages. Owner checks keep audit0
+  until CEO personally starts. HTTPS release/assets/health and restricted API
+  role separation checked; full-grant admin probe only in memory if needed.
+- User explicitly rejected retained backups: remove previous live DB/audit and
+  recovery copies, keep deployment secrets and the new approved source only.

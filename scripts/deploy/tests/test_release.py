@@ -140,6 +140,20 @@ if [[ "$*" == *release.txt* ]]; then basename "$(readlink "$WEB_ROOT/current")";
         self.assertEqual((self.app / ".env.production").read_bytes(), baseline)
         self.assertEqual(baseline.count(b"NEOAVLOD_AUDIT_ENCRYPTION_KEY="), 1)
 
+    def test_pending_ceo_activation_refuses_old_runtime_without_touching_current(self) -> None:
+        self.deploy(A)
+        self.deploy(B)
+        (self.app / ".activation-enforced").touch()
+        (self.root / "calls").write_text("")
+        result = self.run_script("rollback.sh")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("CEO audit activation missing", result.stderr)
+        self.assertEqual((self.app / "current").readlink().name, B)
+        self.assertNotIn("--force-recreate", (self.root / "calls").read_text())
+        (self.app / "releases" / A / "backend/activation_runtime.version").write_text("1\n")
+        self.assertEqual(self.run_script("rollback.sh").returncode, 0)
+        self.assertEqual((self.app / "current").readlink().name, A)
+
     def test_failed_first_audit_migration_never_restarts_legacy_owner_runtime(self) -> None:
         self.deploy(A)
         (self.app / "releases" / A / "backend/audit_runtime.version").unlink()

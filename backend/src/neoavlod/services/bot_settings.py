@@ -142,6 +142,7 @@ async def update_bot_token(
     *,
     changed_by: uuid.UUID | None = None,
     transport: httpx.AsyncBaseTransport | None = None,
+    commit: bool = True,
 ) -> SystemSettings:
     clean_token = token.strip()
     if not clean_token or len(clean_token) > 256:
@@ -187,7 +188,10 @@ async def update_bot_token(
     sys_settings.last_error = None
     sys_settings.changed_by = changed_by
 
-    await session.commit()
+    if commit:
+        await session.commit()
+    else:
+        await session.flush()
     return sys_settings
 
 

@@ -138,6 +138,10 @@ restore_release() {
   local release="$1"
   valid_release "$release" || return 1
   [[ -f "$APP_ROOT/releases/$release/.successful" && -d "$WEB_ROOT/releases/$release" ]] || { fail 'Ishchi release topilmadi.'; return 1; }
+  if [[ -e "$APP_ROOT/.activation-enforced" && "$(cat "$APP_ROOT/releases/$release/backend/activation_runtime.version" 2>/dev/null)" != 1 ]]; then
+    fail 'CEO audit activation missing in rollback runtime; compatible release required.'
+    return 1
+  fi
   if [[ -e "$APP_ROOT/.dataset-enforced" && "$(cat "$APP_ROOT/releases/$release/backend/dataset_runtime.version" 2>/dev/null)" != 1 ]]; then
     local unsafe_current
     unsafe_current="$(basename "$(readlink "$APP_ROOT/current")")"

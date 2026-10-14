@@ -71,3 +71,26 @@ guruh va o‘quvchi inactive, sessiyalar revoked; canonical attendance/batch va
 immutable dalillar FK sabab o‘chirilmaydi. Haqiqiy mijoz qatorlari o‘zgarmadi.
 18active admin/teacher403 check va new portal attribution tasdiqlandi;
 shifrlangan correction dalillari yangi deploydan keyin ham aynan saqlandi.
+
+## Toza production start (0018)
+
+Foydalanuvchi aniq buyurgan bir martalik infratuzilma reseti ilovadagi log
+huquqlarini o‘zgartirmaydi. Eski bazani va audit arxivini operator olib tashlaydi;
+API orqali o‘chirish yo‘q. `neoavlod.clean_install` faqat bo‘sh, migratsiyalangan
+bazada DB owner huquqi bilan ishlaydi. Private profil fayli aynan CEO va to‘rtta
+teacher uchun; eski parol/session/Telegram ID olinmaydi. Yangi tasodifiy parollar
+hashlanib, birinchi Start javobi uchun vaqtincha shifrlanadi. Faqat CEO havolasi
+private faylga yoziladi, stdout/Git/auditga chiqarilmaydi.
+
+Owner `audit.activation` singletonini CEO UUID bilan bir marta tayyorlaydi.
+Shu yangi bazada CEOning muvaffaqiyatli Telegram Start tranzaksiyasigacha audit
+navbati bo‘sh turadi. To‘g‘ri CEO shaxsiy chatda bog‘langach `audit.activated` va
+`telegram.account_linked` bir tranzaksiyada qayd etiladi. Telegram javobi
+muvaffaqiyatsiz bo‘lsa bog‘lanish, aktivatsiya va log birga rollback bo‘ladi.
+Teacher yoki yaroqsiz havola auditni yoqmaydi. Keyingi tranzaksiyalar odatiy
+immutable auditga yoziladi; app/archiver singletonni o‘zgartira olmaydi.
+Mavjud o‘rnatishda singleton yo‘q: audit doimgidek darhol faol, migration uni
+avtomatik to‘xtatmaydi. CI/redeploy hech qachon clean-install/reset qilmaydi.
+Operator clean-startdan keyin `.activation-enforced` markerini qo‘yadi;
+rollback faqat `backend/activation_runtime.version=1` releasega ruxsat beradi.
+CEO Startni qo‘llamaydigan eski runtime qaytarilmaydi.

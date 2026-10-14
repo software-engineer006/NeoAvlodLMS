@@ -701,6 +701,7 @@ export const adminTopics: GuideTopic[] = [
       ["Kunlik logni yuklang", "Kunlik logni yuklash tanlangan kunning barcha yozuvlarini .jsonl.gz faylga oladi. Filtrlar kunlik eksportni qisqartirmaydi. Faylni ochgach har qator alohida JSON yozuvidir."],
     ),
     tips: ["Faqat faol superadmin logni ko‘rishi/yuklashi mumkin. Barcha ruxsatli administratorga ham log ruxsati berilmaydi.",
+      "Toza ishga tushirishda log yuritish CEO o‘zining shaxsiy Telegram havolasidan Start bosib muvaffaqiyatli ulanganda boshlanadi. Keyingi barcha amallar avtomatik qayd etiladi.",
       "Superadmin ham logni o‘chira yoki o‘zgartira olmaydi. Loglar private papkada siqilgan va shifrlangan holda saqlanadi.",
       "Logni ko‘rish/yuklashning o‘zi ham qayd etiladi. Parol, tasdiqlash kodi, token va shaxsiy ulanish havolalari logga yozilmaydi.",
       "Oldingi importlarga taxminiy muallif yozilmaydi. Xotira tejaladi, tasdiqlangan arxivlar avtomatik o‘chirilmaydi."],
