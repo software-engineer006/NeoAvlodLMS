@@ -8,11 +8,11 @@ it("reads immutable audit and clears the previous lesson when the date changes",
     action: "correct", old_status: "absent", new_status: "present", old_note: null, new_note: "Tekshirildi", reason: "Jurnal tekshirildi", changed_at: "2026-10-12T09:00:00Z" }] });
   const post = vi.spyOn(apiClient, "post");
   render(<AdminChangesHistoryView groups={[{ id: "g1", name: "English A" }]} />);
-  fireEvent.change(screen.getByLabelText("Audit dars sanasi"), { target: { value: "2026-10-12" } });
+  fireEvent.change(screen.getByLabelText("Audit dars sanasi"), { target: { value: "12.10.2026" } });
   fireEvent.click(screen.getByRole("button", { name: "O‘zgarishlar tarixi" }));
   await screen.findByText("Jurnal tekshirildi");
   expect(get).toHaveBeenCalledWith("/api/v1/admin/attendance/groups/g1/attendance/changes?date=2026-10-12", { params: { page: 1, page_size: 20 } });
-  fireEvent.change(screen.getByLabelText("Audit dars sanasi"), { target: { value: "2026-10-13" } });
+  fireEvent.change(screen.getByLabelText("Audit dars sanasi"), { target: { value: "13.10.2026" } });
   expect(screen.queryByText("Jurnal tekshirildi")).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "O‘zgarishlar tarixi" }));
   await waitFor(() => expect(get).toHaveBeenLastCalledWith("/api/v1/admin/attendance/groups/g1/attendance/changes?date=2026-10-13", { params: { page: 1, page_size: 20 } }));

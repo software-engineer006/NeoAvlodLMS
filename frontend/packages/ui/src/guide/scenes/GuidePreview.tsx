@@ -2,6 +2,7 @@ import { useEffect, useId, useRef } from "react";
 import { Badge } from "../../components/Badge";
 import { Button } from "../../components/Button";
 import { Card } from "../../components/Card";
+import { formatDate, formatMonth } from "../../lib/dates";
 import { Input } from "../../components/Input";
 import { Select } from "../../components/Select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/Table";
@@ -30,7 +31,8 @@ export function GuidePreview({ scene, description, zoom = false }: { scene: Guid
                   options={field.options.map((label) => ({ value: label, label }))} /> :
                 <Input key={fieldIndex} id={`${prefix}-${index}-${fieldIndex}`} label={field.label}
                   className={zoom ? "text-base!" : ""}
-                  type={field.type || "text"} value={field.value || ""} placeholder={field.placeholder}
+                  type={field.type === "date" || field.type === "month" ? "text" : field.type || "text"}
+                  value={field.type === "date" ? formatDate(field.value || "") : field.type === "month" ? formatMonth(field.value || "") : field.value || ""} placeholder={field.placeholder}
                   readOnly tabIndex={-1} />)}
             </div>}
             {region.stats && <div className="grid grid-cols-2 @lg:grid-cols-4 gap-3">

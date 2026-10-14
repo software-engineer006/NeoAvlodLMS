@@ -1,3 +1,4 @@
+import { formatDate, formatDateTime, formatExactDateTime } from "../lib/dates";
 import type { AuditValue, LogEvent } from "./types";
 import { logPortalLabel, logRequestLabel } from "./requestLabels";
 
@@ -34,22 +35,9 @@ export function logEventLabel(event: LogEvent): string {
   const portal = event.source === "http" || event.action.startsWith("auth.") ? logPortalLabel(event) : "";
   return `${portal ? `${portal} — ` : ""}${logActionLabel(event.action)}`;
 }
-const clocks = /* @__PURE__ */ createClocks();
-function createClocks() { return Object.fromEntries(["Asia/Tashkent", "UTC"].map((timeZone) => [timeZone,
-  new Intl.DateTimeFormat("en-GB", { timeZone, year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" })])); }
-function timestamp(value: string, zone: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  const p = Object.fromEntries(clocks[zone].formatToParts(date).map(({ type, value }) => [type, value]));
-  return `${p.day}.${p.month}.${p.year} ${p.hour}:${p.minute}:${p.second}`;
-}
-export const logTime = (value: string) => timestamp(value, "Asia/Tashkent");
-export function logExactUTC(value: string): string {
-  const basic = timestamp(value, "UTC"), fraction = value.match(/\.(\d+)(?:Z|[+-]\d\d:\d\d)$/)?.[1];
-  return basic === "—" ? basic : `${basic}${fraction ? `.${fraction}` : ""}`;
-}
-export const logDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) ? value.split("-").reverse().join(".") : value;
+export const logTime = formatDateTime;
+export const logExactTime = formatExactDateTime;
+export const logDate = (value: string) => value === "—" ? value : formatDate(value);
 export const logRejected = (event: LogEvent) => event.details.outcome === "rejected" ||
   /(?:rejected|failed|replay)$/.test(event.action);
 export function logValue(value: AuditValue | undefined): string {
@@ -63,6 +51,6 @@ export function logFieldValue(field: string, value: AuditValue): string {
   const labels: Record<string, string> = { present: "Keldi", absent: "Kelmadi", late: "Kech qoldi",
     active: "Faol", inactive: "Faol emas", superadmin: "Superadmin", admin: "Administrator", teacher: "O‘qituvchi" };
   if (typeof value === "string" && ["date", "lesson_date"].includes(field)) return logDate(value);
-  if (typeof value === "string" && field === "finalized_at") return logTime(value);
+  if (typeof value === "string" && field.endsWith("_at")) return logTime(value);
   return ["status", "role"].includes(field) && typeof value === "string" ? labels[value] || value : logValue(value);
 }

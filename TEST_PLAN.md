@@ -345,3 +345,26 @@ Actions38560225362 test115839175443/deploy115841826795 SUCCESS
 (363backend/249frontend/mypy145 plus deploy/TLS regressions).
 Both public production release markers and10asset checksums match source;
 API health/ready200,API/archive healthy and realworker singleton.
+
+Tasks119–121 — portal-wide calendar and Tashkent clock acceptance:
+Shared formatter renders DD.MM.YYYY and HH:mm:ss Asia/Tashkent; calendar
+values and schedule times retain their meaning, API/storage stay ISO.
+Current day/month use Tashkent even at the UTC year boundary. Month-only
+values render MM.YYYY. All7 date/month controls support keyboard/native
+calendar, bounds/clear/controlled changes; impossible values produce no
+request, attendance actions/export are guarded during invalid editing.
+Audit exact-time details keep microseconds and use Tashkent. Student/subject
+dates, Telegram expiry, message creation/cancellation/delivery/retry,
+attendance records/history/deadlines/tooltips and React guide samples share
+the same formatting. Raw audit download timestamps remain their original
+machine-readable values.
+Docker typecheck/lint/full256frontend tests/both builds/release checksum
+passed. Meaningful leap/invalid/year-boundary/offset/legacyUTC and calendar
+regressions passed; LA-zone15 and Kiritimati-zone3 formatter tests passed.
+Closed synthetic Chromium admin+teacher1440LA/768Kiritimati/360UTC verifies
+visible dates/months/clocks, ISO requests, invalid/keyboard/native picker,
+profile/history/subject/link/message/log details and all guide topics.
+Additional logs role/CSRF/gzip/reason and guide search/zoom/navigation
+regressions passed at1440/768/360; no page overflow/JS errors. Mobile
+screenshots including profile month/statistics and deadline reviewed.
+Exact-SHA CI/CD and production HTTPS/UI receipts follow in task121.

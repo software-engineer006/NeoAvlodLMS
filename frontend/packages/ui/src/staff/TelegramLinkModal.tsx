@@ -1,3 +1,4 @@
+import { formatDateTime } from "../lib/dates";
 import React, { useState } from "react";
 import type { StaffItem, TelegramLinkState } from "./types";
 import { apiClient } from "../api/client";
@@ -134,7 +135,7 @@ export const TelegramLinkModal: React.FC<TelegramLinkModalProps> = ({
             <div className="flex items-center justify-between text-xs text-slate-500">
               <span>Amal qilish muddati:</span>
               <span className={(currentLink.is_expired || currentLink.expired) ? "text-rose-600 font-semibold" : "font-medium"}>
-                {currentLink.expires_at ? new Date(currentLink.expires_at).toLocaleString("uz-UZ") : "—"}
+                {currentLink.expires_at ? formatDateTime(currentLink.expires_at) : "—"}
                 {(currentLink.is_expired || currentLink.expired) && " (Muddati tugagan)"}
               </span>
             </div>

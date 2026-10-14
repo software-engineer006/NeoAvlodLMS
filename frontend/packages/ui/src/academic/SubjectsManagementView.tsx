@@ -1,3 +1,4 @@
+import { formatDate } from "../lib/dates";
 import React, { useState, useEffect, useCallback } from "react";
 import type { CurrentUser } from "../api/types";
 import type { SubjectItem, SubjectListResponse } from "./types";
@@ -257,7 +258,7 @@ export const SubjectsManagementView: React.FC<SubjectsManagementViewProps> = ({ 
                   </TableCell>
                   <TableCell>
                     <span className="text-xs text-slate-500">
-                      {new Date(item.created_at).toLocaleDateString("uz-UZ")}
+                      {formatDate(item.created_at)}
                     </span>
                   </TableCell>
                   <TableCell className="text-right">

@@ -21,6 +21,6 @@ export const commonScenes = {
     { fields: [{ label: "Yangi parol", type: "password" }, { label: "Parolni qayta kiriting", type: "password" }] },
     { buttons: ["Parolni yangilash"], note: "Yangilagach, yangi parol va Telegram kodi bilan qayta kiring." }),
   history: scene("Oylik davomat tarixi", { fields: [choice("Guruh", "English A")] },
-    { fields: [field("Oy", "2026-10")] }, { table: { columns: ["O‘quvchi", "05.10", "07.10", "09.10"],
+    { fields: [field("Oy", "10.2026")] }, { table: { columns: ["O‘quvchi", "05.10.2026", "07.10.2026", "09.10.2026"],
       rows: [["Namuna O‘quvchi", "Keldi", "Kech qoldi", "Kelmadi"]] } }),
 };

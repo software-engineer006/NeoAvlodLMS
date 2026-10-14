@@ -1,3 +1,5 @@
+import { CalendarInput } from "../components/CalendarInput";
+import { formatDate, formatMonth, shiftMonth, tashkentMonth } from "../lib/dates";
 import React, { useState, useEffect } from "react";
 import type { TeacherStudentItem } from "./types";
 import { formatDaysOfWeek, formatPrice } from "../academic/types";
@@ -32,15 +34,7 @@ export interface TeacherStudentProfileModalProps {
 
 export type TeacherStudentDetailDrawerProps = TeacherStudentProfileModalProps;
 
-function getAdjacentMonth(monthStr: string, delta: number): string {
-  const parts = monthStr.split("-");
-  const year = parseInt(parts[0], 10) || new Date().getFullYear();
-  const month = (parseInt(parts[1], 10) || 1) - 1;
-  const d = new Date(Date.UTC(year, month + delta, 1));
-  const newY = d.getUTCFullYear();
-  const newM = String(d.getUTCMonth() + 1).padStart(2, "0");
-  return `${newY}-${newM}`;
-}
+const getAdjacentMonth = shiftMonth;
 
 export const TeacherStudentProfileModal: React.FC<TeacherStudentProfileModalProps> = ({
   isOpen,
@@ -49,10 +43,7 @@ export const TeacherStudentProfileModal: React.FC<TeacherStudentProfileModalProp
 }) => {
   const [detail, setDetail] = useState<TeacherStudentItem | null>(student);
   const [isStatsLoading, setIsStatsLoading] = useState<boolean>(false);
-  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  });
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => tashkentMonth());
 
   useEffect(() => {
     if (student) {
@@ -108,13 +99,7 @@ export const TeacherStudentProfileModal: React.FC<TeacherStudentProfileModalProp
     handleMonthChange(next);
   };
 
-  const formattedDate = currentData.created_at
-    ? new Date(currentData.created_at).toLocaleDateString("uz-UZ", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      })
-    : "-";
+  const formattedDate = currentData?.created_at ? formatDate(currentData.created_at) : "—";
 
   const attendanceStats = currentData.attendance_stats;
   const attendanceRate =
@@ -362,12 +347,10 @@ export const TeacherStudentProfileModal: React.FC<TeacherStudentProfileModalProp
               >
                 <ChevronLeft className="w-4 h-4" />
               </Button>
-              <input
-                type="month"
+              <CalendarInput
+                type="month" required
                 value={selectedMonth}
-                onChange={(e) => {
-                  if (e.target.value) handleMonthChange(e.target.value);
-                }}
+                onValueChange={handleMonthChange}
                 disabled={isStatsLoading}
                 className="px-2.5 py-1 text-xs font-medium border border-slate-300 rounded-lg bg-white text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
                 aria-label="Oy tanlash"
@@ -455,7 +438,7 @@ export const TeacherStudentProfileModal: React.FC<TeacherStudentProfileModalProp
                 </div>
               ) : (
                 <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-500 text-xs text-center">
-                  Tanlangan oy ({selectedMonth}) uchun yakunlangan darslar mavjud emas.
+                  Tanlangan oy ({formatMonth(selectedMonth)}) uchun yakunlangan darslar mavjud emas.
                 </div>
               )}
             </div>

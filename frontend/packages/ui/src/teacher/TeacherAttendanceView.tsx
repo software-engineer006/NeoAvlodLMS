@@ -1,3 +1,4 @@
+import { formatDate, formatDateTime, tashkentToday } from "../lib/dates";
 import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import type {
   TeacherGroupItem,
@@ -8,6 +9,7 @@ import type {
 import { apiClient } from "../api/client";
 import { Button } from "../components/Button";
 import { Card, CardContent } from "../components/Card";
+import { CalendarInput } from "../components/CalendarInput";
 import { Input } from "../components/Input";
 import { Select } from "../components/Select";
 import { Modal } from "../components/Modal";
@@ -73,12 +75,9 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
   const [pendingLoading, setPendingLoading] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState<string>(preselectedGroupId || "");
 
-  const todayStr = useMemo(() => {
-    return new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Asia/Tashkent", year: "numeric", month: "2-digit", day: "2-digit",
-    }).format(new Date());
-  }, []);
+  const todayStr = useMemo(() => tashkentToday(), []);
 
+  const [dateValid, setDateValid] = useState(true);
   const [date, setDate] = useState<string>(initialDate || todayStr);
   useEffect(() => {
     if (portal !== "admin") return;
@@ -107,12 +106,10 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
   const [isFinalizing, setIsFinalizing] = useState<boolean>(false);
   const [deadlineExpired, setDeadlineExpired] = useState(false);
   const sheetRequest = useRef(0);
-  const canEdit = sheet?.can_edit === true && !deadlineExpired && !isLoadingSheet
+  const canEdit = dateValid && sheet?.can_edit === true && !deadlineExpired && !isLoadingSheet
     && sheet.group_id === selectedGroupId && sheet.date === date;
   const controlsDisabled = !canEdit || isSavingDraft || isFinalizing;
-  const deadlineLabel = sheet?.edit_deadline ? new Intl.DateTimeFormat("uz-UZ", {
-    timeZone: "Asia/Tashkent", dateStyle: "medium", timeStyle: "short",
-  }).format(new Date(sheet.edit_deadline)) : "";
+  const deadlineLabel = sheet?.edit_deadline ? formatDateTime(sheet.edit_deadline) : "";
 
   useEffect(() => {
     setDeadlineExpired(false);
@@ -492,11 +489,11 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
           </div>
 
           <div className="w-full md:w-60">
-            <Input
-              type="date"
+            <CalendarInput
+              type="date" required onValidityChange={setDateValid}
               label="Dars sanasi"
               value={date}
-              onChange={(e) => handleDateChange(e.target.value)}
+              onValueChange={handleDateChange}
               leftAddon={<Calendar className="w-4 h-4 text-slate-400" />}
             />
           </div>
@@ -516,7 +513,7 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
       {/* Alerts */}
       {portal === "admin" && <Card className="p-4 space-y-3">
         <h3 className="font-semibold text-slate-900">Davomat olinmagan darslar</h3>
-        <p className="text-xs text-slate-500">{date.split("-").reverse().join(".")} sanasida jadval bo‘yicha darsi bor, davomati hali yakunlanmagan guruhlar.</p>
+        <p className="text-xs text-slate-500">{formatDate(date)} sanasida jadval bo‘yicha darsi bor, davomati hali yakunlanmagan guruhlar.</p>
         {pendingError ? <Alert variant="danger">{pendingError}</Alert> : pendingLoading ? <p>Darslar yuklanmoqda...</p> : pendingGroups.length ? <div className="flex flex-wrap gap-2">
           {pendingGroups.map((group) => <Button key={group.id} variant="outline" disabled={isSavingDraft || isFinalizing}
             onClick={() => handleGroupSelect(group.id)}>{group.name} — {group.teacher_name}</Button>)}
@@ -540,7 +537,7 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
           {canEdit ? <>
             {sheet.finalized ? "Davomat yakunlangan. Status va izohni tuzatish mumkin. " : "Davomatni belgilash va yakunlash mumkin. "}
             {sheet.edit_deadline ? <>Tahrirlash muddati: <strong>{deadlineLabel}</strong> (Toshkent vaqti).</> : "Administrator tuzatishlari sabab bilan tarixga saqlanadi."}
-          </> : (sheet.edit_disabled_reason || "Davomatni tahrirlash uchun 2 kunlik muddat tugagan")}
+          </> : (!dateValid ? "Avval to‘g‘ri dars sanasini kiriting." : sheet.edit_disabled_reason || "Davomatni tahrirlash uchun 2 kunlik muddat tugagan")}
         </Alert>
       )}
 

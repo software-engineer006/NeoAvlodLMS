@@ -24,6 +24,10 @@ it.each([...adminTopics, ...teacherTopics].map((topic) => [topic.id, topic] as c
     for (const region of topic.scene.regions) {
       for (const field of region.fields || []) {
         if (field.type === "password" || /tasdiqlash kodi/i.test(field.label)) expect(field.value).toBeUndefined();
+        if (field.type === "date") {
+          const [year, month, day] = field.value!.split("-");
+          expect(container.querySelector(`input[value="${day}.${month}.${year}"]`)).not.toBeNull();
+        }
       }
     }
     expect(get).not.toHaveBeenCalled(); expect(post).not.toHaveBeenCalled();

@@ -1,3 +1,4 @@
+import { tashkentToday } from "../lib/dates";
 import { useEffect, useRef, useState } from "react";
 import { Download, RefreshCw, ScrollText } from "lucide-react";
 import type { CurrentUser } from "../api/types";
@@ -8,7 +9,7 @@ import { Alert } from "../components/Alert";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
-import { Input } from "../components/Input";
+import { CalendarInput } from "../components/CalendarInput";
 import { Select } from "../components/Select";
 import { ErrorState } from "../components/ErrorState";
 import { EmptyState } from "../components/EmptyState";
@@ -19,8 +20,7 @@ import { logActionLabel, logDate, logEntityLabel, logEventLabel, logRejected, lo
 import { useLogPage } from "./useLogPage";
 import type { LogDay, LogEvent } from "./types";
 
-const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tashkent",
-  year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+const today = tashkentToday;
 
 export function LogsView({ currentUser }: { currentUser: CurrentUser }) {
   const allowed = canViewLogs(currentUser);
@@ -29,6 +29,7 @@ export function LogsView({ currentUser }: { currentUser: CurrentUser }) {
   const [revision, setRevision] = useState(0);
   const [days, setDays] = useState<LogDay[]>([]);
   const [downloading, setDownloading] = useState(false);
+  const [dateValid, setDateValid] = useState(true);
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const [selected, setSelected] = useState<{ owner: string; entry: LogEvent } | null>(null);
   const downloadController = useRef<AbortController | null>(null);
@@ -48,7 +49,7 @@ export function LogsView({ currentUser }: { currentUser: CurrentUser }) {
     setSelected(null);
   };
   const download = async () => {
-    if (!allowed || !filters.day || downloading) return;
+    if (!allowed || !dateValid || !filters.day || downloading) return;
     setDownloading(true); setDownloadError(null);
     const controller = new AbortController();
     downloadController.current = controller;
@@ -72,15 +73,15 @@ export function LogsView({ currentUser }: { currentUser: CurrentUser }) {
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" size="sm" leftIcon={<RefreshCw className="h-4 w-4" />}
           onClick={() => { setCursors([""]); setRevision((n) => n + 1); }}>Yangilash</Button>
-        <Button size="sm" disabled={downloading || !filters.day} onClick={download}
+        <Button size="sm" disabled={downloading || !dateValid || !filters.day} onClick={download}
           leftIcon={<Download className="h-4 w-4" />}>{downloading ? "Tayyorlanmoqda…" : "Kunlik logni yuklash"}</Button>
       </div>
     </div>
     <Alert variant="info">Loglar avtomatik saqlanadi. Ularni tahrirlash yoki o‘chirish mumkin emas. Yuklash tanlangan kunning barcha yozuvlarini beradi.</Alert>
     <Card className="p-4 space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-        <Input type="date" label="Log kuni" value={filters.day} max={today()}
-          onChange={(e) => changeFilter("day", e.target.value)} />
+        <CalendarInput type="date" onValidityChange={setDateValid} label="Log kuni" value={filters.day} max={today()}
+          onValueChange={(iso) => changeFilter("day", iso)} />
         <Select label="Xodim" value={filters.actor_id} onChange={(e) => changeFilter("actor_id", e.target.value)}
           options={[{ value: "", label: "Barcha xodimlar" }, ...(data?.actors || []).map((a) => ({ value: a.id, label: a.name }))]} />
         <Select label="Amal" value={filters.action} onChange={(e) => changeFilter("action", e.target.value)}

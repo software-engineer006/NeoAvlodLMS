@@ -31,7 +31,7 @@ const { verifyPreview, verifyZoom } = require('./browser_guide_helpers.cjs');
     await page.screenshot({ path: `/workspace/.private/ui-acceptance/teacher-guide-${width}.png`, fullPage: true });
     await verifyZoom(page);
     await page.getByRole('button', { name: 'Bo‘limga o‘tish', exact: true }).click();
-    await page.getByLabel('Dars sanasi').waitFor();
+    await page.getByRole('textbox', { name: 'Dars sanasi', exact: true }).waitFor();
     assert.equal(await page.getByRole('button', { name: 'Xodimlar', exact: true }).count(), 0);
     state.user = { ...user, role: 'superadmin' }; await page.reload();
     await page.getByText(/Ruxsat berilmagan/).first().waitFor();

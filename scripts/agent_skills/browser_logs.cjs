@@ -47,7 +47,7 @@ const httpEntry = { ...entry, id: '13', at: '2026-10-14T10:37:47.123456Z', actio
     await page.getByText('Admin paneli — Dashboard ko‘rsatkichlari olindi', { exact: true }).waitFor();
     await page.getByText('14.10.2026 15:37:47', { exact: true }).waitFor();
     assert.equal(await page.getByText('Paneldagi so‘rov', { exact: true }).count(), 0);
-    await page.getByLabel('Log kuni').fill('2026-10-14');
+    await page.getByRole('textbox', { name: 'Log kuni', exact: true }).fill('14.10.2026');
     await page.getByLabel('Xodim', { exact: true }).selectOption(ids.teacher);
     await page.getByRole('cell', { name: /Namuna Ustoz/ }).waitFor();
     assert(await page.getByText(/12:00:01/).count());

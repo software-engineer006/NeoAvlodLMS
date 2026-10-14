@@ -2,7 +2,7 @@ export interface SceneField {
   label: string;
   value?: string;
   placeholder?: string;
-  type?: "text" | "password" | "date" | "time";
+  type?: "text" | "password" | "date" | "month" | "time";
   options?: string[];
 }
 export interface SceneRegion {

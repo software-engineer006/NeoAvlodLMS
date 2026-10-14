@@ -20,5 +20,5 @@ export function useLogPage(allowed: boolean, userId: string, filters: LogFilters
     return () => controller.abort();
   }, [allowed, key, day, actor_id, action, outcome, entity, cursor]);
   const current = state.key === key ? state : { data: null, error: null };
-  return { ...current, loading: allowed && !current.data && !current.error };
+  return { ...current, loading: allowed && Boolean(day) && !current.data && !current.error };
 }

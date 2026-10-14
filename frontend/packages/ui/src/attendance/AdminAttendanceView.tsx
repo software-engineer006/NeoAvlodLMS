@@ -1,3 +1,4 @@
+import { formatDate, formatTime, tashkentToday } from "../lib/dates";
 import React, { useState, useEffect, useCallback } from "react";
 import type { CurrentUser } from "../api/types";
 import type { AdminAttendanceItem, AdminAttendanceListResponse } from "./types";
@@ -5,7 +6,7 @@ import { apiClient } from "../api/client";
 import { ApiError } from "../api/errors";
 import { Card } from "../components/Card";
 import { Button } from "../components/Button";
-import { Input } from "../components/Input";
+import { CalendarInput } from "../components/CalendarInput";
 import { Select } from "../components/Select";
 import { Badge } from "../components/Badge";
 import { Alert } from "../components/Alert";
@@ -117,9 +118,7 @@ export const AdminAttendanceView: React.FC<AdminAttendanceViewProps> = ({
   }, [loadAttendance]);
 
   const setTodayDate = () => {
-    const today = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Asia/Tashkent", year: "numeric", month: "2-digit", day: "2-digit",
-    }).format(new Date());
+    const today = tashkentToday();
     setDateFilter(today);
     setPage(1);
   };
@@ -220,12 +219,12 @@ export const AdminAttendanceView: React.FC<AdminAttendanceViewProps> = ({
                 Bugun
               </button>
             </div>
-            <Input
+            <CalendarInput
               id="attendance-date"
               type="date"
               value={dateFilter}
-              onChange={(e) => {
-                setDateFilter(e.target.value);
+              onValueChange={(iso) => {
+                setDateFilter(iso);
                 setPage(1);
               }}
             />
@@ -371,13 +370,10 @@ export const AdminAttendanceView: React.FC<AdminAttendanceViewProps> = ({
                   <TableCell>
                     <div className="flex items-center gap-1.5 text-xs text-slate-800 font-medium">
                       <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                      {record.date}
+                      {formatDate(record.date)}
                     </div>
                     <div className="text-[11px] text-slate-400 font-mono mt-0.5">
-                      {new Date(record.marked_at).toLocaleTimeString("uz-UZ", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {formatTime(record.marked_at)}
                     </div>
                   </TableCell>
 

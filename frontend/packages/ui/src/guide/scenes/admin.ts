@@ -31,7 +31,7 @@ export const adminScenes = {
     { table: { columns: ["O‘quvchi", "Guruh", "Holat"], rows: [["Namuna O‘quvchi", "English A", "Faol"]] }, buttons: ["Profilni ochish"] },
     { badges: ["Jami: 12"], note: "Oy bo‘yicha yangi o‘quvchilar va guruhlarini ko‘ring." }),
   studentStats: scene("O‘quvchi oylik davomati", { fields: [field("O‘quvchi", "Namuna O‘quvchi")] },
-    { fields: [field("Oy", "2026-10")] }, { stats: [{ label: "Keldi", value: "3" }, { label: "Kech qoldi", value: "1" }, { label: "Kelmadi", value: "1" }] }),
+    { fields: [field("Oy", "10.2026")] }, { stats: [{ label: "Keldi", value: "3" }, { label: "Kech qoldi", value: "1" }, { label: "Kelmadi", value: "1" }] }),
   studentForm,
   studentEdit: scene("O‘quvchini tahrirlash", studentForm.regions[0], studentForm.regions[1],
     { fields: [choice("Holat", "Faol", "Faol emas")], note: "Boshqa guruhga biriktirishda yangi guruhning sig‘imi tekshiriladi." }, studentForm.regions[3]),

@@ -1,6 +1,7 @@
+import { tashkentToday } from "../lib/dates";
 import { useState } from "react";
 import { Card } from "../components/Card";
-import { Input } from "../components/Input";
+import { CalendarInput } from "../components/CalendarInput";
 import { Select } from "../components/Select";
 import { AttendanceChangesView } from "./AttendanceChangesView";
 
@@ -11,9 +12,7 @@ export function AdminChangesHistoryView({
 }) {
   const [selection, setSelection] = useState("");
   const [date, setDate] = useState(() =>
-    new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tashkent" }).format(
-      new Date(),
-    ),
+    tashkentToday(),
   );
   const group = groups.some((item) => item.id === selection)
     ? selection
@@ -37,11 +36,11 @@ export function AdminChangesHistoryView({
           onChange={(event) => setSelection(event.target.value)}
           options={groups.map((item) => ({ value: item.id, label: item.name }))}
         />
-        <Input
+        <CalendarInput
           label="Audit dars sanasi"
           type="date"
           value={date}
-          onChange={(event) => setDate(event.target.value)}
+          onValueChange={setDate}
         />
       </div>
       {group && date ? (

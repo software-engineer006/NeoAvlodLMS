@@ -513,8 +513,8 @@ describe("Teacher Attendance Flow (Task 036)", () => {
       fireEvent.click(keldiButtons[0]);
 
       // Change date
-      const dateInput = screen.getByLabelText(/Dars sanasi/i);
-      fireEvent.change(dateInput, { target: { value: "2026-03-16" } });
+      const dateInput = screen.getByRole("textbox", { name: "Dars sanasi" });
+      fireEvent.change(dateInput, { target: { value: "16.03.2026" } });
 
       // Warning modal appears
       expect(screen.getByText("Saqlanmagan o‘zgarishlar mavjud")).toBeDefined();
@@ -527,7 +527,7 @@ describe("Teacher Attendance Flow (Task 036)", () => {
 
       // Warning modal closes and date is updated
       expect(screen.queryByText("Saqlanmagan o‘zgarishlar mavjud")).toBeNull();
-      expect((dateInput as HTMLInputElement).value).toBe("2026-03-16");
+      expect((dateInput as HTMLInputElement).value).toBe("16.03.2026");
       expect(getSpy).toHaveBeenCalledWith(expect.stringContaining("date=2026-03-16"));
     });
   });

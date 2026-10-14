@@ -1,6 +1,6 @@
 import { Modal } from "../components/Modal";
 import { Badge } from "../components/Badge";
-import { logDate, logEventLabel, logExactUTC, logFieldValue, logRejected, logTime, logValue } from "./format";
+import { logDate, logEventLabel, logExactTime, logFieldValue, logRejected, logTime, logValue } from "./format";
 import { logPortalLabel } from "./requestLabels";
 import type { LogEvent } from "./types";
 
@@ -53,7 +53,7 @@ export function LogDetails({ entry, onClose }: { entry: LogEvent | null; onClose
       </p>}
       <details className="rounded-xl border border-slate-200 p-3">
         <summary className="cursor-pointer font-medium">Aniq vaqt va yozuv identifikatori</summary>
-        <p className="mt-2 break-all">UTC: {logExactUTC(entry.at)}</p>
+        <p className="mt-2 break-all">Toshkent: {logExactTime(entry.at)}</p>
         <p className="mt-1 break-all">Log ID: {entry.id}</p>
         {entry.request_id && <p className="mt-1 break-all">So‘rov ID: {entry.request_id}</p>}
         {typeof entry.details.method === "string" && <p className="mt-2 break-all">So‘rov: {logValue(entry.details.method)} {logValue(entry.details.route)}</p>}

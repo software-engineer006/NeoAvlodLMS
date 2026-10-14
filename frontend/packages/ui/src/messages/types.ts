@@ -1,3 +1,4 @@
+import { formatDateTime } from "../lib/dates";
 export type RecipientKind = "parent" | "student";
 export type AudienceKind = "parents" | "students" | "both";
 export type AudienceScope = "selected" | "groups" | "all";
@@ -126,12 +127,4 @@ export const messageError = (error: unknown) =>
   error instanceof Error
     ? error.message
     : "Xabarlar xizmatida xatolik yuz berdi";
-export const messageTime = (value: string) =>
-  new Intl.DateTimeFormat("uz-UZ", {
-    timeZone: "Asia/Tashkent",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
+export const messageTime = formatDateTime;

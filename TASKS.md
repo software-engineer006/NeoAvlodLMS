@@ -136,6 +136,13 @@ invariantlari tekshiruvdan o‘tdi.
 
 ## Davom ettirish checkpoint
 
+2026-10-14 JORIY:119–120 bajarilgan;121 faol. Barcha sana/vaqt common
+formatter va editable DD.MM.YYYY/MM.YYYY calendar inputlar qo‘llandi.
+Docker full255frontend hamda final30 regression, admin/teacher responsive
+UI/guide/log-role regression va LA/Kiritimati/UTC browser year-boundary
+checks passed. Keyingi amal: final Docker release, public scan/push,
+exact-SHA green CI/CD va production-loaded UI/TLS/health qabuli.
+
 2026-10-14 YAKUNIY:001–118 bajarilgan, faol task yo‘q. Davomat olinmagan
 darslar izohi DD.MM.YYYY ko‘rinadi, ISO input/API saqlangan. Serving source
 866c0b7e7b6dfc9a899e0c9bb684b5e8fb0ba7c1; Actions38560225362
@@ -1319,3 +1326,12 @@ No source push/deploy yet;no external user input needed.
 - [x] 118 — Davomat olinmagan darslar izohidagi sanani kun.oy.yil formatiga o‘zgartirish va productionga chiqarish.
   - Qabul: 2026-10-14 matnda 14.10.2026 ko‘rinadi; sana tanlovi va API ISO formatini saqlaydi. Docker frontend typecheck/lint/tests/build va responsive Chromium tekshiruvi o‘tadi. Release non-force push, exact-SHA CI/CD va production HTTPS/UI tekshiruvi bilan tasdiqlanadi.
   - Dalil: Source866c0b7e7b6dfc9a899e0c9bb684b5e8fb0ba7c1: pending attendance description renders14.10.2026/03.11.2026 while input/API ISO unchanged. Docker typecheck/lint/249frontend/both builds/release checksum passed; local and actual HTTPS production-loaded Chromium1440/768/360 closed synthetic API tests passed with no overflow/JS errors.7path private-secret/98pupil public scan passed, non-force push. Actions38560225362 test115839175443/deploy115841826795 SUCCESS:363backend/249frontend/mypy145 and deployment/TLS regressions. Both production release markers and10asset hashes exactSHA;API health/ready200; currentSHA/API/archive healthy and realworker singleton. Only presentation changed, no customer mutations or real Telegram sends.
+- [x] 119 — Ikki portaldagi sana/vaqtlarni umumiy Toshkent formatteriga o‘tkazish.
+  - Qabul: barcha matn/jadval/profil/link/xabar/audit/deadline/tooltip sanalar DD.MM.YYYY, timestamp HH:mm:ss Asia/Tashkent; bugun/joriy oy browser timezonega bog‘liq emas. Date-only va dars jadvali vaqti siljimaydi, API/storage ISO saqlanadi, aniq audit mikrosekundlari saqlanadi. Meaningful leap-day/rollover/offset/invalid tests va Docker frontend quality checks o‘tadi.
+  - Dalil: Shared lib/dates: DD.MM.YYYY calendar/timestamp, HH:mm:ss Asia/Tashkent, exact microseconds, valid leap dates, offset/legacy UTC, Tashkent today/month and timezone-independent adjacent months. All detected attendance/subject/student/link/message/audit/deadline/tooltip output call sites migrated; monthly headings full dates and empty-state MM.YYYY. API/storage ISO and local schedule times preserved. Docker typecheck/lint/full252Vitest passed; final targeted15 LA-zone and3 Kiritimati-zone tests passed; public source scan shows only common Intl clock and no browser-local date/time formatters. UI inputs/guide acceptance follows120, full release121.
+- [x] 120 — Sana va oy tanlash maydonlari hamda React qo‘llanmani moslashtirish.
+  - Bog‘liq:119. Qabul: sana tanlash DD.MM.YYYY, oy MM.YYYY, keyboard/calendar/clear/disabled/min/max/invalid/controlled qiymatlar ishlaydi; wire ISO saqlanadi, invalid sana bilan so‘rov yuborilmaydi. Qo‘llanma barcha namunalari mos. Admin/teacher UI1440/768/360 va browser boshqa timezonalarda matn/input/deadline/profil/history testlari o‘tadi; regression testlar yangilanadi.
+  - Dalil: Shared CalendarInput renders editable DD.MM.YYYY/MM.YYYY with native calendar, ISO callback only, leap/range validation, partial/rejected input, required/clear/bounds/controlled changes; invalid attendance disables mutations, invalid logs disables export. All7 date/month fields and guide scenes migrated; inert33topic samples and exact Tashkent microseconds aligned. Docker typecheck/lint/full255frontend passed before clear-log regression; final30 input/formatter/log/teacher-flow tests passed. Closed synthetic Chromium admin+teacher1440LA/768Kiritimati/360UTC fixed Tashkent year-boundary verifies current date/month, keyboard/native picker/invalid-no-request, ISO requests, record clocks/history full dates/profile/subject/Telegram expiry/messages/log details and all guide topics; zero overflow/JS errors. Screenshots reviewed including mobile month/statistics and deadline. Additional logs role/CSRF/export/reason and admin23/full19/limited6/teacher10 guide search/zoom/navigation all3viewport regressions passed. Full final release follows121.
+- [/] 121 — Barcha sana/vaqt tuzatishlarini tekshirib productionga chiqarish.
+  - Bog‘liq:120. Qabul: Docker full frontend typecheck/lint/tests/both builds/release checksum, reviewed public diff/secret scan va non-force push. Exact-SHA green CI/CD, actual production TLS/assets/portal date/time/UI responsive va health qabuli; TASKS/TEST_PLAN dalillari yoziladi.
+  - Dalil: Kutilmoqda.

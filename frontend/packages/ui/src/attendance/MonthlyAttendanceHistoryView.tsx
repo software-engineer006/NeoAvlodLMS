@@ -1,3 +1,5 @@
+import { CalendarInput } from "../components/CalendarInput";
+import { formatDate, formatMonth, shiftMonth, tashkentMonth } from "../lib/dates";
 import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import type { CurrentUser } from "../api/types";
 import type { TeacherStudentItem } from "../teacher/types";
@@ -35,59 +37,9 @@ export interface MonthlyAttendanceHistoryViewProps {
   currentUser?: CurrentUser;
 }
 
-const MONTH_NAMES_UZ = [
-  "Yanvar",
-  "Fevral",
-  "Mart",
-  "Aprel",
-  "May",
-  "Iyun",
-  "Iyul",
-  "Avgust",
-  "Sentabr",
-  "Oktabr",
-  "Noyabr",
-  "Dekabr",
-];
-
-function formatMonthUz(monthStr: string): string {
-  const parts = monthStr.split("-");
-  if (parts.length !== 2) return monthStr;
-  const year = parts[0];
-  const mIndex = parseInt(parts[1], 10) - 1;
-  const name = MONTH_NAMES_UZ[mIndex] || parts[1];
-  return `${name} ${year}`;
-}
-
-function getAdjacentMonth(monthStr: string, offset: number): string {
-  const parts = monthStr.split("-");
-  if (parts.length !== 2) return monthStr;
-  let year = parseInt(parts[0], 10);
-  let month = parseInt(parts[1], 10) + offset;
-  if (month < 1) {
-    month = 12;
-    year -= 1;
-  } else if (month > 12) {
-    month = 1;
-    year += 1;
-  }
-  return `${year}-${String(month).padStart(2, "0")}`;
-}
-
-function getCurrentMonthString(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  return `${year}-${month}`;
-}
-
-function formatDayHeader(dateStr: string): string {
-  const parts = dateStr.split("-");
-  if (parts.length === 3) {
-    return parts[2];
-  }
-  return dateStr;
-}
+const formatMonthUz = formatMonth;
+const getAdjacentMonth = shiftMonth;
+const getCurrentMonthString = tashkentMonth;
 
 export const MonthlyAttendanceHistoryView: React.FC<MonthlyAttendanceHistoryViewProps> = ({
   portal,
@@ -308,13 +260,13 @@ export const MonthlyAttendanceHistoryView: React.FC<MonthlyAttendanceHistoryView
             {/* Month Picker */}
             <div>
               <label htmlFor="month-history-input" className="block text-xs font-semibold text-slate-700 mb-1">
-                Oy (YYYY-MM)
+                Oy (oy.yil)
               </label>
-              <input
+              <CalendarInput
                 id="month-history-input"
-                type="month"
+                type="month" required
                 value={month}
-                onChange={(e) => setMonth(e.target.value)}
+                onValueChange={setMonth}
                 className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
               />
             </div>
@@ -467,12 +419,11 @@ export const MonthlyAttendanceHistoryView: React.FC<MonthlyAttendanceHistoryView
                         <th
                           key={dateStr}
                           scope="col"
-                          title={dateStr}
-                          className="px-2 py-3 text-center text-xs font-bold text-slate-700 border-r border-slate-200 min-w-[44px]"
+                          title={formatDate(dateStr)}
+                          className="px-2 py-3 text-center text-xs font-bold text-slate-700 border-r border-slate-200 min-w-[100px]"
                         >
                           <div className="flex flex-col items-center">
-                            <span>{formatDayHeader(dateStr)}</span>
-                            <span className="text-[10px] text-slate-400 font-normal">kun</span>
+                            <span>{formatDate(dateStr)}</span>
                           </div>
                         </th>
                       ))}
@@ -535,8 +486,8 @@ export const MonthlyAttendanceHistoryView: React.FC<MonthlyAttendanceHistoryView
                                 <td
                                   key={dateStr}
                                   className="px-1 py-2 text-center border-r border-slate-100 bg-slate-50/30"
-                                  title={`${student.student_name} - ${dateStr}: Dars belgilanmagan`}
-                                  aria-label={`${dateStr}: Dars belgilanmagan`}
+                                  title={`${student.student_name} - ${formatDate(dateStr)}: Dars belgilanmagan`}
+                                  aria-label={`${formatDate(dateStr)}: Dars belgilanmagan`}
                                 >
                                   <span className="text-slate-300 font-mono text-xs select-none">—</span>
                                 </td>
@@ -548,8 +499,8 @@ export const MonthlyAttendanceHistoryView: React.FC<MonthlyAttendanceHistoryView
                                 <td
                                   key={dateStr}
                                   className="px-1 py-2 text-center border-r border-slate-100 bg-emerald-50/20"
-                                  title={`${student.student_name} - ${dateStr}: Keldi${rec.note ? `\nIzoh: ${rec.note}` : ""}`}
-                                  aria-label={`${dateStr}: Keldi`}
+                                  title={`${student.student_name} - ${formatDate(dateStr)}: Keldi${rec.note ? `\nIzoh: ${rec.note}` : ""}`}
+                                  aria-label={`${formatDate(dateStr)}: Keldi`}
                                 >
                                   <div className="flex flex-col items-center justify-center">
                                     <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700">
@@ -570,8 +521,8 @@ export const MonthlyAttendanceHistoryView: React.FC<MonthlyAttendanceHistoryView
                                 <td
                                   key={dateStr}
                                   className="px-1 py-2 text-center border-r border-slate-100 bg-amber-50/20"
-                                  title={`${student.student_name} - ${dateStr}: Kech qoldi${rec.note ? `\nIzoh: ${rec.note}` : ""}`}
-                                  aria-label={`${dateStr}: Kech qoldi`}
+                                  title={`${student.student_name} - ${formatDate(dateStr)}: Kech qoldi${rec.note ? `\nIzoh: ${rec.note}` : ""}`}
+                                  aria-label={`${formatDate(dateStr)}: Kech qoldi`}
                                 >
                                   <div className="flex flex-col items-center justify-center">
                                     <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-700">
@@ -592,8 +543,8 @@ export const MonthlyAttendanceHistoryView: React.FC<MonthlyAttendanceHistoryView
                               <td
                                 key={dateStr}
                                 className="px-1 py-2 text-center border-r border-slate-100 bg-rose-50/20"
-                                title={`${student.student_name} - ${dateStr}: Kelmadi${rec.note ? `\nIzoh: ${rec.note}` : ""}`}
-                                aria-label={`${dateStr}: Kelmadi`}
+                                title={`${student.student_name} - ${formatDate(dateStr)}: Kelmadi${rec.note ? `\nIzoh: ${rec.note}` : ""}`}
+                                aria-label={`${formatDate(dateStr)}: Kelmadi`}
                               >
                                 <div className="flex flex-col items-center justify-center">
                                   <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-rose-100 text-rose-700">

@@ -6,7 +6,7 @@ export const teacherScenes = {
     { badges: ["Dushanba", "Chorshanba", "Juma"], note: "Dars vaqti: 09:00–10:30. Xona: 101." },
     { buttons: ["O‘quvchilar", "Davomat olish"] }),
   students: scene("Guruh o‘quvchilari", { table: { columns: ["O‘quvchi", "Holat"], rows: [["Namuna O‘quvchi", "Faol"]] }, buttons: ["Profilni ochish"] },
-    { fields: [field("Oy", "2026-10")], stats: [{ label: "Keldi", value: "3" }, { label: "Kech qoldi", value: "1" }, { label: "Kelmadi", value: "1" }] },
+    { fields: [field("Oy", "10.2026")], stats: [{ label: "Keldi", value: "3" }, { label: "Kech qoldi", value: "1" }, { label: "Kelmadi", value: "1" }] },
     { note: "Ota-ona kontakti faqat mavjud va o‘z guruhingizga tegishli bo‘lsa ko‘rinadi." }),
   draft: scene("Davomat belgilash", groupDate, { ...marks, fields: [field("Izoh", "Darsda")] },
     { buttons: ["Qoralama saqlash"], note: "Mavjud status yoki izohni tahrir qilsangiz, tuzatish sababini yozing." },

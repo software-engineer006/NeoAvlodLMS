@@ -43,7 +43,7 @@ it("shows actor, exact seconds and immutable old/new/reason details safely", asy
   expect(screen.getByText("Jurnal tekshirildi")).toBeDefined();
   expect(screen.getByText("Kelmadi")).toBeDefined();
   expect(screen.getByText("Keldi")).toBeDefined();
-  expect(screen.getByText(/14\.10\.2026 07:00:01\.123456/)).toBeDefined();
+  expect(screen.getByText(/Toshkent: 14\.10\.2026 12:00:01\.123456/)).toBeDefined();
   expect(screen.queryByRole("button", { name: /O‘chirish|Tahrirlash/ })).toBeNull();
 });
 
@@ -66,7 +66,7 @@ it("applies server filters and resets the cursor when the day changes", async ()
   fireEvent.click(screen.getByRole("button", { name: "Keyingi" }));
   await waitFor(() => expect(get).toHaveBeenCalledWith("/api/v1/admin/logs", expect.objectContaining({
     params: expect.objectContaining({ cursor: "2026-10-14T07:00:01.123456Z|12" }) })));
-  fireEvent.change(screen.getByLabelText("Log kuni"), { target: { value: "2026-10-13" } });
+  fireEvent.change(screen.getByLabelText("Log kuni"), { target: { value: "13.10.2026" } });
   await waitFor(() => expect(get).toHaveBeenLastCalledWith("/api/v1/admin/logs", expect.objectContaining({
     params: expect.objectContaining({ day: "2026-10-13", cursor: undefined }) })));
   await screen.findAllByText("Namuna Ustoz");
@@ -93,6 +93,17 @@ it("handles loading errors, retry and an empty day", async () => {
   get.mockImplementation((url) => Promise.resolve(url.endsWith("/days") ? [] : { ...page, items: [], total: 0 }));
   fireEvent.click(screen.getByRole("button", { name: "Qayta urinish" }));
   await screen.findByText("Log yozuvi topilmadi");
+});
+
+it("clears the date without querying an invalid day or enabling a download", async () => {
+  const get = mockPage(page);
+  render(<LogsView currentUser={user} />);
+  await screen.findAllByText("Namuna Ustoz");
+  const before = get.mock.calls.length;
+  fireEvent.change(screen.getByLabelText("Log kuni"), { target: { value: "" } });
+  expect(get.mock.calls.length).toBe(before);
+  expect(screen.getByText("Log yozuvi topilmadi")).toBeDefined();
+  expect((screen.getByRole("button", { name: "Kunlik logni yuklash" }) as HTMLButtonElement).disabled).toBe(true);
 });
 
 it("aborts a pending page after role revocation and rejects its late result", async () => {

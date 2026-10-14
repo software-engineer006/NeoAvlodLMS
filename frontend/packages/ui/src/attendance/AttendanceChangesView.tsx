@@ -1,3 +1,4 @@
+import { formatDateTime } from "../lib/dates";
 import { useEffect, useState } from "react";
 import { apiClient } from "../api/client";
 import { Button } from "../components/Button";
@@ -48,7 +49,7 @@ export function AttendanceChangesView({ endpoint, revision }: { endpoint: string
         {result.total === 0 ? <p className="text-sm text-slate-500">Ushbu dars uchun o‘zgarishlar hali qayd etilmagan.</p> : <Table>
           <TableHeader><TableRow><TableHead>Vaqt</TableHead><TableHead>Bajaruvchi</TableHead><TableHead>O‘quvchi</TableHead><TableHead>Amal</TableHead><TableHead>Oldingi holat / izoh</TableHead><TableHead>Yangi holat / izoh</TableHead><TableHead>Sabab</TableHead></TableRow></TableHeader>
           <TableBody>{result.items.map((item) => <TableRow key={item.id}>
-            <TableCell>{new Intl.DateTimeFormat("uz-UZ", { timeZone: "Asia/Tashkent", dateStyle: "short", timeStyle: "short" }).format(new Date(item.changed_at))}</TableCell>
+            <TableCell>{formatDateTime(item.changed_at)}</TableCell>
             <TableCell>{item.actor_name}<div className="text-xs text-slate-500">{labels[item.actor_role] || item.actor_role}</div></TableCell>
             <TableCell>{item.student_name}</TableCell><TableCell>{labels[item.action] || item.action}</TableCell>
             <TableCell>{item.old_status ? labels[item.old_status] : "Belgilanmagan"}<div className="whitespace-pre-wrap break-words">{item.old_note || "—"}</div></TableCell>

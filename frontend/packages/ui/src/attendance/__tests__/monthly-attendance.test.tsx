@@ -27,9 +27,9 @@ describe("Monthly attendance", () => {
     const get = vi.spyOn(apiClient, "get").mockResolvedValue(history);
     render(<MonthlyAttendanceHistoryView portal="admin" groups={groups} initialGroupId="g1" initialMonth="2026-10" />);
     await screen.findByText("Test Student");
-    expect(screen.getByText("31")).toBeDefined();
-    expect(screen.getByLabelText("2026-10-06: Kech qoldi")).toBeDefined();
-    expect(screen.getByLabelText("2026-10-07: Dars belgilanmagan")).toBeDefined();
+    expect(screen.getByText("31.10.2026")).toBeDefined();
+    expect(screen.getByLabelText("06.10.2026: Kech qoldi")).toBeDefined();
+    expect(screen.getByLabelText("07.10.2026: Dars belgilanmagan")).toBeDefined();
     expect(screen.getByText("Traffic")).toBeDefined();
     fireEvent.click(screen.getByText("Test Student"));
     expect(get.mock.calls.every(([url]) => !url.includes("/students/"))).toBe(true);
