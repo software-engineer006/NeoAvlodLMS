@@ -367,4 +367,14 @@ profile/history/subject/link/message/log details and all guide topics.
 Additional logs role/CSRF/gzip/reason and guide search/zoom/navigation
 regressions passed at1440/768/360; no page overflow/JS errors. Mobile
 screenshots including profile month/statistics and deadline reviewed.
-Exact-SHA CI/CD and production HTTPS/UI receipts follow in task121.
+Task121 production receipt: serving source
+d88233e0b003fa2cf34208283e0c454c21a2b3da; Actions38564909515
+test115855007102/deploy115857929286 SUCCESS:
+363backend/256frontend/mypy145/13agent/16deploy/disposableTLS checks.
+Both production HTTPS release markers and10asset hashes match source;
+health/ready200,anonymous logs401. Production-loaded admin/teacher UI with
+closed synthetic API/auth fixtures repeats the whole date/month/time/guide
+matrix at1440LA/768Kiritimati/360UTC successfully; no overflow/JS errors,
+mobile screenshots reviewed. This UI verification is not a live OTP login;
+no real customer test writes or Telegram messages. Production currentSHA,
+API/archive healthy and realworker singleton confirmed read-only.

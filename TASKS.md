@@ -136,12 +136,18 @@ invariantlari tekshiruvdan o‘tdi.
 
 ## Davom ettirish checkpoint
 
-2026-10-14 JORIY:119–120 bajarilgan;121 faol. Barcha sana/vaqt common
-formatter va editable DD.MM.YYYY/MM.YYYY calendar inputlar qo‘llandi.
-Docker full255frontend hamda final30 regression, admin/teacher responsive
-UI/guide/log-role regression va LA/Kiritimati/UTC browser year-boundary
-checks passed. Keyingi amal: final Docker release, public scan/push,
-exact-SHA green CI/CD va production-loaded UI/TLS/health qabuli.
+2026-10-14 YAKUNIY:001–121 bajarilgan; faol task yo‘q. Admin/teacher barcha
+ko‘rinadigan sanalar DD.MM.YYYY, oy MM.YYYY, vaqt HH:mm:ss Asia/Tashkent;
+editable/calendar maydonlar va React qo‘llanma mos, wire/storage ISO saqlangan.
+Serving source d88233e0b003fa2cf34208283e0c454c21a2b3da;
+Actions38564909515 test115855007102/deploy115857929286 SUCCESS:
+363backend/256frontend/mypy145/13agent/16deploy/disposableTLS checks.
+Local va production-loaded closed synthetic UI1440LA/768Kiritimati/360UTC
+date/month/year-boundary/profile/history/subject/link/message/audit/guide
+flows passed; no overflow/JS errors, mobile screenshots reviewed. Production
+both release markers/10asset hashes exactSHA,API health/ready200,API/archive
+healthy,realworker singleton. Final evidence docs-only[skip ci] commit;
+serving source remainsd88233e. Older checkpoints below are historical.
 
 2026-10-14 YAKUNIY:001–118 bajarilgan, faol task yo‘q. Davomat olinmagan
 darslar izohi DD.MM.YYYY ko‘rinadi, ISO input/API saqlangan. Serving source
@@ -1332,6 +1338,6 @@ No source push/deploy yet;no external user input needed.
 - [x] 120 — Sana va oy tanlash maydonlari hamda React qo‘llanmani moslashtirish.
   - Bog‘liq:119. Qabul: sana tanlash DD.MM.YYYY, oy MM.YYYY, keyboard/calendar/clear/disabled/min/max/invalid/controlled qiymatlar ishlaydi; wire ISO saqlanadi, invalid sana bilan so‘rov yuborilmaydi. Qo‘llanma barcha namunalari mos. Admin/teacher UI1440/768/360 va browser boshqa timezonalarda matn/input/deadline/profil/history testlari o‘tadi; regression testlar yangilanadi.
   - Dalil: Shared CalendarInput renders editable DD.MM.YYYY/MM.YYYY with native calendar, ISO callback only, leap/range validation, partial/rejected input, required/clear/bounds/controlled changes; invalid attendance disables mutations, invalid logs disables export. All7 date/month fields and guide scenes migrated; inert33topic samples and exact Tashkent microseconds aligned. Docker typecheck/lint/full255frontend passed before clear-log regression; final30 input/formatter/log/teacher-flow tests passed. Closed synthetic Chromium admin+teacher1440LA/768Kiritimati/360UTC fixed Tashkent year-boundary verifies current date/month, keyboard/native picker/invalid-no-request, ISO requests, record clocks/history full dates/profile/subject/Telegram expiry/messages/log details and all guide topics; zero overflow/JS errors. Screenshots reviewed including mobile month/statistics and deadline. Additional logs role/CSRF/export/reason and admin23/full19/limited6/teacher10 guide search/zoom/navigation all3viewport regressions passed. Full final release follows121.
-- [/] 121 — Barcha sana/vaqt tuzatishlarini tekshirib productionga chiqarish.
+- [x] 121 — Barcha sana/vaqt tuzatishlarini tekshirib productionga chiqarish.
   - Bog‘liq:120. Qabul: Docker full frontend typecheck/lint/tests/both builds/release checksum, reviewed public diff/secret scan va non-force push. Exact-SHA green CI/CD, actual production TLS/assets/portal date/time/UI responsive va health qabuli; TASKS/TEST_PLAN dalillari yoziladi.
-  - Dalil: Kutilmoqda.
+  - Dalil: Serving sourced88233e0b003fa2cf34208283e0c454c21a2b3da;47path private-secret/98pupil public scan passed, non-force push. Actions38564909515 test115855007102/deploy115857929286 SUCCESS:363backend/256frontend/mypy145/13agent/16deploy regressions/disposableTLS. Docker clean builds and source/release checksum passed. Production HTTPS both release markers and10asset hashes exactSHA;API health/ready200,anonymous logs401. Actual production-loaded admin/teacher UI with closed synthetic API/auth fixtures at1440LA/768Kiritimati/360UTC confirms Tashkent year rollover, DD.MM.YYYY/MM.YYYY, all7 editable/calendar fields with ISO requests and invalid no-request/mutation guard, attendance records/deadlines/month history/profile/subjects/Telegram expiry/messages/log exact microseconds and33guide scenes; zero overflow/JS errors, mobile captures reviewed. Production currentSHA/API/archive healthy,realworker singleton. Presentation only; no customer test mutations or real messages. TASKS/TEST_PLAN final receipts updated.
