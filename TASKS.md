@@ -136,6 +136,14 @@ invariantlari tekshiruvdan o‘tdi.
 
 ## Davom ettirish checkpoint
 
+2026-10-14 joriy102[/]: uchta texnik karta va foydalanilmagan icon/state olib
+tashlandi; qo‘llanma matni va faqat dashboard PNG yangilandi. Docker clean
+npmci/typecheck/lint/196Vitest/ikkala build/release checksum va 32PNG audit o‘tdi.
+Sintetik Chromium admin+superadmin 1440/768/360: kartalar yo‘q, statistika va
+guruhga navigatsiya ishlaydi, overflow/JS errors yo‘q. Keyingi: public scan,
+professional commit/non-force push, exact-SHA CI/CD va HTTPS read-only qabuli.
+001–101 bajarilgan. Quyidagi checkpointlar tarixiy.
+
 2026-10-14 YAKUNIY:001–101 bajarilgan,faol task yo‘q. Actual feature/fix release
 c3f78986b2dc15962ee51c1603525c29c2962cd0,Actions38503421183 test+deploySUCCESS.
 101 readonly actualprebackuprestore/originalrowdigests/English-source/APIrole/
@@ -1173,3 +1181,7 @@ Qo‘llanma: `LOCAL_DEMO.md`; Docker socketi uchun sandbox escalation kerak bo�
 - [x] 101 — Production deployment va oxirgi read-only UI/API/data qabuli.
   - Bog‘liq: 100. Qabul: backupdan keyin exact verified release SHA, migratsiyalar/import va singleton worker sog‘lom; HTTPS admin/teacher/guide assets/API/release marker va rol/permission/window/OTP/Xabarlar imkoniyati read-only tekshiriladi. English guruhlari/ikki teacher/Asila bo‘sh davomat/Jamshidbek k-only va oldingi Python/credential/history saqlanadi. Real oilalarga agent tomonidan test xabari yuborilmaydi; deploy xatosida rollback va aniq evidence. CI/CD deploy haqiqatan success bo‘ladi, cheklovlar yashirilmaydi.
   - Dalil: Production exactc3f78986b2dc15962ee51c1603525c29c2962cd0 via green Actions38503421183. Actualpre-release dump scratch restore and rowdigests preserve5oldstaff/password/Telegram/authUUID,4groups/62pupils/388attendance/24batches. Current6staff/7groups/118pupils/486attendance/24batches;English3groups56pupils98k-onlydrafts,Asilaempty/existingprofilepreserved,Jamshidcreated1.0010,realreadonlyAPI own1/2groups/admin200/teacher403/foreign404/anon401;realgetMe/immutablebotconfig/singletonheartbeat;OTP180/runtime15min+7days;HTTPS42assets/32PNG SHA256+markers.ProductionHTTPSbundles DockerChromium closed syntheticAPI:33topics/admin22/full20/limited6/teacher11,search/zoom/role/destination/messages preview-confirm/focus,1440/768/360 nooverflow/JSerrors.Receipt rerun readonlyDB/forbiddencallback/no writablecredentialmount bothcreated0.0campaign/delivery/outbox/send;localpollingstopped;privateCSV/credentials excluded.
+
+- [/] 102 — Admin dashboardidan uchta texnik kartani olib tashlash.
+  - Manba: 2026-10-14 foydalanuvchi screenshoti: Backend API, Xodimlar bo‘limi/RBAC Ruxsatlari, Xavfsizlik protokoli/Telegram OTP kartalari.
+  - Qabul: shu uch karta olib tashlanadi; dashboard statistikasi va qolgan navigatsiya ishlaydi, foydalanilmagan import/state tozalanadi. Qo‘llanmaning dashboard rasmi yangi UIga mos. Docker frontend typecheck/lint/test/build/release checksum va sintetik Chromium 1440/768/360 ko‘rinishi o‘tadi. Secret/PII/unrelated faylsiz commit/non-force push, exact-SHA CI/CD deploy va public HTTPS bundle/marker read-only tasdiqlanadi; DB/import/Telegram ma’lumotlariga tahrir kiritilmaydi.

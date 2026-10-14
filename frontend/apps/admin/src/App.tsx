@@ -35,24 +35,13 @@ import {
   useAuth,
 } from "@neoavlod/ui";
 import { AdminGuideView } from "@neoavlod/ui/admin-guide";
-import {
-  ShieldCheck,
-  Users,
-  Layers,
-  CheckCircle2,
-} from "lucide-react";
-
-interface HealthStatus {
-  status: string;
-  database: string;
-}
+import { Layers } from "lucide-react";
 
 const AdminContent: React.FC<{ activeTab: string; onNavigate?: (tab: string) => void }> = ({
   activeTab,
   onNavigate,
 }) => {
   const { user, fetchMe } = useAuth();
-  const [health, setHealth] = useState<HealthStatus | null>(null);
   const [isLoadingHealth, setIsLoadingHealth] = useState<boolean>(false);
   const [healthError, setHealthError] = useState<string | null>(null);
 
@@ -60,8 +49,7 @@ const AdminContent: React.FC<{ activeTab: string; onNavigate?: (tab: string) => 
     setIsLoadingHealth(true);
     setHealthError(null);
     try {
-      const data = await apiClient.get<HealthStatus>("/api/v1/health");
-      setHealth(data);
+      await apiClient.get("/api/v1/health");
     } catch (err) {
       setHealthError(err instanceof Error ? err.message : "API bilan bog‘lanishda xatolik yuz berdi");
     } finally {
@@ -83,56 +71,6 @@ const AdminContent: React.FC<{ activeTab: string; onNavigate?: (tab: string) => 
 
         {/* Real Statistics Cards */}
         <DashboardStatsCards onNavigate={onNavigate} />
-
-        {/* Status Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-slate-600">Backend API</CardTitle>
-              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-            </CardHeader>
-            <CardContent>
-              {isLoadingHealth ? (
-                <div className="text-sm text-slate-500">Tekshirilmoqda...</div>
-              ) : healthError ? (
-                <div className="text-sm text-rose-600 font-medium">{healthError}</div>
-              ) : (
-                <>
-                  <div className="text-2xl font-bold text-slate-900 uppercase">
-                    {health?.status || "Faol"}
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Baza holati: <span className="font-semibold text-emerald-600">{health?.database || "Bog‘langan"}</span>
-                  </p>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-slate-600">Xodimlar bo‘limi</CardTitle>
-              <Users className="w-5 h-5 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-slate-900">RBAC Ruxsatlari</div>
-              <p className="text-xs text-slate-500 mt-1">
-                {user?.permissions?.length ? `${user.permissions.length} ta ruxsat biriktirilgan` : "Superadmin to‘liq huquqi"}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-slate-600">Xavfsizlik protokoli</CardTitle>
-              <ShieldCheck className="w-5 h-5 text-indigo-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-slate-900">Telegram OTP</div>
-              <p className="text-xs text-slate-500 mt-1">Kirish va parolni tiklash himoyalangan</p>
-            </CardContent>
-          </Card>
-        </div>
 
         {/* Dashboard Actions */}
         <Card>

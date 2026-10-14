@@ -98,8 +98,8 @@ export const adminTopics: GuideTopic[] = [
         "Chap menyuda faqat hisobingizga ochiq bo‘limlar turadi. Kichik ekranda yuqoridagi menyu belgisini bosing.",
       ],
       [
-        "Holatni tekshiring",
-        "Dashboardda ruxsatli statistika va tizim holati ko‘rsatiladi. Ruxsat berilmagan modulning sonlari ochilmaydi.",
+        "Panelni ko‘zdan kechiring",
+        "Dashboardda ruxsatli statistika va joriy hisob ma’lumotlari ko‘rsatiladi. Ruxsat berilmagan modulning sonlari ochilmaydi.",
       ],
       [
         "Profilni oching",

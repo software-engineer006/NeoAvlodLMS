@@ -1,13 +1,13 @@
 {
   "schema": 1,
-  "source_sha256": "732b9eade6ecfc9bb54a77095f8772db5dc108e1fb86a1f92a7a2474e2220ef5",
+  "source_sha256": "902669db758513677c3da01aa00e234310193fa2496e37d4efd0b847af80dcfa",
   "assets": {
     "admin": {
       "assets/admin-attendance-D0Ls52o4.png": "d3ad14fe51b6f19eada3e879b3f00fa3a2862a9476c2269a1269702023180b4e",
       "assets/admin-audit-DXNxUFLt.png": "6ab2b632e82b8995dcf9c51ed73335ef384244b38a49c3163fa512304055c6df",
       "assets/admin-bot-BjHA0Xk4.png": "8632132e69b85d99a034fe413f041ef7f606a89df7cce6a42e03daab2d6144ae",
       "assets/admin-correction-DHCjC0HF.png": "3091e0edcf9659a3b967102ea84b3c7b000b3189ea6bcfb6736bd989f2b56008",
-      "assets/admin-dashboard-2janhY11.png": "5b335af26f813d9cfacf372d15a978d23138fc7f8e1d8f2185642733407ac661",
+      "assets/admin-dashboard-BQPNzX53.png": "2ff03447f8c8e4987d1e6ae356c1e253036cac25a70d8e81583fbb1e2353cef4",
       "assets/admin-delivery-BmSjcssJ.png": "d5d0ead73185a939a2cd2ec4fbdcccbfa53e7e228ef91da4919adf0cb321116c",
       "assets/admin-grants-fDvzsTWN.png": "1c5f72da7c8d3bd670375c12df8c42eabbfadc1e795f106d8b38987bdd5e423b",
       "assets/admin-group-form-CzD-0zC0.png": "e8ca744f8bea3ff512b5105548ff2e3f68c36954d2e31e1902d808b024588381",
@@ -24,10 +24,10 @@
       "assets/admin-student-stats-Caq4MXOw.png": "faeb8ece7f2ddb2f712435852c03f9b799dc6154e1f129c25ba6eda56fe5020e",
       "assets/admin-students-DsbCLk7N.png": "7d2a9a1064ff4c0326c5a32afdcd59aeb66e1e5f64aca57200db470ba9a585ee",
       "assets/admin-subjects-B6Dj6N0b.png": "5af76a1fea7e297dc5984ad9543101bf940104bb510d4a8057eb916b5e9d6361",
-      "assets/index-CV-5WP4A.js": "c0a37c02cdbe572f04cd8504625d7ae342d7d59c5836d63f45f5af843cf0663d",
+      "assets/index-Bs71bmtu.js": "751a8169c4f8fc6a45f862c5fbfae76ac791bc143ab208b8f71ad48afb3da7b8",
       "assets/index-PoJ1cTPM.css": "bcdcd41be8738441d83719ad700938db52d872a10f5821202fd9957c1831f874",
       "favicon.svg": "781ebc9673d5e7b3306ea8c79b0c7d8846f327e19ae50bc90fc69677245678f3",
-      "index.html": "3495be5a26fbef5e236376d47529d9bdcae4cc0df400bc8ec1aeb778703d98e1",
+      "index.html": "4d31a736b40380d56b666ebb40fd5697689277bc2ea08841206935971292d806",
       "neoavlod-logo.svg": "780350296223e18c0a8c91ea04248ccb72918189a97166a76b40a0bd3ca2f467"
     },
     "teacher": {
