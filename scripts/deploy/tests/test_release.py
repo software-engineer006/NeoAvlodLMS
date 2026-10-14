@@ -139,6 +139,20 @@ if [[ "$*" == *release.txt* ]]; then basename "$(readlink "$WEB_ROOT/current")";
         self.assertEqual((self.app / ".env.production").read_bytes(), baseline)
         self.assertEqual(baseline.count(b"NEOAVLOD_AUDIT_ENCRYPTION_KEY="), 1)
 
+    def test_failed_first_audit_migration_never_restarts_legacy_owner_runtime(self) -> None:
+        self.deploy(A)
+        (self.app / "releases" / A / "backend/audit_runtime.version").unlink()
+        (self.app / ".audit-enforced").unlink()
+        (self.root / "calls").write_text("")
+        result = self.run_script("deploy.sh", C, FAIL_STEP="migration")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertTrue((self.app / ".audit-enforced").exists())
+        calls = (self.root / "calls").read_text()
+        self.assertIn(f"{A} compose", calls)
+        self.assertIn("stop api worker", calls)
+        self.assertNotIn("--force-recreate", calls)
+        self.assertIn("Auditdan oldingi runtime", result.stderr)
+
     def test_migration_and_nginx_failure_restore_both_previous_releases(self) -> None:
         self.deploy(A)
         self.deploy(B)

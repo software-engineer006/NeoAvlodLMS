@@ -266,3 +266,9 @@ verified; baseline6staff/7groups/118students/486attendance/24batches/0messages,
 private persistent0700folder and stable new secrets ready.213 public staged
 paths scanned:98 actual pupil names/credentials/capability links/raw CSV and
 unrelated output absent. Real CI/CD and production role/UI acceptance114 next.
+
+114 final review: partial first audit migration must not reactivate an older
+owner-credential backend. The enforcement boundary is now persisted before
+migration starts; new failure regression and all16 Docker deploy/rollback
+unit+workflow checks passed. This is a security follow-up to9a0c8fa; production
+must deploy the final exact commit, never a superseded pipeline.

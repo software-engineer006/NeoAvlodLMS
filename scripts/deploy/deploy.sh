@@ -73,8 +73,9 @@ chmod 700 "$AUDIT_DIR"
 RUNTIME_TOUCHED=1
 compose_release "$RELEASE_ID" stop api worker audit-archiver
 tar -czf "$BACKUP.audit.tar.gz" -C "$(dirname "$AUDIT_DIR")" "$(basename "$AUDIT_DIR")" -C "$(dirname "$ENV_FILE")" "$(basename "$ENV_FILE")"
-compose_release "$RELEASE_ID" run --rm -T --no-deps migrations </dev/null
+# A partially applied audit migration also forbids the old unaudited runtime.
 touch "$APP_ROOT/.audit-enforced"
+compose_release "$RELEASE_ID" run --rm -T --no-deps migrations </dev/null
 compose_release "$RELEASE_ID" run --rm -T --no-deps --user 0:0 \
   -v "$ENV_FILE:/production.env:ro" -v "$RELEASE_DIR/scripts/deploy:/deploy:ro" \
   migrations python /deploy/provision_audit.py </dev/null
