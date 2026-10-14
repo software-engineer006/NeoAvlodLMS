@@ -65,3 +65,12 @@ scripts/agent_skills/docker_env.sh node node /workspace/scripts/agent_skills/aud
 Teacher va final UI/backend/release natijalari TASKS097–098da
 alohida qayd qilinadi. Production faqat100–101 haqiqiy deploy qabuli bilan
 tasdiqlanadi; local screenshot/test natijasi deploy muvaffaqiyati emas.
+
+2026-10-14: production deploy c3f78986b2dc15962ee51c1603525c29c2962cd0 va
+Actions38503421183 SUCCESS. Admin/teacher HTTPS42assets checksum mos;
+21admin+11teacher public guide PNGs verified. Actual production frontend
+bundles isolated Docker Chromiumda closed synthetic API bilan tekshirildi:
+admin22/fulladmin20/limited6,teacher11,33topic image decode,search/zoom/role-safe
+destination va1440/768/360 nooverflow/JSerrors. Bu test real teacher OTP login
+yoki Telegram delivery emas; haqiqiy production data/API/getMe/worker/TLS
+read-only qabuli TEST_PLAN.md va TASKS101da alohida qayd qilindi.

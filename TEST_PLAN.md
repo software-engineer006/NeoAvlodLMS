@@ -115,8 +115,8 @@ read-only `verify_english.py --baseline ... --allow-message-grant` va
 | 097 teacher qo‘llanma | O‘tdi | 11 mavzu/11 numbered actual-UI synthetic screenshots; full196 Vitest/typecheck/lint; teacher-only/search2-kun23:59/zoom/destination/11image decode/3viewports;32asset audit |
 | 098 full UI/backend/release | O‘tdi | Full309pytest/Ruff/mypy124,clean196Vitest/typecheck/lint,13agent,0009head/model,real-data-preservation/preview read-only;2build/Node+Python checksum/32PNG/portal-scoped assets; final3 browser scripts passed |
 | 099 production tayyorlov | O‘tdi | 316backend/Ruff/mypy128;0010head/model;13agent/13deploy/actionlint; real disposable production Python+English receipt/repeat/admin-edits/TLS/rollback; VPS private backup scratch restore5staff/4groups/62students/388attendance/24batches; restricted CI SSH key verified; English private package0600 serverga yuborildi |
-| 100 GitHub/CI/CD | Qisman; faol |48f3ca4c8c54fd6d2dcff652b00ba473f2b7586a non-force main push/remote exactSHA. [Actions38451738459](https://github.com/software-engineer006/NeoAvlodLMS/actions/runs/38451738459): barcha test/build/checksum/migration/deploy-regression/Nginx/disposable-production bosqichlari success; haqiqiy deploy pinned identityda failed, SSH_PRIVATE_KEY/SSH_KNOWN_HOSTS bo‘sh. GitHub Secrets:write avtorizatsiyasi kerak; production yangilanmadi |
-| 101 production qabul | Kutilmoqda | Exact serving SHA va read-only health/data/assets dalili keyin yoziladi |
+| 100 GitHub/CI/CD | O‘tdi | c3f78986b2dc15962ee51c1603525c29c2962cd0 non-force main push; [Actions38503421183](https://github.com/software-engineer006/NeoAvlodLMS/actions/runs/38503421183) test va real deploy SUCCESS.322backend/196frontend, release checksums, role/receipt/regression/TLS;5SSHsecrets configured, pinned restricted CI key |
+| 101 production qabul | O‘tdi | Actual pre-release dump scratch restore; original5staff/4groups/62students/388attendance/24batches digests unchanged. Production6staff/7groups/118students/486attendance/24batches, English3groups56pupils98k-onlydrafts/Asilaempty.0010, GETAPIrole/ownership,OTP180/15min+7days,realgetMe+workerready,HTTPS42assets/32PNG checksums,0campaign/delivery/outbox/send. Production bundle isolated browser33topics/3viewports/search/zoom/message-confirm passed |
 
 100 keyingi sozlama: user aynan mavjud CI keyni GitHub repo secretiga saqlashni
 aniq buyurdi; saving-existing-credential tasnifi bilan5SSHsecret saqlandi va
@@ -126,6 +126,38 @@ strict profile conflict berdi; automatic rollback eski app/web1473595ni tikladi,
 English transaction yozilmadi. Read-only metadata orqali sabab topildi; yangi
 preserve_given_names fix6case bilan full322backend/Ruff/mypy128 va frontend
 checksum/publicscan o‘tdi. Latest fix commit/CI va101production qabul kutilmoqda.
+
+### 101 production dalillari (2026-10-14)
+
+- Actual exact release c3f78986b2dc15962ee51c1603525c29c2962cd0, successful
+  GitHub deploy115656963055. Server private pre-release dump scratch restore
+  successful; original staff/profile/password/Telegram ID/auth UUID, Python
+  roster/source fields, all388old attendance and24batches unchanged by row digest.
+- Current6staff/7groups/118students/486attendance/24batches. Existing Asila teacher
+  account reused without profile/password changes, new Jamshidbek teacher created;
+  source schedules/56pupil fields and98dated present drafts reconcile exactly.
+  Asila attendance and new English batches empty;0campaign/delivery/outbox.
+- Actual production API code with readonly DB/session and scoped ASGI identity
+  overrides checks admin GET200, teacher own1/2groups, admin403/foreign404 and
+  anonymous401. This does not claim new real OTP logins for teachers. Bot real
+  getMe username verified, immutable token/version/config preserved, singleton
+  polling worker heartbeat ready. Legacy bot identity metadata may stay unset
+  until the next verified settings update; existing links remain functional.
+- Public HTTPS/admin/teacher release markers exact; all26admin+16teacher assets
+  match SHA256 including21admin+11teacher guide PNGs. Runtime package source
+  confirms15min access, absolute7day refresh family and shared OTP180seconds.
+- Production HTTPS frontend bundles tested in separate Docker Chromium with
+  closed synthetic API fixtures: admin22/fulladmin20/limited6,teacher11,
+  all33topic images decode, search/zoom/destination/admin-denied, message
+  preview/confirmation/focus,1440/768/360 no overflow or JS errors. Real production
+  API writes and Telegram sends are blocked by the fixture; private screenshots
+  in .private/production-ui. Native Chrome existing superadmin session shows
+  the new navigation, but native screenshot/interaction race was excluded from
+  visual evidence. This browser test does not claim real teacher authentication.
+- Actual source receipts invoked in readonly DB transaction, no writable
+  credential mount and forbidden provisioning callback: Python and English
+  both already_applied/created0. Scratch verification DB removed; local real
+  polling remains stopped; private files/source CSVs are excluded from Git.
 
 ### 098 final case dalillari (2026-10-13)
 

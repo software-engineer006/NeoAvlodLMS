@@ -136,6 +136,54 @@ invariantlari tekshiruvdan o‘tdi.
 
 ## Davom ettirish checkpoint
 
+2026-10-14 YAKUNIY:001–101 bajarilgan,faol task yo‘q. Actual feature/fix release
+c3f78986b2dc15962ee51c1603525c29c2962cd0,Actions38503421183 test+deploySUCCESS.
+101 readonly actualprebackuprestore/originalrowdigests/English-source/APIrole/
+worker/getMe/OTP180/access15min+absolute7days/HTTPS42assets32PNG passed.
+Production6staff/7groups/118students/486attendance/24batches;old5staff/allcredential/
+TelegramUUID/62students/388records/24batches unchanged. ExistingAsila preserved,
+newJamshidcreated1;English3groups56pupils98k-onlydrafts/Asilaempty. Both source
+receipt actual readonlyrerun created0 with forbiddenprovisioncallback and no
+credentialmount.0campaign/delivery/outbox/send;localpollingstopped.
+Production HTTPS bundles separately tested DockerChromium with closed synthetic
+API: admin22/full20/limited6,teacher11,all33topicimages/search/zoom/destination/
+roles andmessagesconfirmation/focus;1440/768/360nooverflow/JSerrors. Private
+screenshots .private/production-ui; nativeChrome screenshotrace excluded from
+visualevidence (oldDashboard realID snapshot staysprivate,notGuideasset).
+Remaining publication housekeeping: final acceptance docs commit/nonforcepush
+then watch automaticCI for that doc SHA and confirm latestrelease/markers/counts;
+functional tasks complete. PrivateCSV/key/password never stage;unrelatedoutput/
+keptuntracked. Next command task.sh validate; no pending implementation tasks.
+
+2026-10-14 joriy101[/]:100done real Actions38503421183 test+deploySUCCESS,
+exact production c3f78986b2dc15962ee51c1603525c29c2962cd0. Backup beforeCIDeploy
+pre-c3f...-20261014T030139Z.dump scratch restore passed. Readonly production
+verification compares original5staff/1subject/4groups/62students/388attendance/
+24batches rowdigestsALLunchanged includingcredentials/TelegramID/authUUID.
+Current6staff/7groups/118students/486attendance/24batches; new English3groups56
+students98presentdrafts,Asila0attendance/English0batches;teacherAsila oldprofile
+preserved/newJamshidcreated1. CSV/source_data/schedule/ownership/admin200/teacher
+admin403+foreign404/anon401 verified through actual readonlyDB+ASGI (notliveOTP).
+Bot token/username/version/changed_by preserved;real getMeverified,legacybot_id
+unset allowed untilsettingsupdate,workerheartbeatready;OTP180;0campaign/delivery/
+outbox,0messagesSent. Actualprebackup restoredscratch thenremoved;HTTPS/API and
+singletonworkerhealth passed. Chrome real test_super_admin existing session
+opens production newUI withDavomat/Xabarlar/Qo‘llanma. Native browser user-control
+interrupt prevents deterministic guideclick; re-query before anyUIaction, no
+forces while user active. Remaining101: publicHTTPS32guidePNG checksums/admin/
+teacherrelease markers+source7day/15min verification, realGuide screenshot/search
+if available or production static app bounded synthetic-browser fallback clearly
+labelled;import receipt reruncreated0/credentialstatehash;finaldocs+taskdone.
+
+2026-10-14 joriy eng so‘nggi:100[/].6identity/preservation tests bilan full322
+backend/Ruff/mypy128passed. Fix c3f78986b2dc15962ee51c1603525c29c2962cd0
+nonforce main push passed. Actions38503421183 latestSHA test/build/deployinprogress:
+https://github.com/software-engineer006/NeoAvlodLMS/actions/runs/38503421183
+GitHub5SSHsecrets allconfigured, credential external blocker yo‘q. Keyingi latest
+CI outcome; success→100done→101resume. Production oldapp/web1473595/schema0010
+vaPythonreceiptadopted,English rollback(old388records/24batches/62students).
+Old48f CI rerun/stale SHA endi ishlatilmasin. Local worker stopped.
+
 2026-10-14 joriy100: user aynan mavjud CI keyni shu GitHub repo secretiga saqlashni
 aniq yana buyurdi. Oldingi Hand-Off talqini tuzatildi: mavjud credentialni saqlash
 credential almashtirish emas; Browser Save authentication information preapproval
@@ -1119,9 +1167,9 @@ Qo‘llanma: `LOCAL_DEMO.md`; Docker socketi uchun sandbox escalation kerak bo�
 - [x] 099 — English private ma’lumotlari va yangi release uchun production deployment tayyorlash.
   - Bog‘liq: 098. Qabul: production private English CSV/profile import rejasi, hash/backup/atomik rerun va CI/deploy hook; mavjud hisob/parol/Telegram link/tarix saqlanadi, admin keyingi tahriri importda bosib ketmaydi. VPS/runtime/release/SSH identity va GitHub Actions deployment talablari secretlarni chiqarmasdan tekshiriladi; deploy konfiguratsiyasi Dockerda testlanadi, server backup/rollback tartibi reviewable bo‘ladi. Real ma’lumotlar faqat private/serverga, Gitga chiqmaydi.
   - Dalil: Docker316pytest/Ruff/mypy128;13agent;13deploy/actionlint;0010dev+serving head/model;local backup/restore and English/baseline readonly preserved;real disposable production Python+English receipts/admin-edits/second-release/TLS/backup/automatic+manual rollback passed. Pinned root SSH VPS verified current1473595/0006 and5staff/4groups/62students/388attendance/24batches;private VPS dump restored/counts matched. Private English3CSV+reviewedhash0600 uploaded;dedicated CI key forced-command arbitrary-command rejection verified. No production runtime/data changes;GitHub secrets-write auth dependency recorded for100.
-- [/] 100 — Tekshirilgan release’ni GitHubga professional commit/push va CI/CD ishlashini tasdiqlash.
+- [x] 100 — Tekshirilgan release’ni GitHubga professional commit/push va CI/CD ishlashini tasdiqlash.
   - Bog‘liq: 099. Qabul: remote/base/non-force branch, public diff, secret/PII/unrelated artifact tekshiruvi; yangi qo‘llanma assetlari va ikki release checksum mos. User bergan push/deploy authorization doirasida professional commit va non-force push exact SHA bilan; GitHub Actions test/build/deploy runi topilib real natija qayd qilinadi. Kerakli server/secrets konfiguratsiyasi mavjud ruxsatli credentialdan xavfsiz sozlanadi; yo‘q dependency ishlagan deb ko‘rsatilmaydi.
-  - Dalil: Acceptance yakunida Docker task manager qayd qiladi.
-- [ ] 101 — Production deployment va oxirgi read-only UI/API/data qabuli.
+  - Dalil: Reviewed feature48f3ca4 plus existing-teacher fixc3f78986b2dc15962ee51c1603525c29c2962cd0 non-force main push/exact remote SHA;322 local backend/196 frontend,128mypy, release checksum and secret/PII scan passed. Five SSH secrets configured without logging values; pinned restricted CI key verified. GitHub Actions38503421183 test job115655355701 and real deploy115656963055 SUCCESS including migrations/private imports/health/TLS, no manual bypass. Prior English profile conflict automatically rolled back; fix preserves active matching existing teacher profile/password/Telegram and rejects other identities; six new cases passed.
+- [x] 101 — Production deployment va oxirgi read-only UI/API/data qabuli.
   - Bog‘liq: 100. Qabul: backupdan keyin exact verified release SHA, migratsiyalar/import va singleton worker sog‘lom; HTTPS admin/teacher/guide assets/API/release marker va rol/permission/window/OTP/Xabarlar imkoniyati read-only tekshiriladi. English guruhlari/ikki teacher/Asila bo‘sh davomat/Jamshidbek k-only va oldingi Python/credential/history saqlanadi. Real oilalarga agent tomonidan test xabari yuborilmaydi; deploy xatosida rollback va aniq evidence. CI/CD deploy haqiqatan success bo‘ladi, cheklovlar yashirilmaydi.
-  - Dalil: Acceptance yakunida Docker task manager qayd qiladi.
+  - Dalil: Production exactc3f78986b2dc15962ee51c1603525c29c2962cd0 via green Actions38503421183. Actualpre-release dump scratch restore and rowdigests preserve5oldstaff/password/Telegram/authUUID,4groups/62pupils/388attendance/24batches. Current6staff/7groups/118pupils/486attendance/24batches;English3groups56pupils98k-onlydrafts,Asilaempty/existingprofilepreserved,Jamshidcreated1.0010,realreadonlyAPI own1/2groups/admin200/teacher403/foreign404/anon401;realgetMe/immutablebotconfig/singletonheartbeat;OTP180/runtime15min+7days;HTTPS42assets/32PNG SHA256+markers.ProductionHTTPSbundles DockerChromium closed syntheticAPI:33topics/admin22/full20/limited6/teacher11,search/zoom/role/destination/messages preview-confirm/focus,1440/768/360 nooverflow/JSerrors.Receipt rerun readonlyDB/forbiddencallback/no writablecredentialmount bothcreated0.0campaign/delivery/outbox/send;localpollingstopped;privateCSV/credentials excluded.

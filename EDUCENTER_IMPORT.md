@@ -121,7 +121,8 @@ local tekshiruvdan alohida tasdiqlanadi.
 
 English import alohida `neoavlod.english_import` CLI orqali bajariladi;
 Python importining source hash va profil fayllari o‘zgarmaydi. Ushbu import
-local `neoavlod_demo` bazasiga qo‘llandi; productionga hali yuborilmadi.
+local `neoavlod_demo` bazasiga qo‘llandi. 2026-10-14 productionga GitHub CI/CD
+orqali chiqarildi; quyidagi yakuniy qabul natijalariga qarang.
 
 | CSV fayl stemidagi guruh | O‘qituvchi | Kunlar | Vaqt | O‘quvchi |
 |---|---|---|---|---:|
@@ -212,3 +213,14 @@ maydonlari o‘zgartirilmaydi. Asosiy ism tokeni, familiya, rol yoki faol holat
 mos kelmasa atomik import rad etiladi. Python/general staff importi avvalgi
 qat’iy ism tekshiruvini saqlaydi. Bu qoida ism maydonidagi qo‘shimcha sababli
 productiondagi mavjud teacher hisobini dublikat qilmaslik uchun kerak.
+
+2026-10-14 production qabul: release c3f78986b2dc15962ee51c1603525c29c2962cd0,
+Actions38503421183 test/deploySUCCESS. Mavjud Asila hisobining qo‘shimcha ism,
+telefon, parol va Telegram ulanishi saqlandi; Jamshidbek hisobi yaratildi.
+3Englishgroup/56pupil/98presentdraft source bilan mos,Asilaattendanceempty.
+Actual pre-deploy backup scratch restore va rowdigest compare barcha5oldstaff,
+4oldgroups/62oldstudents/388oldattendance/24batches o‘zgarmaganini isbotladi.
+Production jami6staff/7groups/118students/486attendance/24batches,0messages.
+Ikkala deployment receipt qayta chaqirishda readonlytransaction ichida
+already_applied/created0 berdi; credential state yozilmaydi. Private import
+credential faylidagi generated parol mavjud Asilaning amaldagi paroli emas.
