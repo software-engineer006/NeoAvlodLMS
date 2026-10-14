@@ -136,12 +136,16 @@ invariantlari tekshiruvdan o‘tdi.
 
 ## Davom ettirish checkpoint
 
-2026-10-14 JORIY:118 — davomat olinmagan darslar izohidagi ISO sana
-DD.MM.YYYY ko‘rinishiga almashtirildi. Docker typecheck/lint/249frontend
-tests/ikkala build/release checksum o‘tdi; closed-synthetic Chromium1440/768/360
-14.10.2026 va03.11.2026 matnini, ISO input/API va overflow/JSerrors yo‘qligini
-tasdiqladi. Keyingi amal: reviewed non-force push va exact-SHA CI/CD,
-so‘ng production HTTPS/UI qabuli;118 hali faol.
+2026-10-14 YAKUNIY:001–118 bajarilgan, faol task yo‘q. Davomat olinmagan
+darslar izohi DD.MM.YYYY ko‘rinadi, ISO input/API saqlangan. Serving source
+866c0b7e7b6dfc9a899e0c9bb684b5e8fb0ba7c1; Actions38560225362
+test115839175443/deploy115841826795 SUCCESS:363backend/249frontend/mypy145
+va deploy/TLS regressions. Local/production-loaded closed synthetic UI
+1440/768/360 exact14.10.2026/03.11.2026, date-change API ISO, no overflow/JS
+errors passed. Production10assets/both release markers exactSHA,API health/
+ready200,API/archive healthy,worker singleton. Final evidence docs-only
+[skip ci] commit; actual serving source remains866c0b7. Older checkpoints
+below are historical.
 
 2026-10-14 YAKUNIY:001–117done, faol task yo‘q. Serving source
 ffc4fb0e51fbe93171ed375316593290e76dcbf6; Actions38555952928 test va
@@ -1312,6 +1316,6 @@ No source push/deploy yet;no external user input needed.
 - [x] 117 — Aniq log UI release push/deploy va production yakuniy qabuli.
   - Bog‘liq:116. Qabul: final public diff/secret/PII scan, professional non-force push, exact-SHA green CI/CD. Production HTTPS assets/portal-route label/DD.MM.YYYY/Toshkent UI1440/768/360/role deny va archived actual116 correction render/export readback; API/worker/archive healthy, key/immutable folder/biznes ma’lumotlari preserved. TASKS/test/guide/operational docs dalillari to‘liq.
   - Dalil: Sourceffc4fb0e51fbe93171ed375316593290e76dcbf6 professional non-force push; Actions38555952928 test115825001556/deploy115827423664 SUCCESS:363backend/249frontend/mypy145/16deploy-regressions/disposableTLS.18public paths secret/98pupil scan passed. Production TLS10assets/both markers exactSHA,anonlogs401. Actual HTTPS UI with closed API/auth rendering real verified116 correction events:concrete teacher/admin portal,DD.MM.YYYY/Tashkent,actor/old-new/note/reason1440/768/360; genericHTTP dashboard/date/role hidden/CSRFgzip/reason UI same3viewports passed,zero overflow/JS errors. New runtime actual6active full-admin/teacher403 checks,2real profile200 and server verified portal metadata/forgedheader ignored; temporary marked accounts finally inactive/new sessions revoked. Both116 corrections archived/readback unchanged across deploy;stableenv/key checksum; final original12table per-ID customer/credential/history/message/import hashes unchanged. API/archive healthy/currentSHA and realworker singleton; no real family sends. Inactive labelled fixture records retained for immutable evidence/FK; tests not OTP login. Test/operations docs updated, final evidence docs commit only.
-- [/] 118 — Davomat olinmagan darslar izohidagi sanani kun.oy.yil formatiga o‘zgartirish va productionga chiqarish.
+- [x] 118 — Davomat olinmagan darslar izohidagi sanani kun.oy.yil formatiga o‘zgartirish va productionga chiqarish.
   - Qabul: 2026-10-14 matnda 14.10.2026 ko‘rinadi; sana tanlovi va API ISO formatini saqlaydi. Docker frontend typecheck/lint/tests/build va responsive Chromium tekshiruvi o‘tadi. Release non-force push, exact-SHA CI/CD va production HTTPS/UI tekshiruvi bilan tasdiqlanadi.
-  - Dalil: Kutilmoqda.
+  - Dalil: Source866c0b7e7b6dfc9a899e0c9bb684b5e8fb0ba7c1: pending attendance description renders14.10.2026/03.11.2026 while input/API ISO unchanged. Docker typecheck/lint/249frontend/both builds/release checksum passed; local and actual HTTPS production-loaded Chromium1440/768/360 closed synthetic API tests passed with no overflow/JS errors.7path private-secret/98pupil public scan passed, non-force push. Actions38560225362 test115839175443/deploy115841826795 SUCCESS:363backend/249frontend/mypy145 and deployment/TLS regressions. Both production release markers and10asset hashes exactSHA;API health/ready200; currentSHA/API/archive healthy and realworker singleton. Only presentation changed, no customer mutations or real Telegram sends.

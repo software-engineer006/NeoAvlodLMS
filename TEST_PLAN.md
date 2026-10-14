@@ -334,3 +334,14 @@ finally inactive/sessions revoked; no new real customer changes or messages.
 Both original116 events survive deploy/encrypted readback unchanged;env/key
 checksum stable. Final cleanup reconfirms all original12table per-ID hashes,
 API/archive healthy,worker singleton currentSHA. Test fixture evidence retained.
+
+Task118 — attendance pending description date (2026-10-14):
+DD.MM.YYYY text verified for14.10.2026 and03.11.2026, native date input/API
+remain ISO. Docker typecheck/lint/249frontend tests/both builds/release checksum
+passed. Local and production-loaded Chromium1440/768/360 use closed synthetic
+API fixtures; exact text/date changes and no overflow/JS errors passed.
+Source866c0b7e7b6dfc9a899e0c9bb684b5e8fb0ba7c1,
+Actions38560225362 test115839175443/deploy115841826795 SUCCESS
+(363backend/249frontend/mypy145 plus deploy/TLS regressions).
+Both public production release markers and10asset checksums match source;
+API health/ready200,API/archive healthy and realworker singleton.
