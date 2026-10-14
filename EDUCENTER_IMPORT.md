@@ -203,3 +203,12 @@ reviewed `plan.sha256`; `ENGLISH_DATA_DIR` bilan boshqa private katalog tanlanad
 Natija `/opt/neoavlod/private/english-state/`da 0700/0600 saqlanadi. Tartib:
 backup → migratsiya → Python import/adoption → English import → API/worker/TLS.
 Local credential paketini mavjud server hisoblari ustiga ko‘chirmang.
+
+English birinchi importida shu username bilan faol teacher avvaldan mavjud
+bo‘lsa, berilgan asosiy ism tokenlari va aynan familiya mosligi tekshiriladi.
+Admin ismga qo‘shimcha berilgan ism yoki izoh yozgan bo‘lsa, mavjud profil
+o‘z holicha saqlanadi: parol, Telegram ID/link UUID, telefon va boshqa profil
+maydonlari o‘zgartirilmaydi. Asosiy ism tokeni, familiya, rol yoki faol holat
+mos kelmasa atomik import rad etiladi. Python/general staff importi avvalgi
+qat’iy ism tekshiruvini saqlaydi. Bu qoida ism maydonidagi qo‘shimcha sababli
+productiondagi mavjud teacher hisobini dublikat qilmaslik uchun kerak.

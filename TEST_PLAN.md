@@ -115,8 +115,17 @@ read-only `verify_english.py --baseline ... --allow-message-grant` va
 | 097 teacher qo‘llanma | O‘tdi | 11 mavzu/11 numbered actual-UI synthetic screenshots; full196 Vitest/typecheck/lint; teacher-only/search2-kun23:59/zoom/destination/11image decode/3viewports;32asset audit |
 | 098 full UI/backend/release | O‘tdi | Full309pytest/Ruff/mypy124,clean196Vitest/typecheck/lint,13agent,0009head/model,real-data-preservation/preview read-only;2build/Node+Python checksum/32PNG/portal-scoped assets; final3 browser scripts passed |
 | 099 production tayyorlov | O‘tdi | 316backend/Ruff/mypy128;0010head/model;13agent/13deploy/actionlint; real disposable production Python+English receipt/repeat/admin-edits/TLS/rollback; VPS private backup scratch restore5staff/4groups/62students/388attendance/24batches; restricted CI SSH key verified; English private package0600 serverga yuborildi |
-| 100 GitHub/CI/CD | Kutilmoqda | Exact SHA va Actions URL keyin yoziladi |
+| 100 GitHub/CI/CD | Qisman; faol |48f3ca4c8c54fd6d2dcff652b00ba473f2b7586a non-force main push/remote exactSHA. [Actions38451738459](https://github.com/software-engineer006/NeoAvlodLMS/actions/runs/38451738459): barcha test/build/checksum/migration/deploy-regression/Nginx/disposable-production bosqichlari success; haqiqiy deploy pinned identityda failed, SSH_PRIVATE_KEY/SSH_KNOWN_HOSTS bo‘sh. GitHub Secrets:write avtorizatsiyasi kerak; production yangilanmadi |
 | 101 production qabul | Kutilmoqda | Exact serving SHA va read-only health/data/assets dalili keyin yoziladi |
+
+100 keyingi sozlama: user aynan mavjud CI keyni GitHub repo secretiga saqlashni
+aniq buyurdi; saving-existing-credential tasnifi bilan5SSHsecret saqlandi va
+metadata tekshirildi. Attempt2 SSH/build/checksum/backup/0006→0010migration va
+Python adopted(created0) o‘tdi. Englishda mavjud teacher firstname qo‘shimchasi
+strict profile conflict berdi; automatic rollback eski app/web1473595ni tikladi,
+English transaction yozilmadi. Read-only metadata orqali sabab topildi; yangi
+preserve_given_names fix6case bilan full322backend/Ruff/mypy128 va frontend
+checksum/publicscan o‘tdi. Latest fix commit/CI va101production qabul kutilmoqda.
 
 ### 098 final case dalillari (2026-10-13)
 

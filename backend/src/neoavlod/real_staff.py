@@ -89,6 +89,7 @@ async def provision_staff(
     *,
     require_bot: bool = True,
     preserve_missing_fields: bool = False,
+    preserve_given_names: bool = False,
 ) -> tuple[int, dict[str, str | None]]:
     """Never resets an existing password, rotates a live link, or commits the caller's work."""
     await session.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": 0x4E454F065})
@@ -114,7 +115,15 @@ async def provision_staff(
             created += 1
         elif (
             person.role != spec.role
-            or person.first_name != spec.first_name
+            or (
+                person.first_name != spec.first_name
+                and not (
+                    preserve_given_names
+                    and bool(spec.first_name.split())
+                    and person.first_name.casefold().split()[: len(spec.first_name.split())]
+                    == spec.first_name.casefold().split()
+                )
+            )
             or (
                 person.last_name != spec.last_name
                 and not (preserve_missing_fields and spec.last_name is None)

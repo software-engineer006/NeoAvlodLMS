@@ -5,6 +5,7 @@ from datetime import time
 from pathlib import Path
 
 import pytest
+from factories import staff
 from sqlalchemy import func, select
 
 from neoavlod.database import Database
@@ -22,11 +23,14 @@ from neoavlod.models import (
     AttendanceBatch,
     AttendanceStatus,
     Group,
+    ImportReceipt,
     NotificationOutbox,
+    Role,
     Staff,
     Student,
     Subject,
 )
+from neoavlod.models.common import Status
 from neoavlod.security.passwords import verify_password
 
 
@@ -221,3 +225,74 @@ async def test_schedule_source_and_transfer_conflicts_preserve_existing_data(
             await apply_english(session, plan)
     async with model_database.session() as session:
         assert await session.scalar(select(func.count()).select_from(Student)) == 7
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("change", [None, "first", "prefix", "family", "role", "inactive"])
+async def test_existing_teacher_given_names_preserved_without_accepting_other_identity(
+    model_database: Database, tmp_path: Path, capsys: pytest.CaptureFixture[str], change: str | None
+) -> None:
+    profile = PROFILES[0]
+    person = staff(
+        **(
+            profile.model_dump()
+            | {
+                "first_name": "Asila Namuna",
+                "phone": "+998991234567",
+                "telegram_id": 881000,
+                "must_change_password": False,
+            }
+        )
+    )
+    if change == "first":
+        person.first_name = "Other Namuna"
+    elif change == "prefix":
+        person.first_name = "Asilabek Namuna"
+    elif change == "family":
+        person.last_name = "Other"
+    elif change == "role":
+        person.role = Role.ADMIN
+    elif change == "inactive":
+        person.status = Status.INACTIVE
+    async with model_database.session() as session, session.begin():
+        session.add(person)
+        await session.flush()
+        identity = person.id, person.auth_uuid, person.hashed_password
+        old_name = person.first_name
+    root = sources(tmp_path / "csv")
+    from neoavlod.english_import import reviewed_digest
+
+    args = argparse.Namespace(
+        source=root,
+        capacity=30,
+        report=None,
+        credentials=tmp_path / "private/accounts.json",
+        apply=True,
+        expected_plan=reviewed_digest(build_plan(root)),
+        deployment_receipt=True,
+    )
+    if change:
+        with pytest.raises(ValueError, match="Existing username differs"):
+            await run(args)
+        async with model_database.session() as session:
+            for model in (Group, Student, Attendance, ImportReceipt):
+                assert await session.scalar(select(func.count()).select_from(model)) == 0
+            assert await session.scalar(select(func.count()).select_from(Staff)) == 1
+    else:
+        await run(args)
+        assert json.loads(capsys.readouterr().out)["result"]["created_staff"] == 1
+        await run(args)
+        assert (
+            json.loads(capsys.readouterr().out)["result"]["deployment_status"] == "already_applied"
+        )
+        async with model_database.session() as session:
+            imported_group = await session.scalar(
+                select(Group).where(Group.source_key == build_plan(root).groups[0].key)
+            )
+            assert imported_group and imported_group.teacher_id == identity[0]
+    async with model_database.session() as session:
+        preserved = await session.get(Staff, identity[0])
+        assert preserved
+        assert (preserved.id, preserved.auth_uuid, preserved.hashed_password) == identity
+        assert preserved.first_name == old_name and preserved.phone == "+998991234567"
+        assert preserved.telegram_id == 881000 and not preserved.must_change_password

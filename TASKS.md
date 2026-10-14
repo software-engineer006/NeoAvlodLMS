@@ -136,6 +136,43 @@ invariantlari tekshiruvdan o‘tdi.
 
 ## Davom ettirish checkpoint
 
+2026-10-14 joriy100: user aynan mavjud CI keyni shu GitHub repo secretiga saqlashni
+aniq yana buyurdi. Oldingi Hand-Off talqini tuzatildi: mavjud credentialni saqlash
+credential almashtirish emas; Browser Save authentication information preapproval
+va exact user action-time authorization qo‘llandi. Native Chrome orqali mavjud
+ci_key qiymati faqat GitHub encrypted SSH_PRIVATE_KEYga saqlandi; root credential
+almashtirilmadi, key/token hech qanday output/log/Gitga chiqarilmadi. Beshta nom
+SSH_HOST/SSH_USER/SSH_PORT/SSH_KNOWN_HOSTS/SSH_PRIVATE_KEY ro‘yxatda tasdiqlandi;
+birinchi tab blankrender yangi tab bilan hal bo‘ldi. Private screenshot
+.private/deploy-20261013/github-five-secrets.png. GitHub PAT talab qilinmaydi.
+Remote main hanuz48f3ca4c8c54fd6d2dcff652b00ba473f2b7586a, local worker stopped.
+38451738459 faqat failed-deploy rerun so‘raldi; real result kutilmoqda.100[/],
+101pending. Success bo‘lmaguncha100done deyilmasin; undan keyin exact production
+schema/import/data/worker/HTTPS/guide assets qabulini101da bajaring.
+
+100 rerun attempt2: SSH pinned-identity SUCCESS, backend build/checksum/backup
+va0006→0010migration o‘tdi; Python receipt adopted(created0). English provision
+xatosida automatic rollback app/web1473595ga qaytdi; DB0010vaPythonreceipt
+saqlandi, English staff/groups/attendance transaction rollback. Private English
+expected/actualdigest8d8c...c25 mos,56roster; read-only nullablecolumnsYES.
+Read-only staff metadata: teacher_asila mavjud,roleteacher/active/familiyaexact/
+first-name tokenAsila mos,admin firstnamega qo‘shimcha so‘z kiritgan,0groups;
+teacher_jamshidbek mavjud emas. Profiles strict equality sababli import rad etdi.
+Fix100: English-only preserve_given_names parametri qo‘shildi; primary given-name
+tokens+exact family+role/status guard, profil/password/telegramUUID/phone untouched;
+Python defaultstrict saqlanadi.6parametrli test(first/prefix/family/role/inactive
+rad,existingteacherreuse+receipt rerun preservation) yozildi; fullgate kutilmoqda.
+Auto-review production rollback write-probe+writeablecredentialstate diagnosticni
+rad etdi; qayta aylanib o‘tilmadi. Safer readonlytransaction metadata orqali sabab
+aniqlandi. Keyingi fullbackend→publicscan→fixcommit/nonforcepush→latestSHA CI→101.
+
+100 fix gate: Docker full322pytest/compile/Ruff/mypy128 passed;6new cases preserve
+existing teacher first-name extension/password/authUUID/Telegram/phone and reject
+different first token/prefix/family/role/inactive atomically. Python strict default
+unchanged. Frontend Node source/assets/clean build checksum passed; only backend
+code changed. Public6file staged secret/capabilitylink/98realpupilname/key/PAT/rawCSV
+scan and gitdiffcheck passed. Ready for reviewed fix commit+nonforce main push.
+
 2026-10-14 yangilanish: 001–099 bajarilgan,100 faol. 0010 durable import
 receipt, Python/English deploy hooklari admin tahrirlarini saqlaydi; hash o‘zgarishi,
 partial/provenance/history/batch yetishmasligi fail closed.316backend pytest,
@@ -159,6 +196,50 @@ names/privatekeys/PAT/rawCSV/unrelatedoutput scan passed;gitdiffcheck/32PNG
 provenance/portal-scope/Node+Python cleanbuild checksum passed. Unrelated output/
 stage qilinmadi.100reviewed feature commit/non-force push va Actions follow-up.
 `scripts/agent_skills/task.sh resume`.
+
+100 push/CI dalili: reviewed feature commit48f3ca4c8c54fd6d2dcff652b00ba473f2b7586a
+non-force origin/main push va remote exact SHA tasdiqlandi; faqat unrelated
+output/ untracked. Actions38451738459:
+https://github.com/software-engineer006/NeoAvlodLMS/actions/runs/38451738459
+test job115484088085 barcha Docker/backend/migration/frontend/build/checksum/
+deploy-rollback/Nginx/disposable-production integration bosqichlarida SUCCESS.
+Deploy job115486737362 pinned-identity bosqichida FAILURE: log envda
+SSH_PRIVATE_KEY va SSH_KNOWN_HOSTS bo‘sh; libcrypto empty-key255, remote deploy
+skipped. Real production1473595/0006 o‘zgarmadi.100complete EMAS;101pending.
+Yetishmayotgan external input: repo Secrets:write huquqli GitHub PAT private
+fayl manzili (async so‘ralgan). Docker uchun private configure_github.py tayyor:
+userPAT→GitHubpublickey→LibSodium encrypted5SSHsecrets→metadata verification;
+values/log/chat/Gitga chiqmaydi. PAT kelgach neoavlod-ssh:20261013 Dockerda
+/workspace/.private/deploy-20261013/configure_github.py TOKEN_FILE, so‘ng ayni
+38451738459ning faqat failed deploy jobini connector orqali rerun. Agar public
+main SHA o‘zgarsa stale pipeline deploy qilinmaydi; avval latest SHA tekshirilsin.
+Secret auth kelmaguncha qayta rerun foydasiz. Keyin100done→101resume→actual
+VPS exactSHA/backup/migration/Python-adoption/English98drafts/old388records/
+24batches/credential/worker/HTTPS33guide-topic-assets/read-only acceptance.
+Local real bot worker stopped. CI dalili checkpoint/TEST_PLAN tahriri localda
+saqlandi, yangi main SHAni isbotsiz yaratmaslik uchun alohida docs push qilinmadi.
+
+100 external-input yangilanishi: foydalanuvchi PATni eslamaydi. Native Chrome
+Dilmurod(Work) profilida GitHub authenticated topildi; repository Settings→
+Actions secrets sahifasi ochildi, environment va repository secrets ikkalasi
+ham bo‘sh. PATsiz user handoff varianti tayyor: private GITHUB_SETUP.md jadvali
+va beshta secret qiymat manbasi, New repository secret formasi. Brauzer tool
+Computer Use Confirmation Policy→Hand-Off Required: yangi authentication
+credentialni kiritish, confirmation va submissionni user o‘zi bajarishi kerak.
+Agent hech qanday private key qiymatini UIga kiritmaydi. User5secretsni qo‘shib
+tayyor degach metadata→remoteSHA→same-run failed-deploy rerun→100/101 acceptance.
+100[/] qoladi; avtomatik qayta rerun yoki production success da’vo qilinmaydi.
+
+100 handoff qisqartirildi: user barcha ishni agent bajarishini so‘radi. Native
+Chrome UI orqali public endpoint config SSH_HOST/SSH_USER/SSH_PORT va pinned
+server PUBLIC host keys SSH_KNOWN_HOSTS encrypted repository secret sifatida
+saqlandi; GitHub ro‘yxatida aynan4nom tasdiqlandi. Private screenshot dalili
+.private/deploy-20261013/github-four-secrets.png. Yagona qolgan SSH_PRIVATE_KEY
+formasi Name bilan tayyor, Secret bo‘sh; yangi PRIVATE authentication credential
+UIga agent kiritmadi. Brauzer Hand-Off Required qoidasi user o‘zi kalitni kiritib
+Add secret bosishini talab qiladi, oldingi umumiy authorization buni bekor qilmaydi.
+Private GITHUB_SETUP.md yangilandi: faqat ci_key matnini copy/paste va1Save kerak.
+User key saqlagach secrets metadata→same-SHA failed deploy rerun→100done→101.
 
 2026-10-13: 001–098 bajarilgan; faol task 099 — production private import/deploy tayyorlov.
 Backend full309 pytest/Ruff/mypy124; final39 API/RBAC/CRUD audit va mypy114 src/tests;

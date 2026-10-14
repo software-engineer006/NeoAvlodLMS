@@ -331,7 +331,12 @@ async def run(args: argparse.Namespace) -> None:
                     nonlocal links
                     accounts = prepare(list(PROFILES), args.credentials)
                     created, links = await provision_staff(
-                        session, accounts, settings, require_bot=False, preserve_missing_fields=True
+                        session,
+                        accounts,
+                        settings,
+                        require_bot=False,
+                        preserve_missing_fields=True,
+                        preserve_given_names=True,
                     )
                     return {
                         "created_staff": created,
