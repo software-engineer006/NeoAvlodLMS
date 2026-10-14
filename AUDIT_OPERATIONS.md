@@ -60,3 +60,14 @@ Restricted role, read-only API mount, encrypted read-back, archiver restart va
 stable key tekshirildi. Pre-audit va post-audit DB+encrypted-files/key private
 backuplari tekshirildi. Hozirgi audit-compatible release birinchi audit release;
 oldingi8db08f7 runtime auditdan oldingi bo‘lgani uchun rollback uchun yaroqsiz.
+
+2026-10-14 yangi UI/runtime:ffc4fb0e51fbe93171ed375316593290e76dcbf6,
+CI/CD38555952928 successful. Sana14.10.2026, vaqt HH:mm:ss Toshkent;
+HTTP logda verified session portal va bo‘lim/amal tavsifi, raw route/method
+texnik dalil sifatida qoladi. API o‘qish so‘rovi page-click deb uydirilmaydi.
+Production actual HTTPS davomat sinovi alohida AUDIT SINOV116 guruh/o‘quvchi
+va qisqa robot sessiyalarida bajarildi, OTP login testi emas. Uch test xodimi,
+guruh va o‘quvchi inactive, sessiyalar revoked; canonical attendance/batch va
+immutable dalillar FK sabab o‘chirilmaydi. Haqiqiy mijoz qatorlari o‘zgarmadi.
+18active admin/teacher403 check va new portal attribution tasdiqlandi;
+shifrlangan correction dalillari yangi deploydan keyin ham aynan saqlandi.

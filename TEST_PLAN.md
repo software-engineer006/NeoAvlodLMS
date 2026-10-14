@@ -317,3 +317,20 @@ message/import per-ID hashes identical. One clearly labelled non-real attendance
 batch/student record and inactive fixtures remain for immutable audit/FK evidence;
 no real family sends. Private backup before test; current serving source b1a39b6.
 Final117 release/CI/production UI receipt follows.
+
+117 final production receipt: sourceffc4fb0e51fbe93171ed375316593290e76dcbf6,
+Actions38555952928 SUCCESS(test115825001556/deploy115827423664):363backend,
+249frontend,mypy145,16deploy regressions and actual disposableTLS integration.
+Production TLS10asset hashes/both markers exactSHA,anonymous logs401.
+Production-loaded UI renders actual verified116 teacher/admin correction bodies
+with concrete portal,DD.MM.YYYY/Tashkent,actor/status/note/reason;1440/768/360
+no overflow/JS errors. These UI API/auth responses are closed fixtures populated
+from actual verified events, not live OTP login. Separate production HTTPS UI
+fixtures verify dashboard HTTP label,date15:37:47,role-hidden logs/CSRFgzip and
+reason flows at all3viewports. New runtime active full-admin/teacher6log API
+checks403,2real /auth/{portal}/me GET200 and audit details.portal exact;
+forged X-Portal ignored. Only marked test accounts briefly reactivated and
+finally inactive/sessions revoked; no new real customer changes or messages.
+Both original116 events survive deploy/encrypted readback unchanged;env/key
+checksum stable. Final cleanup reconfirms all original12table per-ID hashes,
+API/archive healthy,worker singleton currentSHA. Test fixture evidence retained.

@@ -136,16 +136,23 @@ invariantlari tekshiruvdan o‘tdi.
 
 ## Davom ettirish checkpoint
 
-2026-10-14 faol117[/]:001–116done. Yangi talab: aniq portal/amal loglari,
-DD.MM.YYYY HH:mm:ss Toshkent UI.115:22backend/249frontend/3viewport
-passed; oldHTTPlabel compatibility, spoof rejection and teacher bundle isolation.
-116: actual productionHTTPS teacher+admin2corrections, exact actor/timestamp/
-old-new/note/reason/requestID,12role403checks and real gzip export verified.
-Test3staff/1group/1student inactive, sessions revoked; all original12table
-rows hashes preserved. Both corrections archived/decrypt-readback unchanged,
-no real family sends, test sessions not OTP login.117 next: fullbackend then
-secret scan/push/exact greenCI/production UI actual events/final docs.
-No external input needed. Old114 checkpoint follows as historical.
+2026-10-14 YAKUNIY:001–117done, faol task yo‘q. Serving source
+ffc4fb0e51fbe93171ed375316593290e76dcbf6; Actions38555952928 test va
+deploySUCCESS:363backend/249frontend/mypy145/16deploychecks/TLSintegration.
+Aniq portal/bo‘lim/amal, DD.MM.YYYY HH:mm:ss Toshkent logUI; verified server
+portal, oldHTTPcompatibility, no forged header trust. Actual productionHTTPS
+teacher+admin2corrections:exactactor/old-new/note/reason/seconds/requestID;
+missingreason422 and18active full-admin/teacher log403 checks. Test accounts
+inactive/sessionsrevoked; original12table customer rows hashes preserved.
+Both correction events archived/decryptreadback unchanged across deploy.
+Production10asset HTTPSexactSHA/anon401/all3viewport genericHTTP UI and
+actualverified correction render passed; UI auth/API closed fixtures only,
+actual HTTP correction/role tests real, not OTP login. No family sends.
+Stableenv/key, API/archive healthy and realworker singleton. Inactive clearly
+labelled116 fixture group/student/staff and attendance evidence retained for
+FK/immutable audit integrity. TASKS/TEST_PLAN/AUDIT_OPERATIONS current.
+Final docs-only[skip ci] commit; actual source SHA remains ffc4fb0.
+No required work remains. Older checkpoints below are historical.
 
 2026-10-14 TARIXIY:001–114done, faol task yo‘q. Production source
 b1a39b64cc8cedcaff9f309792438a007d4c5b44; Actions38547243448 test va
@@ -1295,6 +1302,6 @@ No source push/deploy yet;no external user input needed.
 - [x] 116 — Haqiqiy production HTTP davomat audit va role taqiqlarini sinash.
   - Bog‘liq:115. Qabul: private backup va mavjud biznes qatorlari baseline; aniq ajratilgan test fixture/session bilan actual production authenticated HTTP attendance correction, old/new/note/reason/actor/seconds/correlation va kunlik export/archive integrity tekshiriladi. Full-permission admin va teacher barcha log/legacy audit read/download APIlarda403, anon401; admin UI/teacher UI ham logni bermaydi. Test sessiyalar revoke, fixture inactive; haqiqiy o‘quvchi/davomat/credential/config o‘zgarmaydi, real Telegram xabari yuborilmaydi. Immutable test dalillari o‘chirilmaydi; test session OTP login sifatida ko‘rsatilmaydi.
   - Dalil: Private pre-test pg_dump and per-original-ID12table hash baseline. Actual production public HTTPS+cookie/CSRF/Origin authentication with explicit5min robot test sessions (not OTP login):teacher finalize, teacher correction present->absent and admin correction absent->late; both status/note deltas, exact actor ID/name/role, reason, Tashkent day, timestamp within request window and response request_id matched logs. Missing reasons422/no mutation. Full-catalog admin and teacher:12GET list/days/detail/download/legacyaudit checks403. Real superadmin test daily gzip/no-store included byte-for-value same2events. Test sessions revoked and3staff/1group/1non-real student inactive; post-cleanup token requests401. All original customer/credential/history/message/import rows identical; no real recipients/Telegram messages. Immutable fixture evidence retained, not deleted. Forced production archive+decrypt/readback finds both correction events unchanged; singleton restarted healthy. Original business totals unchanged except clearly labelled inactive test entities/one test attendance batch retained for FK/audit integrity.
-- [/] 117 — Aniq log UI release push/deploy va production yakuniy qabuli.
+- [x] 117 — Aniq log UI release push/deploy va production yakuniy qabuli.
   - Bog‘liq:116. Qabul: final public diff/secret/PII scan, professional non-force push, exact-SHA green CI/CD. Production HTTPS assets/portal-route label/DD.MM.YYYY/Toshkent UI1440/768/360/role deny va archived actual116 correction render/export readback; API/worker/archive healthy, key/immutable folder/biznes ma’lumotlari preserved. TASKS/test/guide/operational docs dalillari to‘liq.
-  - Dalil: Kutilmoqda.
+  - Dalil: Sourceffc4fb0e51fbe93171ed375316593290e76dcbf6 professional non-force push; Actions38555952928 test115825001556/deploy115827423664 SUCCESS:363backend/249frontend/mypy145/16deploy-regressions/disposableTLS.18public paths secret/98pupil scan passed. Production TLS10assets/both markers exactSHA,anonlogs401. Actual HTTPS UI with closed API/auth rendering real verified116 correction events:concrete teacher/admin portal,DD.MM.YYYY/Tashkent,actor/old-new/note/reason1440/768/360; genericHTTP dashboard/date/role hidden/CSRFgzip/reason UI same3viewports passed,zero overflow/JS errors. New runtime actual6active full-admin/teacher403 checks,2real profile200 and server verified portal metadata/forgedheader ignored; temporary marked accounts finally inactive/new sessions revoked. Both116 corrections archived/readback unchanged across deploy;stableenv/key checksum; final original12table per-ID customer/credential/history/message/import hashes unchanged. API/archive healthy/currentSHA and realworker singleton; no real family sends. Inactive labelled fixture records retained for immutable evidence/FK; tests not OTP login. Test/operations docs updated, final evidence docs commit only.
