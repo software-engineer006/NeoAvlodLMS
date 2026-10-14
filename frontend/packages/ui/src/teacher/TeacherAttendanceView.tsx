@@ -516,7 +516,7 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
       {/* Alerts */}
       {portal === "admin" && <Card className="p-4 space-y-3">
         <h3 className="font-semibold text-slate-900">Davomat olinmagan darslar</h3>
-        <p className="text-xs text-slate-500">{date} sanasida jadval bo‘yicha darsi bor, davomati hali yakunlanmagan guruhlar.</p>
+        <p className="text-xs text-slate-500">{date.split("-").reverse().join(".")} sanasida jadval bo‘yicha darsi bor, davomati hali yakunlanmagan guruhlar.</p>
         {pendingError ? <Alert variant="danger">{pendingError}</Alert> : pendingLoading ? <p>Darslar yuklanmoqda...</p> : pendingGroups.length ? <div className="flex flex-wrap gap-2">
           {pendingGroups.map((group) => <Button key={group.id} variant="outline" disabled={isSavingDraft || isFinalizing}
             onClick={() => handleGroupSelect(group.id)}>{group.name} — {group.teacher_name}</Button>)}
