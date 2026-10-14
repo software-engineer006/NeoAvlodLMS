@@ -7,6 +7,7 @@ import { apiClient } from "../api/client";
 import { Modal } from "../components/Modal";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
+import { StudentCourseMetadata } from "../components/StudentCourseMetadata";
 import {
   Users,
   Phone,
@@ -57,7 +58,7 @@ export const TeacherStudentProfileModal: React.FC<TeacherStudentProfileModalProp
       setIsStatsLoading(true);
       apiClient
         .get<TeacherStudentItem>(
-          `/api/v1/teacher/students/${student.id}?month=${selectedMonth}`
+          `/api/v1/teacher/students/${student.id}?month=${selectedMonth}&group_id=${student.group_id}`
         )
         .then((data) => {
           if (isCurrent && data && !Array.isArray(data)) {
@@ -77,13 +78,13 @@ export const TeacherStudentProfileModal: React.FC<TeacherStudentProfileModalProp
         isCurrent = false;
       };
     }
-  }, [isOpen, student?.id, selectedMonth]);
+  }, [isOpen, student?.id, student?.group_id, selectedMonth]);
 
   if (!isOpen || !student) {
     return null;
   }
 
-  const currentData = (detail && !Array.isArray(detail)) ? detail : student;
+  const currentData = detail && detail.id === student.id && detail.group_id === student.group_id ? detail : student;
 
   const handleMonthChange = (newMonth: string) => {
     setSelectedMonth(newMonth);
@@ -256,12 +257,14 @@ export const TeacherStudentProfileModal: React.FC<TeacherStudentProfileModalProp
         </div>
 
         {/* 3. Parent Section */}
-        {(currentData.school_grade || currentData.import_notes?.length) && (
+        {(currentData.school_grade || currentData.school_name || currentData.import_notes?.length) && (
           <div className="p-4 border border-slate-200 rounded-xl space-y-2 text-sm">
             {currentData.school_grade && <p><strong>Sinf:</strong> {currentData.school_grade}</p>}
+            {currentData.school_name && <p><strong>Maktabi:</strong> {currentData.school_name}</p>}
             {!!currentData.import_notes?.length && <div><strong>Manbadagi izohlar</strong>{currentData.import_notes.map((note, index) => <p key={index}>{note}</p>)}</div>}
           </div>
         )}
+        <StudentCourseMetadata level={currentData.level} mygov_status={currentData.mygov_status} notes={currentData.notes} />
         <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 space-y-4 shadow-2xs">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">

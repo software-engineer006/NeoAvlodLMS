@@ -21,6 +21,25 @@ compose_release() {
     --project-directory "$APP_ROOT/releases/$release" --env-file "$ENV_FILE" \
     -f "$APP_ROOT/releases/$release/compose.prod.yaml" "$@"
 }
+import_business_data() {
+  local release="$1" source_dir="${EDUCENTER_REFRESH_DIR:-$APP_ROOT/private/educenter-refresh-data}"
+  if [[ ! -d "$source_dir" ]]; then
+    [[ -z "${EDUCENTER_REFRESH_DIR:-}" && ! -e "$APP_ROOT/.dataset-enforced" ]] || { fail 'Reviewed refresh input missing.'; return 1; }
+    import_educenter "$release"
+    import_english "$release"
+    return
+  fi
+  [[ "$(cat "$APP_ROOT/releases/$release/backend/dataset_runtime.version" 2>/dev/null)" == 1 ]] || { fail 'Current-dataset runtime required.'; return 1; }
+  local digest
+  [[ -f "$source_dir/plan.sha256" ]] || { fail 'Reviewed refresh SHA256 missing.'; return 1; }
+  digest="$(cat "$source_dir/plan.sha256")"
+  [[ "$digest" =~ ^[a-f0-9]{64}$ ]] || { fail 'Reviewed refresh SHA256 invalid.'; return 1; }
+  # After refresh, older runtimes would expose retained legacy rows. Fail closed on rollback.
+  touch "$APP_ROOT/.dataset-enforced"
+  compose_release "$release" run --rm -T --no-deps \
+    -v "$source_dir:/refresh-source:ro" migrations python -m neoavlod.dataset_refresh \
+    --source /refresh-source --expected-digest "$digest" --apply </dev/null
+}
 import_educenter() {
   local release="$1"
   local source_dir="${EDUCENTER_DATA_DIR:-$APP_ROOT/private/educenter_data}"
@@ -115,6 +134,13 @@ restore_release() {
   local release="$1"
   valid_release "$release" || return 1
   [[ -f "$APP_ROOT/releases/$release/.successful" && -d "$WEB_ROOT/releases/$release" ]] || { fail 'Ishchi release topilmadi.'; return 1; }
+  if [[ -e "$APP_ROOT/.dataset-enforced" && "$(cat "$APP_ROOT/releases/$release/backend/dataset_runtime.version" 2>/dev/null)" != 1 ]]; then
+    local unsafe_current
+    unsafe_current="$(basename "$(readlink "$APP_ROOT/current")")"
+    compose_release "$unsafe_current" stop api worker || true
+    fail 'Dataset archive boundary missing in rollback runtime; safe release required.'
+    return 1
+  fi
   if [[ -e "$APP_ROOT/.audit-enforced" && "$(cat "$APP_ROOT/releases/$release/backend/audit_runtime.version" 2>/dev/null)" != 1 ]]; then
     # Older owner-credential runtimes cannot safely attribute writes or enforce audit RBAC.
     local current

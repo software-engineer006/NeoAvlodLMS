@@ -10,6 +10,7 @@ from neoavlod.models import Group, Student
 from neoavlod.models.common import Status
 from neoavlod.security.rbac import ensure_group_owner, ensure_student_owner
 from neoavlod.security.sessions import Identity
+from neoavlod.services.enrollments import active_counts, in_group
 
 
 @dataclass(frozen=True)
@@ -28,21 +29,13 @@ async def list_teacher_groups(
     if status is not None:
         filters.append(Group.status == status)
 
-    active_sub = (
-        select(
-            Student.group_id,
-            func.count().label("active_count"),
-        )
-        .where(Student.status == Status.ACTIVE)
-        .group_by(Student.group_id)
-        .subquery()
-    )
+    active_sub = active_counts()
     count_col = func.coalesce(active_sub.c.active_count, 0)
 
     stmt = (
         select(Group, count_col)
         .outerjoin(active_sub, Group.id == active_sub.c.group_id)
-        .options(joinedload(Group.subject))
+        .options(joinedload(Group.subject), joinedload(Group.teacher))
         .where(*filters)
         .order_by(Group.status, func.lower(Group.name), Group.id)
     )
@@ -61,12 +54,14 @@ async def get_teacher_group(
         await session.scalar(
             select(func.count())
             .select_from(Student)
-            .where(Student.group_id == group_id, Student.status == Status.ACTIVE)
+            .where(in_group(group_id), Student.status == Status.ACTIVE)
         )
         or 0
     )
     group = await session.scalar(
-        select(Group).where(Group.id == group_id).options(joinedload(Group.subject))
+        select(Group)
+        .where(Group.id == group_id)
+        .options(joinedload(Group.subject), joinedload(Group.teacher))
     )
     if group is None:
         raise DomainError("Guruh topilmadi", 404)
@@ -81,7 +76,7 @@ async def list_group_students(
     status: Status | None = None,
 ) -> list[Student]:
     await ensure_group_owner(session, teacher, group_id)
-    filters = [Student.group_id == group_id]
+    filters = [in_group(group_id)]
     if status is not None:
         filters.append(Student.status == status)
 
@@ -117,3 +112,30 @@ async def get_teacher_student(
     if learner is None:
         raise DomainError("Talaba topilmadi", 404)
     return learner
+
+
+async def student_context_group(
+    session: AsyncSession,
+    teacher: Identity,
+    learner: Student,
+    group_id: uuid.UUID | None = None,
+) -> Group:
+    from neoavlod.models import StudentGroupEnrollment
+
+    query = (
+        select(Group)
+        .join(StudentGroupEnrollment, StudentGroupEnrollment.group_id == Group.id)
+        .where(
+            StudentGroupEnrollment.student_id == learner.id,
+            StudentGroupEnrollment.is_active.is_(True),
+            Group.teacher_id == teacher.staff.id,
+        )
+        .options(joinedload(Group.subject), joinedload(Group.teacher))
+        .order_by((Group.id != learner.group_id).asc(), Group.name, Group.id)
+    )
+    if group_id is not None:
+        query = query.where(Group.id == group_id)
+    group = await session.scalar(query.limit(1))
+    if group is None:
+        raise DomainError("Guruh topilmadi", 404)
+    return group

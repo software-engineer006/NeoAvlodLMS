@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import type { CurrentUser } from "../api/types";
 import type { StudentItem, StudentListResponse } from "./types";
+import { studentEnrollments } from "./types";
 import type { StudentGroupOption } from "../academic/types";
 import { hasPermission, PERMISSIONS } from "../navigation/permissions";
 import { apiClient } from "../api/client";
@@ -260,7 +261,7 @@ export const StudentsManagementView: React.FC<StudentsManagementViewProps> = ({ 
               <TableRow>
                 <TableHead>O‘quvchi</TableHead>
                 <TableHead>Telefon & Telegram</TableHead>
-                <TableHead>Guruh</TableHead>
+                <TableHead>Guruhlar</TableHead>
                 <TableHead>Ota-ona</TableHead>
                 <TableHead>Holati</TableHead>
                 <TableHead className="text-right">Amallar</TableHead>
@@ -314,7 +315,7 @@ export const StudentsManagementView: React.FC<StudentsManagementViewProps> = ({ 
 
                   <TableCell>
                     <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                      {student.group.name}
+                      {studentEnrollments(student).filter((item) => item.is_active).map((item) => item.group.name).join(", ") || "Biriktirilmagan"}
                     </span>
                   </TableCell>
 

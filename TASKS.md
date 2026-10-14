@@ -48,7 +48,7 @@ invariantlari tekshiruvdan o‘tdi.
   Superadmin barcha huquqlarga ega, admin faqat tanilgan permission kalitlari
   bilan ishlaydi. Teacher admin portaliga backend va frontendda 403 oladi;
   guruh va talaba uchun ownership SQL so‘rovi bilan tekshiriladi.
-- Permission katalogi: `staff:manage`, `subjects:manage`, `groups:read`,
+- Permission katalogi: `staff:manage`, `subjects:manage`, `rooms:manage`, `groups:read`,
   `groups:create`, `groups:edit`, `students:read`, `students:create`,
   `students:edit`, `attendance:read`, `attendance:write`, `messages:send`. Bot sozlamalari faqat
   superadmin uchun. Guruh/o‘quvchi create/edit va attendance write o‘z read
@@ -135,6 +135,90 @@ invariantlari tekshiruvdan o‘tdi.
   Kod bind mount orqali yangilanadi; frontend Node ishlari Node konteynerida.
 
 ## Davom ettirish checkpoint
+
+2026-10-15 JORIY:122–133 bajarilgan;134 faol. User approves BOTH
+DB refresh preserving staff/auth/bot/audit, one profile/multiple groups,
+Python4 16:00–18:00, four Python groups217room, all Asila k included,
+mixed phones child-only and explicit admin parent linkage. Strict V2 parser,
+public refresh plan and private0600 approved manifest verified:
+117rows/95identities/116memberships/443exact dated k drafts/12review profiles.
+Docker Ruff/mypy1 and7synthetic tests pass; no DB reset/import yet.
+123 verified full375backend/Ruff/mypy151 and final8 enrollment+migration;
+development0013 head/model match and health/ready, no business refresh yet.
+124 verified260frontend/typecheck/lint and all membership/guide responsive
+checks1440/768/360; private evidence .private/enrol-124.
+125 verified school/profile/course metadata and bounded edit API/UI/audit:
+263frontend/typecheck/lint/responsive, final12profileUI,9migration+course,
+3metadata tests; development0014 head/model/health/ready passed.
+126 verified full383backend/compile/Ruff/mypy158; rooms/grant/lookup tests,
+parallel uniqueness+assignment/deactivation invariant and frozen0015 schema
+backfill/protected downgrade passed. Development0015 head/model/health ready.
+127 verified rooms CRUD/sidebar/grants/group selector/native guide:
+268frontend/typecheck/lint, browser_rooms + admin24/full20/limited6 and
+teacher10 guides pass1440/768/360; screenshot reviewed, no real mutations.
+128 verified existing parent selection/shared child linkage/relink URL and
+two-child one-Telegram fake delivery, former guardian pending suppression:
+Ruff/mypy159, final38 backend and2family cases;270frontend/type/lint,
+responsive family/native-guide pass1440/768/360. Development reload/health ready.
+129 verified template/API/preview/version/actor audit/frozen0016:
+Ruff/mypy165, final28backend,274frontend/type/lint/final3draft;
+responsive template/admin25/full21/limited6 guide pass1440/768/360.
+Development0016 head/model ready.130 implemented professional payload,
+DD.MM.YYYY/Tashkent lesson time/immutable template snapshots and canonical
+note authors, silent admin edits cancel pending/claimed/failed; stale worker
+leases rejected, family advisory before group/outbox lock avoids row cycles.
+Full399backend/Ruff/mypy168 and274frontend/type/lint passed; full guide/dates
+all portals1440/768/360/three timezones passed. Final inherited-admin-note
+test passed (final13policy);130 done.131 active next: selected membership
+transfer with reason, preserved other courses/parent/history and clear UI.
+131 verified11backend/Ruff/mypy169 and275frontend/type/lint, responsive
+selected-secondary transfer/search/reason/read-grant/native guide pass.
+132 done: archive boundary for nine business tables, global ORM
+current-row filtering, nullable truthful CSV marker/source draft history,
+one transaction/advisory/table locks/idempotent receipt and private deployment
+selection with unsafe-old-runtime rollback guard implemented. First two
+synthetic refresh tests pass (counts/metadata/old IDs/teacher denial/rollback/
+parallel retry/manual-edit preservation); frozen0017 upgrade/model/empty
+downgrade checks pass. Old0013 migration fixture must now insert/select its
+old schema explicitly (archived_at not yet exists); fix and rerun migration,
+full backend/frontend/deploy tests before marking132 done.
+132 full406backend/mypy173,276frontend/type/lint,18deploy/13agent,
+head/model/downgrade guard and all source/guide responsive checks passed.
+133 done: actual local DB was demo-database/neoavlod_demo0012,
+6staff/118oldstudents/7groups/462attendance. Private pg_dump146KiB + env/audit
+folder backups saved in .private/refresh-133, restored to newly created
+neoavlod_refresh_rehearsal_133 and exact original staff/auth/bot/counts verified.
+Full real seven-CSV rehearsal upgraded0017, dry-run, precommit failure rollback,
+apply and already_applied created0 passed. Actual local DB now0017 with
+95current profiles/7groups/116memberships/443source k drafts and Python4
+16:00–18:00/four217room; all school/level/MyGov/notes/source dates reconciled,
+all old business IDs archived, staff/auth/bot and old history unchanged,
+new message outbox0. Fixed missing neoavlod_app grants for post0012 tables;
+actual restricted-credential migration test passed. Extra child advisory lock
+before membership/transfer/profile prevents assign-vs-transfer row cycles;
+final22 concurrency/family/policy cases passed. Full406backend and clean
+npmci/type/lint/276frontend/both builds/checksums pass before final lock
+hardening; final targeted lock/metadata tests, full responsive flows and
+disposableTLS deployment/rollback running. Local backend/admin/teacher
+restored to actual local DB, health/ready200; local realworker remains stopped.
+133 final10 transfer/membership/metadata and full new responsive flows/dates
+pass; disposable realTLS image/release backup/auto+manual rollback/key archive
+hash preservation passed. Repeated actual import created0 and exact source
+reconciliation/checksums pass; only owned rehearsal DB removed.134 active:
+production serving d88233e0b003fa2cf34208283e0c454c21a2b3da, API/archive
+healthy/single worker/12GiB free. Exact seven CSV staged privately under
+/opt/neoavlod/private/educenter-refresh-data with reviewed digest. Read-only
+production preservation proof and backup+restore rehearsal uploaded privately.
+Private production backup restored successfully:9staff/8oldgroups/119oldpupils/
+487attendance/25batches/4immutable attendance changes/424verified audit bodies;
+env/audit backups/checksums saved off web root, API/worker preserved.
+No production dataset change yet. Next: finish public review/scan,
+stage only scoped code/build/TASKS/plan (leave user EDUCENTER_IMPORT.md deletion
+unstaged),95-pupil/secret scan, non-force main push and monitor green exactSHA
+CI/CD; then remote exact metadata/room/legacy/auth/bot/audit preservation,
+production-loaded UI/RBAC/source/date/guide and HTTPS checks.
+Private evidence .private/refresh-122; user deletion of EDUCENTER_IMPORT.md
+must remain uncommitted/unrestored, rawCSV/PII/secrets excluded from Git.
 
 2026-10-14 YAKUNIY:001–121 bajarilgan; faol task yo‘q. Admin/teacher barcha
 ko‘rinadigan sanalar DD.MM.YYYY, oy MM.YYYY, vaqt HH:mm:ss Asia/Tashkent;
@@ -1341,3 +1425,42 @@ No source push/deploy yet;no external user input needed.
 - [x] 121 — Barcha sana/vaqt tuzatishlarini tekshirib productionga chiqarish.
   - Bog‘liq:120. Qabul: Docker full frontend typecheck/lint/tests/both builds/release checksum, reviewed public diff/secret scan va non-force push. Exact-SHA green CI/CD, actual production TLS/assets/portal date/time/UI responsive va health qabuli; TASKS/TEST_PLAN dalillari yoziladi.
   - Dalil: Serving sourced88233e0b003fa2cf34208283e0c454c21a2b3da;47path private-secret/98pupil public scan passed, non-force push. Actions38564909515 test115855007102/deploy115857929286 SUCCESS:363backend/256frontend/mypy145/13agent/16deploy regressions/disposableTLS. Docker clean builds and source/release checksum passed. Production HTTPS both release markers and10asset hashes exactSHA;API health/ready200,anonymous logs401. Actual production-loaded admin/teacher UI with closed synthetic API/auth fixtures at1440LA/768Kiritimati/360UTC confirms Tashkent year rollover, DD.MM.YYYY/MM.YYYY, all7 editable/calendar fields with ISO requests and invalid no-request/mutation guard, attendance records/deadlines/month history/profile/subjects/Telegram expiry/messages/log exact microseconds and33guide scenes; zero overflow/JS errors, mobile captures reviewed. Production currentSHA/API/archive healthy,realworker singleton. Presentation only; no customer test mutations or real messages. TASKS/TEST_PLAN final receipts updated.
+- [x] 122 — Yangi7CSVni professional tahlil qilish va yangilash kontraktini belgilash.
+  - Qabul: barcha source rows/sha/headers/guruh/ustoz/jadval/metadata/davomat va duplicate/family/telefon muammolari private manifestda reconciled; mygov/sinf/izoh/daraja/maktab ma’nosi aniq, noaniq ma’lumot uydirilmaydi. Ikki DB backup/preserve/archive/replacement va import idempotency/rollback rejasi, public synthetic test fixtures yoziladi. PII/credentials Gitga kirmaydi.
+  - Dalil: Read-only V2 seven-file parser and EDUCENTER_REFRESH_PLAN contract created. User confirms both DBs archive/replace preserving staff/auth/bot/immutable audit; Python4 16:00-18:00 override; Asila exact k included; mixed phone stored on child with explicit admin parent assignment; one profile/multiple groups. Private source/quality/approved manifest reconciles117rows/95normalized identities/116memberships/443exact dated k drafts/zero absent inference; all row+footer controls match, one same-group duplicate retains both sources,12profiles flagged for conflicting/malformed contacts/school/grade. Four Python groups217room; actual school/MyGov/level/notes and raw cells/file hashes preserved private0600. Docker Ruff/mypy1 and7 meaningful synthetic parser tests pass: multiline fields/dedup/provenance/conflicting metadata/unknown tokens/counts/required schedule approval. No DB/business/Telegram mutation yet; registry expanded123-134 for authorized multi-group support and features.
+- [x] 123 — Bitta o‘quvchini bir nechta guruhga ulash backend asosini yaratish.
+  - Bog‘liq:122. Qabul: StudentGroupEnrollment schema/migration va existing single-group compatibility; duplicate membership guard, active group/capacity/concurrent enrollment va teacher own-group isolation. Student profile bir marta saqlanadi, course-specific level/MyGov/notes manbasi ajratiladi. Attendance/history/message/lookup/count/querylar membershipdan foydalanadi; admin/teacher cross-course privacy va meaningful isolated backend/migration tests o‘tadi.
+  - Dalil: StudentGroupEnrollment unique/active/course metadata, frozen0013 backfill and legacy primary-write trigger added; shared membership predicates/counts cover attendance/history/lookup/messages/teacher ownership. Permission-scoped PUT assignment is idempotent, group capacity serialized and reactivation checks all courses; primary transfer preserves other courses and historical memberships. Teacher DTO/selected group/month statistics use only owned context, secondary attendance payload uses actual lesson group; campaigns aggregate each pupil once. Verified actor/group/student snapshots recorded by immutable enrollment observer. Full Docker Ruff/mypy151/375pytest passed; final8 enrollment+migration tests passed including concurrent capacity, role isolation, exact audit/no-op, three-course transfer, repeatable backfill and blocked lossy downgrade. Development0013 head/model match and health/ready/PostgreSQL18.6 passed; no dataset reset/import or real messages.
+- [x] 124 — Ko‘p guruhli o‘quvchi profilini UI va qo‘llanmaga ulash.
+  - Bog‘liq:123. Qabul: admin student profile/groups assignment va teacher own-context profile, selected course filters va distinct student counts; existing single-group flows ishlaydi, bir profil turli kurslarda to‘g‘ri ko‘rinadi. Group add/remove/transfer controls grantsdan keladi, no duplicate profile yoki boshqa teacher course leak. Frontend regression va responsive synthetic UI/guide tests o‘tadi.
+  - Dalil: Reusable React StudentGroupsPanel replaces primary-only duplicated lesson block; admin list/profile show all active courses once per identity plus historical memberships, capacity-aware additional group selection and explicit removal confirmation; STUDENTS_EDIT grant controls writes and revocation hides controls, reader makes no write-selector requests. Teacher requests carry selected group_id, scoped response and async identity/context guard prevent course mixing. Enrollment domain/request log labels and existing native admin/teacher guide scenes updated without duplicate topics or raster images. Docker typecheck/lint and full260Vitest pass, including four assignment/error/grant/context regressions; browser_enrollments plus full admin23/fulladmin19/limited6 and teacher10 guide scripts pass1440/768/360 with closed synthetic APIs, markers/inert controls/search/zoom, no overflow/JS errors; desktop/mobile screenshots inspected. No customer mutations or real Telegram.
+- [x] 125 — O‘quvchi qo‘shimcha ma’lumotlarini schema/API/UI va auditda qo‘llash.
+  - Bog‘liq:124. Qabul: sinf, maktab, daraja, mygov va izoh source meaningga mos structured fields, bounded validation va role checks; admin edit va teacher own-group read/profile, source provenance saqlanadi. Sensitive qiymatlar logga chiqarilmaydi; migration, backend/frontend meaningful tests o‘tadi.
+  - Dalil: Structured school_name migration0014 and bounded school_grade/name create/edit/explicit-clear API/UI added. Enrollment level/MyGov status/course notes have STUDENTS_EDIT-only bounded PATCH and per-course reusable React editor; provenance untouched and unknown fields rejected. Teacher sees only owned enrollment metadata with common school profile, no other-course notes/provenance; shared inert presentation escapes HTML text. Verified actor school deltas and enrollment flags captured; free notes/source values excluded from immutable logs. Docker Ruff/mypy153,9 migration/enrollment tests and final3 metadata/create/private-audit/lossy-downgrade tests pass; existing17 CRUD/teacher/stats regressions passed. Full263frontend/typecheck/lint and final12 profile/metadata tests pass; updated membership/metadata UI plus admin/teacher guide scripts pass1440/768/360/no overflow/JS errors. Development0014 head/schema check/health/ready passed. No dataset refresh or real messages yet.
+- [x] 126 — Xonalar katalogi backendini va guruhga bog‘lanishini yaratish.
+  - Bog‘liq:125. Qabul: room schema/CRUD/status/unique nom yoki raqam, group room_id/lookups, old room_number compatibility/migration; permissionlar, conflict/in-use/assignment checks va exact actor audit.217-xona Python guruhlariga biriktirishga tayyor; isolated backend/migration tests o‘tadi.
+  - Dalil: Rooms catalogue has bounded name/description/status, PostgreSQL case-insensitive unique name, dedicated rooms:manage CRUD with strict admin portal checks and minimal action-scoped selectors. Group room_id FK/index plus legacy room_number compatibility added; only active rooms assign, mismatched labels rejected, room-before-group locks serialize assignment/deactivation, rename synchronizes linked group labels atomically. Active linked room cannot deactivate, any linked room cannot delete, explicit unlink supported, activation rechecks room/race. Frozen0015 backfills normalized existing labels once and installs exact verified actor room/group observers; description private, room labels in audit FK snapshots, lossy catalogue downgrade refused. Full Docker compile/Ruff/mypy158/383pytest pass; final34 RBAC/selector/catalogue cases pass including parallel unique creation and assignment-vs-deactivate invariant, teacher reflected room rename, audit attribution and repeatable populated migration. Development0015 head/model check/health/ready passed.217 catalogue is ready for four Python groups in refresh132; business source import and real messages not performed.
+- [x] 127 — Xonalar bo‘limi va guruhga oson biriktirish UI/qo‘llanmasini qo‘shish.
+  - Bog‘liq:126. Qabul: permission-aware sidebar/CRUD, room dropdown/search, group/profile/teacher schedule to‘g‘ri ko‘rsatadi; React guide va responsive1440/768/360, frontend tests o‘tadi.
+  - Dalil: Dedicated permission-aware RoomsManagementView/sidebar and staff grant checkbox added; reusable existing UI atoms, bounded create/edit/description/status/delete-confirm/search/filter forms, server in-use failures retained and Tashkent formatted updated time. GroupModal uses active catalogue from existing action-scoped options to send room_id/explicit unlink, preserving legacy clients/labels; teacher sees own schedule room. Native four-step rooms scene/topic and room/request log labels added, teacher guide stays separate. Docker typecheck/lint/full268Vitest pass including no-grant/no-request, create/delete-conflict/revocation and room-ID/unlink regressions. Closed Chromium browser_rooms and fulladmin24/fullgrant20/limited6+teacher10 guides pass1440/768/360, room creation/group binding/in-use denial/date/time/teacher own217/no overflow/JS errors; mobile screenshot inspected. No runtime customer writes or real messages.
+- [x] 128 — Bir ota-onaga bir nechta bola bog‘lashni to‘g‘rilash.
+  - Bog‘liq:127. Qabul: existing parent lookup/select va shared parent_id, dublikatlardan/concurrencydan himoya; parent shared profile editing/relink rotate ta’siri aniq; bir Telegramda har bola ism-familiyasi bilan alohida davomat xabari. Cross-group/privacy/teacher/grant/link/idempotency meaningful backend/UI/fake-delivery tests o‘tadi.
+  - Dalil: Explicit existing parent_id create/edit/detach with locked child/guardian and mutually exclusive parent payload added, preserving optional single-parent flows and no phone-based auto merge. Minimal bounded parent name/phone lookup requires student create/edit, excludes Telegram IDs/capability/auth fields and reports real reconnect/child count. Admin React selector/search/profile displays shared family count/contact/link effects; removes fabricated default age/phone, current/new/no-parent modes preserve profile fields and select one guardian ID without cloning. Pending attendance processing locks/refetches child and skips former guardian after reassignment; uses current connected parent address, never stale snapshot fallback. Docker Ruff/mypy159 and9 family/outbox + final38 real permission/onboarding/fake-delivery regressions pass; final2 family tests verify parallel shared children, exact actor FK audit, one rotated URL across siblings, two distinct child-name messages to one Telegram, retry no duplicate and former guardian suppression. Full270frontend/typecheck/lint pass; family + full admin24/full20/limited6 guide Chromium pass1440/768/360/no overflow/JS error with closed fixtures. No real Telegram or source import.
+- [x] 129 — Davomat xabari shablonini admin tahrirlashi va auditini yaratish.
+  - Bog‘liq:128. Qabul: safe bounded template placeholders/preview/version/permission, child full name/date DD.MM.YYYY/Tashkent lesson time/group/status/feedback va verified actor attribution; admin template edit old/new/actor/time auditda, credential yoki unsafe render yo‘q. Synthetic formatter/validation/RBAC/UI tests o‘tadi.
+  - Dalil: Dedicated singleton/versioned attendance template with bounded plain-text body and exact placeholder allowlist/required child-group-date-time-status-feedback fields added. Validation rejects attribute/index access, conversions/specs/unknown fields and excessive UTF16 Telegram size; preview uses explicitly synthetic DD.MM.YYYY/Tashkent lesson context. ATTENDANCE_WRITE-only admin GET/preview/optimistic PUT; verified session actor, changed_by/name/time, no-op and concurrent conflict handling, frozen0016 transactional audit captures before/after body/version/actor and guards lossy downgrade. React template tab requires preview of edited text before save, preserves draft on409 and checks current version without overwriting draft, with escaped preview/compare text, role revocation guard and new four-step native guide/log labels. Docker Ruff/mypy165 and final28 template/RBAC/migration tests pass; full274frontend/typecheck/lint and final3 version/draft tests pass. Closed Chromium template UI and admin25/full21/limited6 guides pass1440/768/360/no overflow/JS errors. Development0016 head/model/health/ready passed. Actual attendance outbox snapshot/verified feedback attribution integration follows130; no real messages or source reset.
+- [x] 130 — Davomat notification siyosatini admin tahririda jim qilish.
+  - Bog‘liq:129. Qabul: initial finalize kerakli xabar beradi; teacher correction/feedback exact actor va lesson schedule/name bilan to‘g‘ri yuboriladi. Admin/superadmin edits correction xabarini yaratmaydi yoki pending payloadni qayta yuborishga yo‘naltirmaydi; delivered/pending/processing/retry/family cases fake sender bilan isbotlanadi. Worker/template snapshot/idempotency va immutable audit saqlanadi.
+  - Dalil: Attendance message snapshots now freeze validated template/body/version/rendered text/context in the attendance transaction, with child full name/subject/group/DD.MM.YYYY/actual Tashkent lesson time/Keldi-Kelmadi-Kech qoldi and bounded UTF16 feedback. Feedback author comes from immutable note-change actor snapshots, including inherited teacher/admin notes; unknown legacy author not fabricated. Admin/superadmin corrections always audit but create no correction notification, never rewrite a frozen payload and cancel pending/processing/failed records; delivered unchanged. Teacher corrections update unsent/claimed payload once and invalidate leases, delivered corrections enqueue once. Worker checks current lease owner under family-before-group/outbox locking, rejects reclaimed claims and serializes guardian reassignment without new student-row cycles. API default months now use Tashkent clock; admin UI/manual explains silent edits. Full Docker compile/Ruff/mypy168/399backend and final13 policy cases pass: both admin roles/all queue states/exact reason, teacher attribution, template edit persistence, stale-owner and claimed edit races; additional inherited admin note attribution passed. Full274frontend/typecheck/lint and actual admin25/full21/limited6+teacher10 guides/all calendar/date panels passed1440/768/360 in LA/Kiritimati/UTC closed fixtures, no overflow/JS errors. No real messages, source reset/import or production mutation.
+- [x] 131 — O‘quvchini guruhlar orasida ko‘chirish UX va tarixini tekshirish.
+  - Bog‘liq:130. Qabul: admin/superadmin grant asosida quick transfer/search/capacity/active-target/reason/confirmation; shared parent va old attendance tarixi saqlanadi, actor/group before-after/sabab auditda. Concurrency/backend/UI tests va React qo‘llanma o‘tadi.
+  - Dalil: Selected primary/secondary membership transfer requires bounded reason and deterministic source/target group locks; retry is idempotent, capacity race permits one slot only. Other courses/parent/Telegram/old attendance remain, same-subject metadata preserved without copying private source, legacy notes stay scoped. Verified actor/reason/source+target semantic audit and log labels added. Docker Ruff/mypy169 and11 transfer/enrollment/admin tests pass; typecheck/lint/full275frontend pass, reason-required/secondary UI and closed Chromium1440/768/360/read-grant/native five-step guide pass. No real messages or source import.
+- [x] 132 — Yangi dataset importi va auditni saqlovchi almashtirishni yaratish.
+  - Bog‘liq:131. Qabul:7CSV strict reviewed parser/manifest, identity/family dedup va all metadata/updated schedule/teacher/217room mapping; eski business dataset immutable-FK bilan arxivlanib current UI/APIlar yangi datasetni ko‘rsatadi. Transaction/maintenance/advisory lock, snapshot/idempotent receipt, import notifications suppressed; failed/retry/rollback and archived-history isolation tests, production private input staging/deploy integration tayyor.
+  - Dalil: Nine-table archived_at boundary and centralized ORM select/join/alias/relationship/bulk-mutation isolation retain immutable FK/history and hide old IDs from both portals. Frozen0017/partial subject uniqueness/truthful nullable CSV marker/source draft monthly views and explicit CSV labels added. Strict digest/active teacher mapping/one transaction/advisory+table locks/receipt import preserves employee auth, raw provenance and all reviewed metadata; no parent inference/absent inference/finalization/messages, legacy queues cancelled and capabilities revoked. Meaningful rollback/crash/parallel-retry/manual-edit/current-ID/teacher/capability/fake-delivery tests pass. Full Docker compile/Ruff/mypy173/406backend,276frontend/type/lint,18deploy and13agent tests pass; migration head/model/empty downgrade/populated guard pass. Closed Chromium source-history/context/admin25/full21/limited6/teacher10 native guides1440/768/360 pass; mobile screenshot reviewed. Private refresh deployment selector/read-only input/digest and unsafe-old-runtime rollback guard tested. No actual business refresh yet; actual local data is demo-database neoavlod_demo(0012,6staff,7groups,118students), base dev database is empty(0016), migrate/backup actual local DB in133.
+- [x] 133 — Development bazasini backup bilan yangilash va full acceptance.
+  - Bog‘liq:132. Qabul: dev backup+audit/key preservation, real7CSV new dataset applied and exact row/group/family/metadata/room/attendance reconciliation; original staff/login/bot/audit unchanged, no real messages. Full Docker backend/frontend/migrations/agent/build/checksum and UI/RBAC/guide tests, production dry-run/rollback rehearsal va docs o‘tadi.
+  - Dalil: Actual local neoavlod_demo baseline6staff/118students/7groups/462attendance backed up privately with env/audit folder.146KiB dump restored to fresh rehearsal DB; exact staff/auth/bot/counts and immutable history preserved. Real seven-CSV rehearsal0017/dry-run/precommit rollback/apply/idempotent created0 passed, then actual local import reconciled95profiles/7groups/116memberships/443exact source drafts/all school-level-MyGov-notes/schedules/four217room with new messages0; old IDs/history retained, baseline staff/auth/bot unchanged. Repeat actual import created0; rehearsal DB cleaned after evidence. Correct post0012 runtime table grants verified using actual neoavlod_app credentials; archive retains old updated_at. Full406backend/Ruff/mypy173, clean npmci/type/lint/276frontend/both builds/source-assets checksum pass; final22 concurrency/policy/family and10 transfer/membership/metadata checks pass including assign-vs-transfer shared child lock. All new UI flows+native guides1440/768/360/Tashkent three-zone dates pass; mobile PNG reviewed. Actual local backend/portals point to data DB and health/ready200, realworker stays stopped. Disposable real production Docker/TLS automatic+manual rollback/audit-key preservation pass,18deploy/13agent pass. Production remains unchanged until134.
+- [/] 134 — Production bazasini yangilash, release push/deploy va yakuniy qabuli.
+  - Bog‘liq:133. Qabul: private production backup/audit/key/data baseline; staged exact7CSV manifest, reviewed diff/secret/PII scan/non-force push/exactSHA green CI/CD. Production authorized current dataset replacement with idempotent receipt, legacy/current isolation, all metadata/7group/217room/family reconciliation and staff/bot/audit preservation. TLS assets/API/worker/archive health, production-loaded UI/RBAC/guide and fake delivery evidence; real family test xabari yo‘q, TASKS/docs yakuniy.
+  - Dalil: Kutilmoqda.

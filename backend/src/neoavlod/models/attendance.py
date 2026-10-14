@@ -3,6 +3,7 @@ from datetime import date, datetime
 from enum import StrEnum
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     Date,
     DateTime,
@@ -12,11 +13,12 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
 from neoavlod.database import Base
-from neoavlod.models.common import AuditFields, UUIDPrimaryKey
+from neoavlod.models.common import AuditFields, DatasetFields, UUIDPrimaryKey
 
 
 class AttendanceStatus(StrEnum):
@@ -25,7 +27,7 @@ class AttendanceStatus(StrEnum):
     LATE = "late"
 
 
-class AttendanceBatch(UUIDPrimaryKey, Base):
+class AttendanceBatch(DatasetFields, UUIDPrimaryKey, Base):
     __tablename__ = "attendance_batches"
     __table_args__ = (
         UniqueConstraint("group_id", "date", name="uq_attendance_batches_group_date"),
@@ -40,11 +42,12 @@ class AttendanceBatch(UUIDPrimaryKey, Base):
     )
 
 
-class Attendance(UUIDPrimaryKey, AuditFields, Base):
+class Attendance(DatasetFields, UUIDPrimaryKey, AuditFields, Base):
     __tablename__ = "attendance"
     __table_args__ = (
         UniqueConstraint("group_id", "student_id", "date", name="uq_attendance_group_student_date"),
         CheckConstraint("note IS NULL OR length(note) <= 2000", name="note_length"),
+        CheckConstraint("marked_by IS NOT NULL OR source_imported", name="marker_or_source"),
     )
     group_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("groups.id", ondelete="RESTRICT"), index=True
@@ -64,7 +67,10 @@ class Attendance(UUIDPrimaryKey, AuditFields, Base):
         ),
     )
     note: Mapped[str | None] = mapped_column(Text)
-    marked_by: Mapped[uuid.UUID] = mapped_column(
+    source_imported: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=text("false")
+    )
+    marked_by: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("staff.id", ondelete="RESTRICT"), index=True
     )
     batch_id: Mapped[uuid.UUID | None] = mapped_column(

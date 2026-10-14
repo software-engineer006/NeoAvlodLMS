@@ -22,6 +22,12 @@ class AuditFields:
     )
 
 
+class DatasetFields:
+    """Retain legacy business rows while excluding them from current portal queries."""
+
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+
+
 def link_expiry() -> datetime:
     return datetime.now(UTC) + timedelta(days=7)
 

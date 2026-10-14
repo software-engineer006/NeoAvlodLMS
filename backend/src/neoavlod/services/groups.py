@@ -10,6 +10,8 @@ from sqlalchemy.orm import joinedload
 from neoavlod.errors import DomainError
 from neoavlod.models import Attendance, Group, Role, Staff, Student, Subject
 from neoavlod.models.common import Status
+from neoavlod.services.enrollments import active_counts, in_group
+from neoavlod.services.rooms import resolve_assignment, room_for_assignment
 
 
 @dataclass(frozen=True)
@@ -45,7 +47,7 @@ async def get_group_row(session: AsyncSession, group_id: uuid.UUID) -> GroupRow:
         await session.scalar(
             select(func.count())
             .select_from(Student)
-            .where(Student.group_id == group_id, Student.status == Status.ACTIVE)
+            .where(in_group(group_id), Student.status == Status.ACTIVE)
         )
         or 0
     )
@@ -111,15 +113,7 @@ async def list_groups(
 
     total = await session.scalar(select(func.count()).select_from(Group).where(*filters)) or 0
 
-    active_sub = (
-        select(
-            Student.group_id,
-            func.count().label("active_count"),
-        )
-        .where(Student.status == Status.ACTIVE)
-        .group_by(Student.group_id)
-        .subquery()
-    )
+    active_sub = active_counts()
     count_col = func.coalesce(active_sub.c.active_count, 0)
 
     stmt = (
@@ -149,7 +143,9 @@ async def create_group(
     start_time: time | None,
     end_time: time | None,
     room_number: str | None,
+    room_id: uuid.UUID | None = None,
 ) -> GroupRow:
+    room_id, room_number = await resolve_assignment(session, room_id, room_number)
     await validate_subject(session, subject_id)
     await validate_teacher(session, teacher_id)
     group = Group(
@@ -162,6 +158,7 @@ async def create_group(
         start_time=start_time,
         end_time=end_time,
         room_number=room_number,
+        room_id=room_id,
         status=Status.ACTIVE,
     )
     session.add(group)
@@ -182,7 +179,11 @@ async def update_group(
     start_time: time | None = None,
     end_time: time | None = None,
     room_number: str | None = None,
+    room_id: uuid.UUID | None = None,
+    room_specified: bool = False,
 ) -> GroupRow:
+    if room_specified or room_number is not None:
+        room_id, room_number = await resolve_assignment(session, room_id, room_number)
     group = await get_group(session, group_id, lock=True)
 
     if subject_id is not None and subject_id != group.subject_id:
@@ -198,7 +199,7 @@ async def update_group(
             await session.scalar(
                 select(func.count())
                 .select_from(Student)
-                .where(Student.group_id == group_id, Student.status == Status.ACTIVE)
+                .where(in_group(group_id), Student.status == Status.ACTIVE)
             )
             or 0
         )
@@ -226,16 +227,23 @@ async def update_group(
         group.monthly_price = monthly_price
     if days_of_week is not None:
         group.days_of_week = days_of_week
-    if room_number is not None:
+    if room_specified or room_number is not None:
         group.room_number = room_number
+        group.room_id = room_id
 
     await session.commit()
     return await get_group_row(session, group_id)
 
 
 async def set_group_active(session: AsyncSession, group_id: uuid.UUID, *, active: bool) -> GroupRow:
+    initial = await get_group(session, group_id)
+    initial_room = initial.room_id
+    if active and initial_room is not None:
+        await room_for_assignment(session, initial_room)
     group = await get_group(session, group_id, lock=True)
     if active:
+        if group.room_id != initial_room:
+            raise DomainError("Guruh xonasi o‘zgardi; qayta urinib ko‘ring", 409)
         await validate_subject(session, group.subject_id)
         await validate_teacher(session, group.teacher_id)
         group.status = Status.ACTIVE
@@ -249,7 +257,7 @@ async def delete_group(session: AsyncSession, group_id: uuid.UUID) -> None:
     group = await get_group(session, group_id, lock=True)
     student_count = (
         await session.scalar(
-            select(func.count()).select_from(Student).where(Student.group_id == group_id)
+            select(func.count()).select_from(Student).where(in_group(group_id, active=False))
         )
         or 0
     )

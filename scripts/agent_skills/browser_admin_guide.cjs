@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const { user, installFixtures } = require('./browser_fixtures.cjs');
 const { verifyPreview, verifyZoom } = require('./browser_guide_helpers.cjs');
 const catalogue = ['staff:manage', 'subjects:manage', 'groups:read', 'groups:create', 'groups:edit',
+  'rooms:manage',
   'students:read', 'students:create', 'students:edit', 'attendance:read', 'attendance:write', 'messages:send'];
 (async () => {
   const browser = await chromium.launch({ headless: true });
@@ -22,7 +23,7 @@ const catalogue = ['staff:manage', 'subjects:manage', 'groups:read', 'groups:cre
     await open();
     const nav = page.getByRole('navigation', { name: 'Qo‘llanma mavzulari' });
     const count = await nav.getByRole('button').count();
-    assert.equal(count, 23);
+    assert.equal(count, 25);
     if (width === 1440) {
       for (let index = 0; index < count; index++) {
         await nav.getByRole('button').nth(index).click();
@@ -44,7 +45,7 @@ const catalogue = ['staff:manage', 'subjects:manage', 'groups:read', 'groups:cre
     await verifyZoom(page);
     state.user = { ...user, permissions: catalogue };
     await open();
-    assert.equal(await nav.getByRole('button').count(), 19);
+    assert.equal(await nav.getByRole('button').count(), 21);
     assert.equal(await nav.getByRole('button', { name: /Kunlik loglarni|Davomat auditi/ }).count(), 0);
     await page.getByLabel('Qo‘llanmadan qidirish').fill('botni sozlash');
     await page.getByText('Mavzu topilmadi', { exact: true }).waitFor();
@@ -57,5 +58,5 @@ const catalogue = ['staff:manage', 'subjects:manage', 'groups:read', 'groups:cre
     await page.close();
   }
   await browser.close(); assert.deepEqual(failures, []);
-  console.log('Admin React guide: superadmin23/fulladmin19/limited6, all scene markers/inert controls, search/zoom/log manual,1440/768/360 no overflow/JS error; synthetic only.');
+  console.log('Admin React guide: superadmin25/fulladmin21/limited6, all scene markers/inert controls, search/zoom/log manual,1440/768/360 no overflow/JS error; synthetic only.');
 })().catch((error) => { console.error(error.message); process.exit(1); });

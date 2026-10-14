@@ -3,6 +3,7 @@ import type { CurrentUser } from "../api/types";
 export const PERMISSIONS = {
   STAFF_MANAGE: "staff:manage",
   SUBJECTS_MANAGE: "subjects:manage",
+  ROOMS_MANAGE: "rooms:manage",
   GROUPS_READ: "groups:read",
   GROUPS_CREATE: "groups:create",
   GROUPS_EDIT: "groups:edit",

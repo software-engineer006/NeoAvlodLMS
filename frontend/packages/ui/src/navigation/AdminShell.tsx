@@ -23,6 +23,7 @@ import {
   ChevronRight,
   BookOpenCheck,
   ScrollText,
+  DoorOpen,
 } from "lucide-react";
 
 export interface NavItemConfig {
@@ -57,6 +58,7 @@ export const ADMIN_NAV_ITEMS: NavItemConfig[] = [
     icon: Layers,
     permission: PERMISSIONS.GROUPS_READ,
   },
+  { id: "rooms", label: "Xonalar", icon: DoorOpen, permission: PERMISSIONS.ROOMS_MANAGE },
   {
     id: "students",
     label: "O‘quvchilar",

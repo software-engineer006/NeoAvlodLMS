@@ -7,7 +7,7 @@ export const teacherScenes = {
     { buttons: ["O‘quvchilar", "Davomat olish"] }),
   students: scene("Guruh o‘quvchilari", { table: { columns: ["O‘quvchi", "Holat"], rows: [["Namuna O‘quvchi", "Faol"]] }, buttons: ["Profilni ochish"] },
     { fields: [field("Oy", "10.2026")], stats: [{ label: "Keldi", value: "3" }, { label: "Kech qoldi", value: "1" }, { label: "Kelmadi", value: "1" }] },
-    { note: "Ota-ona kontakti faqat mavjud va o‘z guruhingizga tegishli bo‘lsa ko‘rinadi." }),
+    { fields: [field("Sinf", "6"), field("Maktabi", "Namuna maktab"), field("Daraja", "Elementary"), field("MyGov holati", "o‘tdi")], note: "Bitta profil bir nechta kursda. Daraja, MyGov, izoh va davomat tanlangan o‘z guruhingizga tegishli." }),
   draft: scene("Davomat belgilash", groupDate, { ...marks, fields: [field("Izoh", "Darsda")] },
     { buttons: ["Qoralama saqlash"], note: "Mavjud status yoki izohni tahrir qilsangiz, tuzatish sababini yozing." },
     { ...summary, buttons: ["Davomatni yakunlash"] }),

@@ -66,7 +66,7 @@ export const MonthlyAttendanceHistoryView: React.FC<MonthlyAttendanceHistoryView
       setSelectedStudentId(id);
     } else {
       try {
-        const data = await apiClient.get<TeacherStudentItem>(`/api/v1/teacher/students/${id}`, { params: { month } });
+        const data = await apiClient.get<TeacherStudentItem>(`/api/v1/teacher/students/${id}`, { params: { month, group_id: selectedGroupId } });
         setSelectedTeacherStudent(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : "O‘quvchi profilini yuklab bo‘lmadi");
@@ -219,7 +219,7 @@ export const MonthlyAttendanceHistoryView: React.FC<MonthlyAttendanceHistoryView
                 </Badge>
               </div>
               <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                Guruhning butun oy bo‘yicha yakunlangan darslar davomati va o‘quvchilar umumiy statistikasi
+                Oylik davomat: yakunlangan darslar, CSV manba belgilari va o‘quvchilar statistikasi
               </p>
             </div>
 
@@ -342,6 +342,7 @@ export const MonthlyAttendanceHistoryView: React.FC<MonthlyAttendanceHistoryView
       {/* Main Content Area */}
       {!isLoading && !error && selectedGroupId && historyData && (
         <>
+          {historyData.records.some(record => record.source_imported) && <p className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">CSVdagi aniq «k» belgilar ham ko‘rsatilgan. Ular manbadan olingan qoralama; bo‘sh katak kelmadi degani emas. Administrator tekshirishi va tuzatishi mumkin.</p>}
           {/* Monthly Summary Statistics Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
             <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-xs">

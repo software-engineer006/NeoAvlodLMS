@@ -3,11 +3,12 @@ import { formatDate, formatMonth, shiftMonth, tashkentMonth } from "../lib/dates
 import React, { useState, useEffect, useCallback } from "react";
 import type { CurrentUser } from "../api/types";
 import type { StudentDetailItem } from "./types";
+import { studentEnrollments } from "./types";
+import { StudentGroupsPanel } from "./StudentGroupsPanel";
 import type { TelegramLinkState } from "../staff/types";
 import { hasPermission, PERMISSIONS } from "../navigation/permissions";
 import { apiClient } from "../api/client";
 import { ApiError } from "../api/errors";
-import { formatDaysOfWeek, formatPrice } from "../academic/types";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
 import { Alert } from "../components/Alert";
@@ -15,7 +16,6 @@ import { LoadingState } from "../components/LoadingState";
 import { Modal } from "../components/Modal";
 import {
   Users,
-  Layers,
   Phone,
   CheckCircle2,
   XCircle,
@@ -27,9 +27,6 @@ import {
   Trash2,
   Send,
   Calendar,
-  Clock,
-  DoorOpen,
-  DollarSign,
   UserCheck,
   ChevronLeft,
   ChevronRight,
@@ -246,7 +243,7 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({
             "O‘quvchi profili"
           )
         }
-        description={detail ? `Guruh: ${detail.group.name} • Ro‘yxatga olingan: ${formattedCreatedDate}` : ""}
+        description={detail ? `Guruhlar: ${studentEnrollments(detail).filter((item) => item.is_active).length} • Ro‘yxatga olingan: ${formattedCreatedDate}` : ""}
         size="2xl"
         footer={
           <div className="flex items-center justify-between w-full">
@@ -353,66 +350,17 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({
             </div>
 
             {/* 2. Group & Lesson Details */}
-            {(detail.school_grade || detail.import_notes?.length) && (
+            {(detail.school_grade || detail.school_name || detail.import_notes?.length) && (
               <div className="p-4 border border-slate-200 rounded-xl space-y-2 text-sm">
                 {detail.school_grade && <p><strong>Sinf:</strong> {detail.school_grade}</p>}
+                {detail.school_name && <p><strong>Maktabi:</strong> {detail.school_name}</p>}
                 {!!detail.import_notes?.length && <div><strong>Manbadagi izohlar</strong>{detail.import_notes.map((note, index) => <p key={index}>{note}</p>)}</div>}
               </div>
             )}
-            <div className="p-4 sm:p-5 border border-slate-200 rounded-xl space-y-3 bg-white">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-slate-900 font-semibold text-sm">
-                  <Layers className="w-4 h-4 text-blue-600" />
-                  <span>Guruh va dars tafsilotlari</span>
-                </div>
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-                  {detail.group.name}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs pt-2">
-                <div className="p-2.5 bg-slate-50 rounded-lg">
-                  <span className="text-slate-500 block mb-0.5">Fan</span>
-                  <span className="font-semibold text-slate-900">
-                    {detail.group.subject_name || "-"}
-                  </span>
-                </div>
-                <div className="p-2.5 bg-slate-50 rounded-lg">
-                  <span className="text-slate-500 block mb-0.5">O‘qituvchi</span>
-                  <span className="font-semibold text-slate-900">
-                    {detail.group.teacher_name || "-"}
-                  </span>
-                </div>
-                <div className="p-2.5 bg-slate-50 rounded-lg">
-                  <span className="text-slate-500 block mb-0.5">Oylik to‘lov</span>
-                  <span className="font-semibold text-slate-900 flex items-center gap-1">
-                    <DollarSign className="w-3.5 h-3.5 text-slate-400" />
-                    {formatPrice(detail.group.monthly_price)}
-                  </span>
-                </div>
-                <div className="p-2.5 bg-slate-50 rounded-lg">
-                  <span className="text-slate-500 block mb-0.5">Dars kunlari</span>
-                  <span className="font-semibold text-slate-900">
-                    {formatDaysOfWeek(detail.group.days_of_week || [])}
-                  </span>
-                </div>
-                <div className="p-2.5 bg-slate-50 rounded-lg">
-                  <span className="text-slate-500 block mb-0.5">Dars vaqti</span>
-                  <span className="font-semibold text-slate-900 flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5 text-slate-400" />
-                    {detail.group.start_time ? detail.group.start_time?.slice(0, 5) ?? "Kiritilmagan" : "-"} –{" "}
-                    {detail.group.end_time ? detail.group.end_time?.slice(0, 5) ?? "Kiritilmagan" : "-"}
-                  </span>
-                </div>
-                <div className="p-2.5 bg-slate-50 rounded-lg">
-                  <span className="text-slate-500 block mb-0.5">Xona</span>
-                  <span className="font-semibold text-slate-900 flex items-center gap-1">
-                    <DoorOpen className="w-3.5 h-3.5 text-slate-400" />
-                    {detail.group.room_number || "-"}
-                  </span>
-                </div>
-              </div>
-            </div>
+            <StudentGroupsPanel key={detail.id} student={detail} canEdit={canEdit} onUpdated={(updated) => {
+              setDetail((current) => current?.id === updated.id ? { ...updated,
+                attendance_stats: updated.attendance_stats ?? current.attendance_stats } : current); onStatusChanged?.();
+            }} />
 
             {/* 3. Parent & Contacts */}
             <div className="p-4 sm:p-5 border border-slate-200 rounded-xl space-y-3 bg-white">
@@ -532,6 +480,7 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({
                       </span>
                     )}
                   </div>
+                  {(detail.parent?.child_count ?? 0) > 1 && <p className="text-xs text-slate-500">Bu ota-onaga {detail.parent?.child_count} ta bola bog‘langan. Barcha bolalarning davomati shu Telegramga ism-familiyasi bilan boradi; ulanish havolasini yangilash barchasiga tegishli.</p>}
 
                   {detail.parent?.telegram_link?.deep_link && !detail.parent?.telegram_connected && (
                     <div className="space-y-2 pt-1">

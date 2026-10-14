@@ -5,6 +5,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Response
 from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import func, select
 
 from neoavlod.api.deps import SessionDependency, require_permission
 from neoavlod.errors import DomainError
@@ -14,6 +15,7 @@ from neoavlod.security.rbac import Permission, has_permission
 from neoavlod.security.sessions import Identity
 from neoavlod.services import attendance as attendance_service
 from neoavlod.services import students as service
+from neoavlod.services.enrollments import assign_group, update_metadata
 from neoavlod.services.onboarding import (
     LinkState,
     link_state,
@@ -52,6 +54,7 @@ class ParentOut(BaseModel):
     phone: str
     telegram_connected: bool
     created_at: datetime
+    child_count: int | None = None
 
 
 class ParentDetail(ParentOut):
@@ -72,6 +75,7 @@ class GroupSummary(BaseModel):
     start_time: time | None = None
     end_time: time | None = None
     room_number: str | None = None
+    room_id: uuid.UUID | None = None
     monthly_price: Decimal | None = None
 
     @classmethod
@@ -92,6 +96,7 @@ class GroupSummary(BaseModel):
             start_time=g.start_time,
             end_time=g.end_time,
             room_number=g.room_number,
+            room_id=g.room_id,
             monthly_price=g.monthly_price,
         )
 
@@ -106,6 +111,39 @@ class StudentAttendanceStatsOut(BaseModel):
     total_lessons: int
 
 
+class EnrollmentOut(BaseModel):
+    group: GroupSummary
+    is_active: bool
+    level: str | None
+    mygov_status: str | None
+    notes: str | None
+
+
+def enrollment_summary(learner: Student) -> list[EnrollmentOut]:
+    return [
+        EnrollmentOut(
+            group=GroupSummary.of(item.group),
+            is_active=item.is_active,
+            level=item.level,
+            mygov_status=item.mygov_status,
+            notes=item.notes,
+        )
+        for item in sorted(learner.enrollments, key=lambda row: (row.group.name, str(row.group_id)))
+    ]
+
+
+class EnrollmentUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    is_active: bool = True
+
+
+class EnrollmentMetadataUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    level: str | None = Field(default=None, min_length=1, max_length=150)
+    mygov_status: str | None = Field(default=None, min_length=1, max_length=150)
+    notes: str | None = Field(default=None, min_length=1, max_length=4000)
+
+
 class StudentOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
@@ -114,6 +152,7 @@ class StudentOut(BaseModel):
     phone: str | None
     age: int | None
     school_grade: str | None = None
+    school_name: str | None = None
     import_notes: list[str] = Field(default_factory=list)
     status: Status
     group_id: uuid.UUID
@@ -122,6 +161,7 @@ class StudentOut(BaseModel):
     created_at: datetime
     parent: ParentOut | None
     group: GroupSummary
+    enrollments: list[EnrollmentOut] = Field(default_factory=list)
 
     @classmethod
     def of(cls, learner: Student) -> "StudentOut":
@@ -132,6 +172,7 @@ class StudentOut(BaseModel):
             phone=learner.phone,
             age=learner.age,
             school_grade=learner.school_grade,
+            school_name=learner.school_name,
             import_notes=(learner.source_data or {}).get("notes", []),
             status=learner.status,
             group_id=learner.group_id,
@@ -149,6 +190,7 @@ class StudentOut(BaseModel):
             if learner.parent is not None
             else None,
             group=GroupSummary.of(learner.group),
+            enrollments=enrollment_summary(learner),
         )
 
 
@@ -172,8 +214,11 @@ class StudentCreate(BaseModel):
     last_name: str | None = Field(default=None, min_length=1, max_length=100)
     phone: str | None = Field(default=None, pattern=r"^\+[1-9][0-9]{7,14}$", max_length=16)
     age: int | None = Field(default=None, ge=3, le=100)
+    school_grade: str | None = Field(default=None, min_length=1, max_length=100)
+    school_name: str | None = Field(default=None, min_length=1, max_length=150)
     group_id: uuid.UUID
     parent: ParentCreate | None = None
+    parent_id: uuid.UUID | None = None
 
 
 class StudentUpdate(BaseModel):
@@ -182,11 +227,17 @@ class StudentUpdate(BaseModel):
     last_name: str | None = Field(default=None, min_length=1, max_length=100)
     phone: str | None = Field(default=None, pattern=r"^\+[1-9][0-9]{7,14}$", max_length=16)
     age: int | None = Field(default=None, ge=3, le=100)
+    school_grade: str | None = Field(default=None, min_length=1, max_length=100)
+    school_name: str | None = Field(default=None, min_length=1, max_length=150)
     parent: ParentUpdate | None = None
+    parent_id: uuid.UUID | None = None
 
 
 class StudentTransfer(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     target_group_id: uuid.UUID
+    source_group_id: uuid.UUID | None = None
+    reason: str = Field(min_length=1, max_length=2000)
 
 
 async def build_detail(
@@ -225,6 +276,14 @@ async def build_detail(
             created_at=learner.parent.created_at,
             telegram_link=p_link,
             telegram_link_error=p_err,
+            child_count=int(
+                await session.scalar(
+                    select(func.count())
+                    .select_from(Student)
+                    .where(Student.parent_id == learner.parent_id)
+                )
+                or 0
+            ),
         )
         if learner.parent is not None
         else None
@@ -232,7 +291,7 @@ async def build_detail(
 
     stats_out: StudentAttendanceStatsOut | None = None
     if can_read_attendance:
-        target_month = month or datetime.now().strftime("%Y-%m")
+        target_month = month or attendance_service.attendance_now().strftime("%Y-%m")
         stats = await attendance_service.get_student_monthly_attendance_stats(
             session, learner.id, target_month
         )
@@ -245,6 +304,7 @@ async def build_detail(
         phone=learner.phone,
         age=learner.age,
         school_grade=learner.school_grade,
+        school_name=learner.school_name,
         import_notes=(learner.source_data or {}).get("notes", []),
         status=learner.status,
         group_id=learner.group_id,
@@ -253,6 +313,7 @@ async def build_detail(
         created_at=learner.created_at,
         parent=parent_detail,
         group=GroupSummary.of(learner.group),
+        enrollments=enrollment_summary(learner),
         telegram_link=st_link,
         telegram_link_error=st_err,
         attendance_stats=stats_out,
@@ -290,10 +351,13 @@ async def create_student(
         last_name=body.last_name,
         phone=body.phone,
         age=body.age,
+        school_grade=body.school_grade,
+        school_name=body.school_name,
         group_id=body.group_id,
         parent_first_name=body.parent.first_name if body.parent else None,
         parent_last_name=body.parent.last_name if body.parent else None,
         parent_phone=body.parent.phone if body.parent else None,
+        existing_parent_id=body.parent_id,
     )
     return await build_detail(session, learner)
 
@@ -329,9 +393,15 @@ async def update_student(
         last_name=body.last_name,
         phone=body.phone,
         age=body.age,
+        school_fields={
+            key: getattr(body, key)
+            for key in body.model_fields_set & {"school_grade", "school_name"}
+        },
         parent_first_name=p_fn,
         parent_last_name=p_ln,
         parent_phone=p_ph,
+        parent_assignment_specified="parent_id" in body.model_fields_set,
+        parent_id=body.parent_id,
     )
     return await build_detail(session, learner)
 
@@ -343,8 +413,40 @@ async def transfer_student(
     _: StudentEditor,
     session: SessionDependency,
 ) -> StudentDetail:
-    learner = await service.transfer_student(session, student_id, body.target_group_id)
+    learner = await service.transfer_student(
+        session,
+        student_id,
+        body.target_group_id,
+        source_group_id=body.source_group_id,
+        reason=body.reason,
+    )
     return await build_detail(session, learner)
+
+
+@router.put("/{student_id}/groups/{group_id}", response_model=StudentDetail)
+async def set_enrollment(
+    student_id: uuid.UUID,
+    group_id: uuid.UUID,
+    body: EnrollmentUpdate,
+    _: StudentEditor,
+    session: SessionDependency,
+) -> StudentDetail:
+    await assign_group(session, student_id, group_id, active=body.is_active)
+    return await build_detail(session, await service.get_student(session, student_id))
+
+
+@router.patch("/{student_id}/groups/{group_id}", response_model=StudentDetail)
+async def edit_enrollment_metadata(
+    student_id: uuid.UUID,
+    group_id: uuid.UUID,
+    body: EnrollmentMetadataUpdate,
+    _: StudentEditor,
+    session: SessionDependency,
+) -> StudentDetail:
+    await update_metadata(
+        session, student_id, group_id, {key: getattr(body, key) for key in body.model_fields_set}
+    )
+    return await build_detail(session, await service.get_student(session, student_id))
 
 
 @router.post("/{student_id}/deactivate", response_model=StudentDetail)

@@ -15,6 +15,7 @@ const fields: Record<string, string> = {
   audience: "Auditoriya", bot_username: "Bot nomi", version: "Versiya",
   finalized_by: "Yakunlagan xodim", finalized_at: "Yakunlash vaqti",
   must_change_password: "Parol yangilash talabi", avatar_url: "Profil rasmi",
+  room_id: "Xona", school_grade: "Sinf", school_name: "Maktabi", level: "Daraja", mygov_status: "MyGov holati", changed_by: "Tahrirlagan xodim",
 };
 export function LogDetails({ entry, onClose }: { entry: LogEvent | null; onClose: () => void }) {
   return <Modal isOpen={Boolean(entry)} onClose={onClose} title="Log tafsilotlari" size="2xl"
@@ -31,6 +32,7 @@ export function LogDetails({ entry, onClose }: { entry: LogEvent | null; onClose
           ["Vaqt (Toshkent)", logTime(entry.at)], ["Obyekt", entry.entity.name || logValue(entry.details.group)],
           ["Guruh", logValue(entry.details.group)], ["Sabab", logValue(entry.details.reason)], ["Manba", entry.source],
           ["Panel", logPortalLabel(entry) || "—"],
+          ...(entry.details.source_group ? [["Oldingi guruh", logValue(entry.details.source_group)], ["Yangi guruh", logValue(entry.details.target_group)]] : []),
           ["Dars sanasi", logDate(logValue(entry.details.lesson_date))]].map(([label, value]) =>
           <div key={label}><dt className="text-slate-500">{label}</dt>
             <dd className="mt-1 break-words whitespace-pre-wrap font-medium">{value}</dd></div>)}

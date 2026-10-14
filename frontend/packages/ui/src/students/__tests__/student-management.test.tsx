@@ -287,6 +287,21 @@ describe("Student & Parent Management (Task 031)", () => {
   });
 
   describe("StudentTransferModal Component", () => {
+    it("requires a reason and transfers only the selected secondary membership", async () => {
+      vi.spyOn(apiClient, "get").mockResolvedValue({ items: sampleGroups });
+      const post = vi.spyOn(apiClient, "post").mockResolvedValue(sampleStudentDetail);
+      const pupil = { ...sampleStudents[0], enrollments: sampleGroups.map(group => ({ group: { ...group, subject_name: "Python", teacher_name: "Namuna" }, is_active: true, level: null, mygov_status: null, notes: null })) };
+      render(<StudentTransferModal isOpen onClose={vi.fn()} student={pupil} onSuccess={vi.fn()} />);
+      await waitFor(() => expect((screen.getByLabelText(/Yangi guruhni tanlang/) as HTMLSelectElement).disabled).toBe(false));
+      fireEvent.click(screen.getByRole("button", { name: "Guruhga ko‘chirish" }));
+      expect(screen.getByText("Ko‘chirish sababini kiriting")).toBeDefined();
+      expect(post).not.toHaveBeenCalled();
+      fireEvent.change(screen.getByLabelText("Qaysi guruhdan ko‘chirish"), { target: { value: "grp-2" } });
+      await waitFor(() => expect((screen.getByLabelText(/Yangi guruhni tanlang/) as HTMLSelectElement).value).toBe("grp-1"));
+      fireEvent.change(screen.getByLabelText(/Ko‘chirish sababi/), { target: { value: "  Jadval moslashdi  " } });
+      fireEvent.click(screen.getByRole("button", { name: "Guruhga ko‘chirish" }));
+      await waitFor(() => expect(post).toHaveBeenCalledWith(`/api/v1/admin/students/${pupil.id}/transfer`, { source_group_id: "grp-2", target_group_id: "grp-1", reason: "Jadval moslashdi" }));
+    });
     it("handles transferring student to another group and displays capacity warnings", async () => {
       vi.spyOn(apiClient, "get").mockResolvedValue({ items: sampleGroups });
       const postSpy = vi.spyOn(apiClient, "post").mockResolvedValue(sampleStudentDetail);
@@ -309,13 +324,14 @@ describe("Student & Parent Management (Task 031)", () => {
 
       // Target group grp-2 is full, so warning alert appears
       expect(screen.getByText(/Tanlangan guruh allaqachon maksimal sig‘imga yetgan/)).toBeDefined();
+      fireEvent.change(screen.getByLabelText(/Ko‘chirish sababi/), { target: { value: "Jadval o‘zgardi" } });
 
       fireEvent.click(screen.getByRole("button", { name: "Guruhga ko‘chirish" }));
 
       await waitFor(() => {
         expect(postSpy).toHaveBeenCalledWith(
           `/api/v1/admin/students/${sampleStudents[0].id}/transfer`,
-          { target_group_id: "grp-2" }
+          { target_group_id: "grp-2", source_group_id: sampleStudents[0].group_id, reason: "Jadval o‘zgardi" }
         );
         expect(onSuccess).toHaveBeenCalled();
         expect(onClose).toHaveBeenCalled();

@@ -9,6 +9,7 @@ export interface SubjectItem {
 }
 
 export interface GroupOptions {
+  rooms?: Pick<RoomItem, "id" | "name" | "is_active">[];
   subjects: Pick<SubjectItem, "id" | "name" | "is_active">[];
   teachers: Pick<TeacherSummary, "id" | "first_name" | "last_name" | "status">[];
 }
@@ -46,6 +47,7 @@ export interface SubjectSummary {
 }
 
 export interface GroupItem {
+  room_id?: string | null;
   id: string;
   name: string;
   subject_id: string;
@@ -72,6 +74,7 @@ export interface GroupListResponse {
 }
 
 export interface GroupCreateInput {
+  room_id?: string | null;
   name: string;
   subject_id: string;
   teacher_id: string;
@@ -84,6 +87,7 @@ export interface GroupCreateInput {
 }
 
 export interface GroupUpdateInput {
+  room_id?: string | null;
   name?: string;
   subject_id?: string;
   teacher_id?: string;
@@ -92,7 +96,16 @@ export interface GroupUpdateInput {
   days_of_week?: number[];
   start_time?: string;
   end_time?: string;
-  room_number?: string;
+  room_number?: string | null;
+}
+
+export interface RoomItem {
+  id: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export const DAYS_OF_WEEK = [

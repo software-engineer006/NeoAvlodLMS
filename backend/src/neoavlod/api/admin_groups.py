@@ -66,6 +66,7 @@ class GroupOut(BaseModel):
     start_time: time | None
     end_time: time | None
     room_number: str | None
+    room_id: uuid.UUID | None
     created_at: datetime
     updated_at: datetime
     subject: SubjectSummary
@@ -87,6 +88,7 @@ class GroupOut(BaseModel):
             start_time=g.start_time,
             end_time=g.end_time,
             room_number=g.room_number,
+            room_id=g.room_id,
             created_at=g.created_at,
             updated_at=g.updated_at,
             subject=SubjectSummary.model_validate(g.subject),
@@ -112,6 +114,7 @@ class GroupCreate(BaseModel):
     start_time: time | None = None
     end_time: time | None = None
     room_number: str | None = Field(default=None, min_length=1, max_length=30)
+    room_id: uuid.UUID | None = None
 
     _days = field_validator("days_of_week")(_validate_days)
 
@@ -137,6 +140,7 @@ class GroupUpdate(BaseModel):
     start_time: time | None = None
     end_time: time | None = None
     room_number: str | None = Field(default=None, min_length=1, max_length=30)
+    room_id: uuid.UUID | None = None
 
     _days = field_validator("days_of_week")(_validate_days)
 
@@ -192,6 +196,7 @@ async def create_group(body: GroupCreate, _: GroupCreator, session: SessionDepen
             start_time=body.start_time,
             end_time=body.end_time,
             room_number=body.room_number,
+            room_id=body.room_id,
         )
     )
 
@@ -218,6 +223,8 @@ async def update_group(
             start_time=body.start_time,
             end_time=body.end_time,
             room_number=body.room_number,
+            room_id=body.room_id,
+            room_specified=bool(body.model_fields_set & {"room_id", "room_number"}),
         )
     )
 
@@ -249,7 +256,7 @@ async def get_group_attendance_history(
     session: SessionDependency,
     month: Annotated[str | None, Query(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")] = None,
 ) -> GroupMonthlyAttendanceHistoryOut:
-    target_month = month or datetime.now().strftime("%Y-%m")
+    target_month = month or attendance_service.attendance_now().strftime("%Y-%m")
     history = await attendance_service.get_group_monthly_attendance_history(
         session, group_id, target_month
     )

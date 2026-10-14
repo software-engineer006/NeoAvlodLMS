@@ -36,6 +36,10 @@ export interface TeacherStudentItem {
   phone: string | null;
   age: number | null;
   school_grade?: string | null;
+  school_name?: string | null;
+  level?: string | null;
+  mygov_status?: string | null;
+  notes?: string | null;
   import_notes?: string[];
   status: "active" | "inactive" | "archived";
   group_id: string;
@@ -56,6 +60,7 @@ export interface TeacherStudentItem {
 export type TeacherAttendanceStatus = "present" | "absent" | "late";
 
 export interface TeacherAttendanceEntry {
+  source_imported?: boolean;
   student_id: string;
   student_first_name: string;
   student_last_name: string | null;

@@ -21,6 +21,7 @@ export interface StaffModalProps {
 const AVAILABLE_PERMISSIONS = [
   { key: PERMISSIONS.STAFF_MANAGE, label: "Xodimlarni boshqarish" },
   { key: PERMISSIONS.SUBJECTS_MANAGE, label: "Fanlarni boshqarish" },
+  { key: PERMISSIONS.ROOMS_MANAGE, label: "Xonalarni boshqarish" },
   { key: PERMISSIONS.GROUPS_READ, label: "Guruhlarni ko‘rish" },
   { key: PERMISSIONS.GROUPS_CREATE, label: "Guruh yaratish" },
   { key: PERMISSIONS.GROUPS_EDIT, label: "Guruhlarni tahrirlash" },

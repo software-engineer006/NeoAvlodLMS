@@ -31,6 +31,8 @@ export const GroupModal: React.FC<GroupModalProps> = ({
   const [startTime, setStartTime] = useState<string>("09:00");
   const [endTime, setEndTime] = useState<string>("11:00");
   const [roomNumber, setRoomNumber] = useState<string>("");
+  const [roomId, setRoomId] = useState("");
+  const [rooms, setRooms] = useState<GroupOptions["rooms"]>();
   const [monthlyPrice, setMonthlyPrice] = useState<string>("500000");
   const [maxStudents, setMaxStudents] = useState<string>("15");
 
@@ -52,6 +54,7 @@ export const GroupModal: React.FC<GroupModalProps> = ({
         const options = await apiClient.get<GroupOptions>("/api/v1/admin/lookups/group-options", { params: { active_only: true } });
         setSubjects(options.subjects);
         setTeachers(options.teachers);
+        setRooms(options.rooms);
 
         // Set defaults if creating and not set
         if (!group) {
@@ -82,6 +85,7 @@ export const GroupModal: React.FC<GroupModalProps> = ({
       setStartTime(group.start_time?.slice(0, 5) ?? "");
       setEndTime(group.end_time?.slice(0, 5) ?? "");
       setRoomNumber(group.room_number ?? "");
+      setRoomId(group.room_id ?? "");
       setMonthlyPrice(group.monthly_price == null ? "" : String(group.monthly_price));
       setMaxStudents(String(group.max_students));
     } else {
@@ -90,6 +94,7 @@ export const GroupModal: React.FC<GroupModalProps> = ({
       setStartTime("09:00");
       setEndTime("11:00");
       setRoomNumber("");
+      setRoomId("");
       setMonthlyPrice("500000");
       setMaxStudents("15");
     }
@@ -155,7 +160,8 @@ export const GroupModal: React.FC<GroupModalProps> = ({
           days_of_week: daysOfWeek,
           start_time: startTime || undefined,
           end_time: endTime || undefined,
-          room_number: roomNumber.trim() || undefined,
+          ...(rooms ? { room_id: roomId || null, room_number: roomId ? undefined : roomNumber.trim() || null }
+            : { room_number: roomNumber.trim() || undefined }),
         };
         const updated = await apiClient.patch<GroupItem>(`/api/v1/admin/groups/${group.id}`, payload);
         onSuccess(updated);
@@ -169,7 +175,8 @@ export const GroupModal: React.FC<GroupModalProps> = ({
           days_of_week: daysOfWeek,
           start_time: startTime || null,
           end_time: endTime || null,
-          room_number: roomNumber.trim() || null,
+          room_number: roomId ? null : roomNumber.trim() || null,
+          ...(rooms ? { room_id: roomId || null } : {}),
         };
         const created = await apiClient.post<GroupItem>("/api/v1/admin/groups", payload);
         onSuccess(created);
@@ -317,13 +324,19 @@ export const GroupModal: React.FC<GroupModalProps> = ({
 
         {/* Room, Price & Max students */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Input
+          {rooms ? <Select label="Xona" value={roomId} disabled={isLoading || isLoadingOptions}
+            onChange={event => { setRoomId(event.target.value); setRoomNumber(""); }}
+            helperText="Yangi xona Xonalar bo‘limida yaratiladi. Xonasiz saqlash ham mumkin.">
+            <option value="">{!roomId && roomNumber ? `Avvalgi xona: ${roomNumber}` : "Xona biriktirilmagan"}</option>
+            {roomId && !rooms.some(room => room.id === roomId) && <option value={roomId}>Avvalgi xona: {group?.room_number}</option>}
+            {rooms.map(room => <option key={room.id} value={room.id}>{room.name}</option>)}
+          </Select> : <Input
             label="Xona raqami / nomi"
             placeholder="masalan: 302-xona"
                         value={roomNumber}
             onChange={(e) => setRoomNumber(e.target.value)}
             disabled={isLoading}
-          />
+          />}
           <Input
             label="Oylik to‘lov (so‘m)"
             type="number"

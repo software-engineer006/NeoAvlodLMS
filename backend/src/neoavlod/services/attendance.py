@@ -6,7 +6,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 import httpx
-from sqlalchemy import ColumnElement, func, select
+from sqlalchemy import ColumnElement, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -36,6 +36,8 @@ from neoavlod.security.rbac import (
     has_permission,
 )
 from neoavlod.security.sessions import Identity
+from neoavlod.services.attendance_payload import message_snapshot
+from neoavlod.services.enrollments import in_group
 from neoavlod.services.outbox import dispatch_pending_outbox
 
 
@@ -47,6 +49,7 @@ class AttendanceEntry:
     status: AttendanceStatus | None
     note: str | None
     marked_at: datetime | None
+    source_imported: bool = False
 
 
 @dataclass(frozen=True)
@@ -83,6 +86,7 @@ class AdminAttendanceRow:
     marked_at: datetime
     finalized: bool
     batch_id: uuid.UUID | None
+    source_imported: bool = False
 
 
 @dataclass(frozen=True)
@@ -111,6 +115,7 @@ class MonthlyAttendanceRecord:
     date: date
     status: AttendanceStatus
     note: str | None
+    source_imported: bool = False
 
 
 @dataclass(frozen=True)
@@ -191,9 +196,9 @@ def actor_edit_window(
 
 async def _lock_editable_group(
     session: AsyncSession, teacher: Identity, group_id: uuid.UUID, target_date: date
-) -> None:
+) -> Group:
     await ensure_attendance_access(session, teacher, group_id, write=True)
-    query = select(Group.id).where(Group.id == group_id)
+    query = select(Group).where(Group.id == group_id)
     if teacher.staff.role == Role.TEACHER:
         query = query.where(Group.teacher_id == teacher.staff.id)
     owned = await session.scalar(query.with_for_update())
@@ -202,6 +207,7 @@ async def _lock_editable_group(
     editable, _, reason = actor_edit_window(teacher, target_date)
     if not editable:
         raise DomainError(reason or "Davomatni tahrirlash mumkin emas", 409)
+    return owned
 
 
 def _audit(
@@ -309,7 +315,7 @@ async def get_attendance_sheet(
         (
             await session.scalars(
                 select(Student)
-                .where(Student.group_id == group_id, Student.status == Status.ACTIVE)
+                .where(in_group(group_id), Student.status == Status.ACTIVE)
                 .order_by(func.lower(Student.first_name), func.lower(Student.last_name))
             )
         ).all()
@@ -338,6 +344,7 @@ async def get_attendance_sheet(
                 status=rec.status if rec else None,
                 note=rec.note if rec else None,
                 marked_at=rec.updated_at if rec else None,
+                source_imported=rec.source_imported if rec else False,
             )
         )
 
@@ -370,7 +377,7 @@ async def save_attendance_draft(
         (
             await session.scalars(
                 select(Student.id).where(
-                    Student.group_id == group_id,
+                    in_group(group_id),
                     Student.status == Status.ACTIVE,
                 )
             )
@@ -393,7 +400,7 @@ async def finalize_attendance(
     items: list[DraftItem] | None = None,
     reason: str | None = None,
 ) -> AttendanceSheet:
-    await _lock_editable_group(session, teacher, group_id, target_date)
+    group = await _lock_editable_group(session, teacher, group_id, target_date)
 
     # 1. Idempotent check: if already finalized, return current sheet
     finalized, _ = await is_date_finalized(session, group_id, target_date)
@@ -406,7 +413,7 @@ async def finalize_attendance(
             (
                 await session.scalars(
                     select(Student.id).where(
-                        Student.group_id == group_id,
+                        in_group(group_id),
                         Student.status == Status.ACTIVE,
                     )
                 )
@@ -422,7 +429,7 @@ async def finalize_attendance(
             await session.scalars(
                 select(Student)
                 .options(joinedload(Student.parent), joinedload(Student.group))
-                .where(Student.group_id == group_id, Student.status == Status.ACTIVE)
+                .where(in_group(group_id), Student.status == Status.ACTIVE)
             )
         ).all()
     )
@@ -467,19 +474,7 @@ async def finalize_attendance(
             select(NotificationOutbox.id).where(NotificationOutbox.idempotency_key == idem_key)
         )
         if not existing_outbox and s.parent is not None:
-            status_labels = {
-                AttendanceStatus.PRESENT: "Bor",
-                AttendanceStatus.ABSENT: "Yo‘q",
-                AttendanceStatus.LATE: "Kechikdi",
-            }
-            payload = {
-                "student_name": f"{s.first_name} {s.last_name or ''}".strip(),
-                "group_name": s.group.name,
-                "date": target_date.isoformat(),
-                "status": att.status.value,
-                "status_label": status_labels.get(att.status, att.status.value),
-                "note": att.note,
-            }
+            payload = await message_snapshot(session, group, s, att)
             outbox_item = NotificationOutbox(
                 idempotency_key=idem_key,
                 attendance_id=att.id,
@@ -502,7 +497,7 @@ async def correct_attendance(
     items: list[DraftItem],
     reason: str | None = None,
 ) -> AttendanceSheet:
-    await _lock_editable_group(session, teacher, group_id, target_date)
+    group = await _lock_editable_group(session, teacher, group_id, target_date)
     batch = await session.scalar(
         select(AttendanceBatch).where(
             AttendanceBatch.group_id == group_id, AttendanceBatch.date == target_date
@@ -515,7 +510,7 @@ async def correct_attendance(
             await session.scalars(
                 select(Student)
                 .options(joinedload(Student.parent), joinedload(Student.group))
-                .where(Student.group_id == group_id, Student.status == Status.ACTIVE)
+                .where(in_group(group_id), Student.status == Status.ACTIVE)
             )
         ).all()
     )
@@ -558,22 +553,28 @@ async def correct_attendance(
         await session.flush()
         _audit(session, teacher, record, "correct", old_status, old_note, reason)
         learner = by_student[item.student_id]
+        if teacher.staff.role != Role.TEACHER:
+            queued = (
+                await session.scalars(
+                    select(NotificationOutbox)
+                    .where(
+                        NotificationOutbox.attendance_id == record.id,
+                        NotificationOutbox.status.in_(
+                            (OutboxStatus.PENDING, OutboxStatus.PROCESSING, OutboxStatus.FAILED)
+                        ),
+                    )
+                    .with_for_update()
+                )
+            ).all()
+            for pending in queued:
+                pending.status = OutboxStatus.SKIPPED
+                pending.locked_by = None
+                pending.locked_until = None
+                pending.last_error = "Administrator davomatni tuzatdi; xabar yuborilmaydi"
+            continue
         if learner.parent is None:
             continue
-        labels = {
-            AttendanceStatus.PRESENT: "Bor",
-            AttendanceStatus.ABSENT: "Yo‘q",
-            AttendanceStatus.LATE: "Kechikdi",
-        }
-        payload: dict[str, object] = {
-            "student_name": f"{learner.first_name} {learner.last_name or ''}".strip(),
-            "group_name": learner.group.name,
-            "date": target_date.isoformat(),
-            "status": record.status.value,
-            "status_label": labels[record.status],
-            "note": record.note,
-            "correction": True,
-        }
+        payload = await message_snapshot(session, group, learner, record, correction=True)
         latest = await session.scalar(
             select(NotificationOutbox)
             .where(NotificationOutbox.attendance_id == record.id)
@@ -586,12 +587,15 @@ async def correct_attendance(
             OutboxStatus.PENDING,
             OutboxStatus.SKIPPED,
             OutboxStatus.FAILED,
+            OutboxStatus.PROCESSING,
         ):
             latest.payload = payload
             latest.telegram_id = learner.parent.telegram_id
             latest.parent_id = learner.parent.id
             latest.status = OutboxStatus.PENDING if latest.telegram_id else OutboxStatus.SKIPPED
             latest.attempts = 0
+            latest.locked_by = None
+            latest.locked_until = None
             latest.available_at = attendance_now()
             latest.last_error = None
         else:
@@ -730,6 +734,7 @@ async def list_admin_attendance(
         select(
             Attendance,
             Group.name,
+            Group.teacher_id,
             Staff.first_name,
             Staff.last_name,
             Student.first_name,
@@ -745,14 +750,14 @@ async def list_admin_attendance(
     )
 
     rows = []
-    for att, g_name, t_fn, t_ln, s_fn, s_ln in (await session.execute(stmt)).all():
+    for att, g_name, g_teacher_id, t_fn, t_ln, s_fn, s_ln in (await session.execute(stmt)).all():
         rows.append(
             AdminAttendanceRow(
                 attendance_id=att.id,
                 date=att.date,
                 group_id=att.group_id,
                 group_name=g_name,
-                teacher_id=att.marked_by,
+                teacher_id=g_teacher_id,
                 teacher_name=f"{t_fn} {t_ln or ''}".strip(),
                 student_id=att.student_id,
                 student_name=f"{s_fn} {s_ln or ''}".strip(),
@@ -761,6 +766,7 @@ async def list_admin_attendance(
                 marked_at=att.updated_at,
                 finalized=att.batch_id is not None,
                 batch_id=att.batch_id,
+                source_imported=att.source_imported,
             )
         )
 
@@ -800,6 +806,7 @@ async def get_student_monthly_attendance_stats(
     session: AsyncSession,
     student_id: uuid.UUID,
     month_str: str,
+    group_id: uuid.UUID | None = None,
 ) -> StudentMonthlyAttendanceStats:
     start_date, end_date = parse_month_string(month_str)
 
@@ -808,7 +815,7 @@ async def get_student_monthly_attendance_stats(
             Attendance.status,
             func.count(Attendance.id).label("count"),
         )
-        .join(AttendanceBatch, Attendance.batch_id == AttendanceBatch.id)
+        .where(or_(Attendance.batch_id.is_not(None), Attendance.source_imported.is_(True)))
         .where(
             Attendance.student_id == student_id,
             Attendance.date >= start_date,
@@ -816,6 +823,8 @@ async def get_student_monthly_attendance_stats(
         )
         .group_by(Attendance.status)
     )
+    if group_id is not None:
+        stmt = stmt.where(Attendance.group_id == group_id)
     result = await session.execute(stmt)
     status_counts = {row[0]: int(row[1]) for row in result.all()}
 
@@ -859,7 +868,17 @@ async def get_group_monthly_attendance_history(
         )
         .order_by(AttendanceBatch.date.asc())
     )
-    batch_dates = list((await session.scalars(batches_stmt)).all())
+    source_dates = await session.scalars(
+        select(Attendance.date)
+        .where(
+            Attendance.group_id == group_id,
+            Attendance.source_imported.is_(True),
+            Attendance.date >= start_date,
+            Attendance.date <= end_date,
+        )
+        .distinct()
+    )
+    batch_dates = sorted(set((await session.scalars(batches_stmt)).all()) | set(source_dates.all()))
 
     records_stmt = (
         select(
@@ -867,7 +886,7 @@ async def get_group_monthly_attendance_history(
             Student.first_name,
             Student.last_name,
         )
-        .join(AttendanceBatch, Attendance.batch_id == AttendanceBatch.id)
+        .where(or_(Attendance.batch_id.is_not(None), Attendance.source_imported.is_(True)))
         .join(Student, Attendance.student_id == Student.id)
         .where(
             Attendance.group_id == group_id,
@@ -881,7 +900,7 @@ async def get_group_monthly_attendance_history(
     active_students_stmt = (
         select(Student)
         .where(
-            Student.group_id == group_id,
+            in_group(group_id),
             Student.status == Status.ACTIVE,
         )
         .order_by(Student.first_name.asc(), Student.last_name.asc())
@@ -901,6 +920,7 @@ async def get_group_monthly_attendance_history(
                 date=att.date,
                 status=att.status,
                 note=att.note,
+                source_imported=att.source_imported,
             )
         )
         s_id = att.student_id

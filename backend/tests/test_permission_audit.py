@@ -15,12 +15,16 @@ pytestmark = pytest.mark.anyio
 ROUTES = {
     "/api/v1/admin/staff": {"staff:manage"},
     "/api/v1/admin/subjects": {"subjects:manage"},
+    "/api/v1/admin/rooms": {"rooms:manage"},
+    "/api/v1/admin/lookups/rooms": {"groups:create", "groups:edit", "rooms:manage"},
     "/api/v1/admin/groups": {"groups:read", "groups:create", "groups:edit"},
     "/api/v1/admin/students": {"students:read", "students:create", "students:edit"},
     "/api/v1/admin/attendance/groups": {"attendance:read", "attendance:write"},
+    "/api/v1/admin/attendance/message-template": {"attendance:write"},
     "/api/v1/admin/messages": {"messages:send"},
     "/api/v1/admin/lookups/group-options": {"groups:read", "groups:create", "groups:edit"},
     "/api/v1/admin/lookups/student-groups": {"students:read", "students:create", "students:edit"},
+    "/api/v1/admin/lookups/parents": {"students:create", "students:edit"},
 }
 
 

@@ -20,6 +20,9 @@ class CaptureSpec:
 
 SPECS = (
     CaptureSpec(
+        "attendance_message_templates", "attendance_template", ("body", "version", "changed_by")
+    ),
+    CaptureSpec(
         "staff",
         "staff",
         (
@@ -42,7 +45,8 @@ SPECS = (
             "telegram_reconnect_required",
         ),
     ),
-    CaptureSpec("subjects", "subject", ("name", "description", "is_active")),
+    CaptureSpec("subjects", "subject", ("name", "description", "is_active", "archived_at")),
+    CaptureSpec("rooms", "room", ("name", "is_active"), ("description",)),
     CaptureSpec(
         "groups",
         "group",
@@ -57,6 +61,8 @@ SPECS = (
             "start_time",
             "end_time",
             "room_number",
+            "room_id",
+            "archived_at",
         ),
     ),
     CaptureSpec(
@@ -67,6 +73,8 @@ SPECS = (
             "last_name",
             "age",
             "school_grade",
+            "school_name",
+            "archived_at",
             "group_id",
             "parent_id",
             "status",
@@ -76,8 +84,14 @@ SPECS = (
     CaptureSpec(
         "parents",
         "parent",
-        ("first_name", "last_name"),
+        ("first_name", "last_name", "archived_at"),
         ("phone", "telegram_id", "auth_uuid", "auth_used_at", "telegram_reconnect_required"),
+    ),
+    CaptureSpec(
+        "student_group_enrollments",
+        "enrollment",
+        ("student_id", "group_id", "is_active", "level", "mygov_status", "archived_at"),
+        ("notes", "source_data"),
     ),
     CaptureSpec(
         "attendance_batches",
@@ -87,6 +101,7 @@ SPECS = (
             "date",
             "finalized_by",
             "finalized_at",
+            "archived_at",
         ),
     ),
     CaptureSpec(
@@ -100,6 +115,7 @@ SPECS = (
             "audience",
             "cancelled_at",
             "cancelled_by",
+            "archived_at",
         ),
     ),
     CaptureSpec(
@@ -110,6 +126,7 @@ SPECS = (
             "retried_by",
             "retried_at",
             "retry_attempts",
+            "archived_at",
         ),
     ),
     CaptureSpec("system_settings", "bot", ("bot_username", "version"), ("bot_token_encrypted",)),
@@ -154,6 +171,7 @@ BEGIN
   IF ident IS NULL THEN RETURN 'null'::jsonb; END IF;
   CASE kind
     WHEN 'group' THEN SELECT name INTO label FROM public.groups WHERE id=ident;
+    WHEN 'room' THEN SELECT name INTO label FROM public.rooms WHERE id=ident;
     WHEN 'subject' THEN SELECT name INTO label FROM public.subjects WHERE id=ident;
     WHEN 'staff' THEN SELECT concat_ws(' ',first_name,last_name) INTO label
       FROM public.staff WHERE id=ident;
@@ -216,7 +234,9 @@ END $$;
 
 def _snapshot(spec: CaptureSpec, row: str) -> str:
     relationships = {
+        "student_id": "student",
         "group_id": "group",
+        "room_id": "room",
         "subject_id": "subject",
         "teacher_id": "staff",
         "parent_id": "parent",

@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
 import type { StudentItem, StudentDetailItem, StudentTransferInput } from "./types";
+import { studentEnrollments } from "./types";
 import type { StudentGroupOption } from "../academic/types";
 import { apiClient } from "../api/client";
 import { ApiError } from "../api/errors";
 import { Modal } from "../components/Modal";
 import { Select } from "../components/Select";
+import { Input } from "../components/Input";
 import { Button } from "../components/Button";
 import { Alert } from "../components/Alert";
 import { ArrowRightLeft } from "lucide-react";
@@ -23,21 +25,32 @@ export const StudentTransferModal: React.FC<StudentTransferModalProps> = ({
   onSuccess,
 }) => {
   const [targetGroupId, setTargetGroupId] = useState<string>("");
+  const [sourceGroupId, setSourceGroupId] = useState("");
+  const [reason, setReason] = useState("");
+  const [search, setSearch] = useState("");
   const [groups, setGroups] = useState<StudentGroupOption[]>([]);
   const [isLoadingGroups, setIsLoadingGroups] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isOpen || !student) return;
+    if (isOpen && student) {
+      const active = studentEnrollments(student).filter(item => item.is_active);
+      setSourceGroupId(active.some(item => item.group.id === student.group_id) ? student.group_id : active[0]?.group.id ?? "");
+      setReason(""); setSearch("");
+    }
+  }, [isOpen, student]);
 
+  useEffect(() => {
+    if (!isOpen || !student) return;
+    let cancelled = false;
     const loadGroups = async () => {
       setIsLoadingGroups(true);
       setError(null);
       try {
         const res = await apiClient.get<{ items: StudentGroupOption[] }>("/api/v1/admin/lookups/student-groups");
-        // Filter out current group
-        const available = res.items.filter((g) => g.id !== student.group_id);
+        if (cancelled) return;
+        const available = res.items.filter((g) => g.id !== sourceGroupId);
         setGroups(available);
         if (available.length > 0) {
           setTargetGroupId(available[0].id);
@@ -45,14 +58,15 @@ export const StudentTransferModal: React.FC<StudentTransferModalProps> = ({
           setTargetGroupId("");
         }
       } catch {
-        setError("Guruhlar ro‘yxatini yuklashda xatolik yuz berdi");
+        if (!cancelled) setError("Guruhlar ro‘yxatini yuklashda xatolik yuz berdi");
       } finally {
-        setIsLoadingGroups(false);
+        if (!cancelled) setIsLoadingGroups(false);
       }
     };
 
     loadGroups();
-  }, [isOpen, student]);
+    return () => { cancelled = true; };
+  }, [isOpen, student, sourceGroupId]);
 
   if (!student) {
     return null;
@@ -60,11 +74,13 @@ export const StudentTransferModal: React.FC<StudentTransferModalProps> = ({
 
   const selectedGroup = groups.find((g) => g.id === targetGroupId);
   const isSelectedGroupFull = selectedGroup
-    ? selectedGroup.current_students >= selectedGroup.max_students
+    ? selectedGroup.current_students >= selectedGroup.max_students && !studentEnrollments(student).some(item => item.is_active && item.group.id === targetGroupId)
     : false;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!reason.trim()) { setError("Ko‘chirish sababini kiriting"); return; }
+    if (!sourceGroupId) { setError("Manba guruhni tanlang"); return; }
     if (!targetGroupId) {
       setError("Ko‘chiriladigan yangi guruhni tanlang");
       return;
@@ -76,6 +92,8 @@ export const StudentTransferModal: React.FC<StudentTransferModalProps> = ({
     try {
       const payload: StudentTransferInput = {
         target_group_id: targetGroupId,
+        source_group_id: sourceGroupId,
+        reason: reason.trim(),
       };
       const updated = await apiClient.post<StudentDetailItem>(
         `/api/v1/admin/students/${student.id}/transfer`,
@@ -111,8 +129,13 @@ export const StudentTransferModal: React.FC<StudentTransferModalProps> = ({
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs space-y-1">
           <div className="text-slate-500 font-medium">Joriy guruh:</div>
-          <div className="text-slate-900 font-semibold text-sm">{student.group.name}</div>
+          <div className="text-slate-900 font-semibold text-sm">{studentEnrollments(student).find(item => item.group.id === sourceGroupId)?.group.name ?? student.group.name}</div>
+          <p>Boshqa kurslar, ota-ona va oldingi davomat tarixi saqlanadi.</p>
         </div>
+
+        <Select label="Qaysi guruhdan ko‘chirish" value={sourceGroupId} onChange={event => setSourceGroupId(event.target.value)} disabled={isLoading}
+          options={studentEnrollments(student).filter(item => item.is_active).map(item => ({ value: item.group.id, label: item.group.name }))} />
+        <Input label="Yangi guruhdan qidirish" value={search} onChange={event => { setSearch(event.target.value); setTargetGroupId(""); }} disabled={isLoading} />
 
         <Select
           label="Yangi guruhni tanlang"
@@ -122,7 +145,7 @@ export const StudentTransferModal: React.FC<StudentTransferModalProps> = ({
           disabled={isLoading || isLoadingGroups}
           options={[
             { value: "", label: "-- Guruhni tanlang --" },
-            ...groups.map((g) => {
+            ...groups.filter(g => g.name.toLocaleLowerCase().includes(search.toLocaleLowerCase())).map((g) => {
               const full = g.current_students >= g.max_students;
               return {
                 value: g.id,
@@ -134,6 +157,7 @@ export const StudentTransferModal: React.FC<StudentTransferModalProps> = ({
           ]}
           helperText="Faqat faol va joriy guruhdan farqli guruhlar ko‘rsatilgan"
         />
+        <Input label="Ko‘chirish sababi" required maxLength={2000} value={reason} onChange={event => setReason(event.target.value)} disabled={isLoading} />
 
         {isSelectedGroupFull && (
           <Alert variant="warning">

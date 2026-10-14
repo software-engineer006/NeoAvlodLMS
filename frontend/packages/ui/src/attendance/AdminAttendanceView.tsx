@@ -29,6 +29,7 @@ import { AdminChangesHistoryView } from "./AdminChangesHistoryView";
 import { TeacherAttendanceView } from "../teacher/TeacherAttendanceView";
 import type { AttendanceGroupOption } from "../teacher/TeacherAttendanceView";
 import { canViewLogs, hasPermission, PERMISSIONS } from "../navigation/permissions";
+import { AttendanceTemplateView } from "./AttendanceTemplateView";
 
 export interface AdminAttendanceViewProps {
   currentUser: CurrentUser;
@@ -41,7 +42,7 @@ export const AdminAttendanceView: React.FC<AdminAttendanceViewProps> = ({
 }) => {
   const canWrite = hasPermission(_currentUser, PERMISSIONS.ATTENDANCE_WRITE);
   const canAudit = canViewLogs(_currentUser);
-  const [activeTab, setActiveTab] = useState<"matrix" | "list" | "mark" | "changes">(defaultTab || (canWrite ? "mark" : "matrix"));
+  const [activeTab, setActiveTab] = useState<"matrix" | "list" | "mark" | "changes" | "template">(defaultTab || (canWrite ? "mark" : "matrix"));
   const [records, setRecords] = useState<AdminAttendanceItem[]>([]);
   const [total, setTotal] = useState<number>(0);
   const [page, setPage] = useState<number>(1);
@@ -193,9 +194,11 @@ export const AdminAttendanceView: React.FC<AdminAttendanceViewProps> = ({
           className={`py-2.5 px-4 text-sm font-medium border-b-2 ${activeTab === "changes" ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-500"}`}>
           Audit tarixi
         </button>}
+        {canWrite && <button type="button" onClick={() => setActiveTab("template")}
+          className={`py-2.5 px-4 text-sm font-medium border-b-2 ${activeTab === "template" ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-500"}`}>Xabar shabloni</button>}
       </div>
 
-      {activeTab === "changes" && canAudit ? <AdminChangesHistoryView groups={groups} /> : activeTab === "mark" && canWrite ? <TeacherAttendanceView portal="admin" /> : activeTab === "matrix" ? (
+      {activeTab === "template" && canWrite ? <AttendanceTemplateView currentUser={_currentUser} /> : activeTab === "changes" && canAudit ? <AdminChangesHistoryView groups={groups} /> : activeTab === "mark" && canWrite ? <TeacherAttendanceView portal="admin" /> : activeTab === "matrix" ? (
         <MonthlyAttendanceHistoryView
           portal="admin"
           groups={groups}
@@ -413,7 +416,7 @@ export const AdminAttendanceView: React.FC<AdminAttendanceViewProps> = ({
                         <Lock className="w-3 h-3 text-emerald-600" /> Yakunlangan
                       </span>
                     ) : (
-                      <Badge variant="warning" size="sm">Qoralama</Badge>
+                      <Badge variant="warning" size="sm">{record.source_imported ? "CSV qoralamasi" : "Qoralama"}</Badge>
                     )}
                   </TableCell>
                 </TableRow>

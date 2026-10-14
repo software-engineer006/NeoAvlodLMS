@@ -13,7 +13,7 @@ from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from neoavlod.errors import DomainError
-from neoavlod.models import Group, Portal, Role, Staff, Student
+from neoavlod.models import Group, Portal, Role, Staff, Student, StudentGroupEnrollment
 from neoavlod.models.common import Status
 from neoavlod.security.sessions import Identity
 
@@ -21,6 +21,7 @@ from neoavlod.security.sessions import Identity
 class Permission(StrEnum):
     STAFF_MANAGE = "staff:manage"
     SUBJECTS_MANAGE = "subjects:manage"
+    ROOMS_MANAGE = "rooms:manage"
     GROUPS_READ = "groups:read"
     GROUPS_CREATE = "groups:create"
     GROUPS_EDIT = "groups:edit"
@@ -96,7 +97,13 @@ async def ensure_group_owner(
     """Teacher must own the group; absent and foreign groups look identical."""
     ensure_teacher(identity)
     owned = await session.scalar(
-        select(exists().where(Group.id == group_id, Group.teacher_id == identity.staff.id))
+        select(
+            exists().where(
+                Group.id == group_id,
+                Group.teacher_id == identity.staff.id,
+                Group.archived_at.is_(None),
+            )
+        )
     )
     if not owned:
         raise DomainError("Guruh topilmadi", 404)
@@ -111,7 +118,12 @@ async def ensure_student_owner(
         select(
             exists().where(
                 Student.id == student_id,
-                Student.group_id == Group.id,
+                Student.archived_at.is_(None),
+                Group.archived_at.is_(None),
+                StudentGroupEnrollment.archived_at.is_(None),
+                StudentGroupEnrollment.student_id == Student.id,
+                StudentGroupEnrollment.group_id == Group.id,
+                StudentGroupEnrollment.is_active.is_(True),
                 Group.teacher_id == identity.staff.id,
             )
         )

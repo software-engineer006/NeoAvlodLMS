@@ -1,6 +1,7 @@
 import type { TelegramLinkState } from "../staff/types";
 
 export interface ParentItem {
+  child_count?: number | null;
   id: string;
   first_name: string;
   last_name: string;
@@ -57,6 +58,7 @@ export interface StudentItem {
   phone: string | null;
   age: number | null;
   school_grade?: string | null;
+  school_name?: string | null;
   import_notes?: string[];
   status: "active" | "inactive";
   group_id: string;
@@ -65,7 +67,19 @@ export interface StudentItem {
   created_at: string;
   parent: ParentItem | null;
   group: GroupSummaryItem;
+  enrollments?: StudentEnrollment[];
 }
+
+export interface StudentEnrollment {
+  group: GroupSummaryItem;
+  is_active: boolean;
+  level: string | null;
+  mygov_status: string | null;
+  notes: string | null;
+}
+
+export const studentEnrollments = (student: StudentItem): StudentEnrollment[] =>
+  student.enrollments ?? [{ group: student.group, is_active: true, level: null, mygov_status: null, notes: null }];
 
 export interface StudentDetailItem extends StudentItem {
   parent: ParentDetailItem | null;
@@ -82,6 +96,9 @@ export interface StudentListResponse {
 }
 
 export interface StudentCreateInput {
+  parent_id?: string | null;
+  school_grade?: string | null;
+  school_name?: string | null;
   first_name: string;
   last_name: string | null;
   phone: string | null;
@@ -91,6 +108,9 @@ export interface StudentCreateInput {
 }
 
 export interface StudentUpdateInput {
+  parent_id?: string | null;
+  school_grade?: string | null;
+  school_name?: string | null;
   first_name?: string;
   last_name?: string;
   phone?: string;
@@ -100,4 +120,6 @@ export interface StudentUpdateInput {
 
 export interface StudentTransferInput {
   target_group_id: string;
+  source_group_id?: string;
+  reason: string;
 }

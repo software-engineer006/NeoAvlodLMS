@@ -1,19 +1,19 @@
 {
   "schema": 1,
-  "source_sha256": "4ed2ad582a593e5233047f1628040cd27cea9442ef788091a9350a67ebdec0af",
+  "source_sha256": "f75227fc476ae39487c0befdaa63bead0a8ef1cc07cb1aa23cdc213f644506a3",
   "assets": {
     "admin": {
-      "assets/index-CMAb1omf.css": "fe8fd3881dfe083faf8c3f1ca97c8d9ffeb416a8bcea7a755127c5904908714b",
-      "assets/index-DloWKmHl.js": "c789192139a0522f8345ad8f8a67eedd2ba342136d7c47b41f51766bfb188527",
+      "assets/index-BQ8PyHM-.css": "30c4d9defb8b3a86a6c33c10bb0081cd19d881f344de19d338dca01ee9f113d6",
+      "assets/index-spoI8yEf.js": "03b43b7a4fc2999041b6756e945446a7466129ae48299740ed39454b73f76c1f",
       "favicon.svg": "781ebc9673d5e7b3306ea8c79b0c7d8846f327e19ae50bc90fc69677245678f3",
-      "index.html": "4d944b8a3f774d5ce7e3acbbaffd0dd57b4f06bed3d324f62a14a61c67d477ca",
+      "index.html": "eb8e86b4a608cf68d9daf869354a51755a0f5a165b8ad6ad70dc791153d3016a",
       "neoavlod-logo.svg": "780350296223e18c0a8c91ea04248ccb72918189a97166a76b40a0bd3ca2f467"
     },
     "teacher": {
-      "assets/index-BMc0yM5u.js": "fea6ce3ee0e607d4bc7d760bb214f1eaf2e46f60aa980d92cd4ffbac1397a1af",
-      "assets/index-DUlPhTk6.css": "1f9ab94933307d45a56bb088bde108a008332c6827a2a404b0904cf12103f2b2",
+      "assets/index-BSzVjffS.css": "87967ab4af21b264c48e0dc845d5995c40e550bd7a8077f6e5eb38c982aa842f",
+      "assets/index-CpVFdWZl.js": "ca2213ce8cf7cba956a36afbe7c9b5c932a0a5d66e3e176bb95362d411cb9fe4",
       "favicon.svg": "a063427f116ea788384ca5f10732a549f78aacf05a628e1bb68b39b09ceb5148",
-      "index.html": "eda1253f4bd94b34945d739c5b5abd12e72b91c151d10a4a7a920a9852a3411b",
+      "index.html": "7ea9ce3338d35b5dcfda821ae8fbfb1669c954f1a6b964c2c0b799d508c4a113",
       "neoavlod-logo.svg": "553095d15c7fe9d5c96a179cdfcf349344b534f50eb68e995dc64d1b66573a09"
     }
   }

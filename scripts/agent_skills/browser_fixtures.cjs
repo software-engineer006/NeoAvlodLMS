@@ -45,7 +45,7 @@ async function installFixtures(page, state) {
       const full = who.role === 'superadmin';
       body = { groups_count: full || perms.includes('groups:read') ? 1 : null, students_count: full || perms.includes('students:read') ? 1 : null,
         staff_count: full || perms.includes('staff:manage') ? 2 : null, staff_breakdown: full || perms.includes('staff:manage') ? { teachers: 1, admins: 1, superadmins: 0 } : null };
-    } else if (path.endsWith('/lookups/group-options')) body = { subjects: [subject], teachers: [teacher] };
+    } else if (path.endsWith('/lookups/group-options')) body = { subjects: [subject], teachers: [teacher], rooms: [{ id: ids.group, name: '101', is_active: true }] };
     else if (path.endsWith('/lookups/student-groups')) body = pageOf([group], url);
     else if (path.endsWith('/settings/bot')) body = { configured: true, bot_username: 'namuna_bot', version: 7, active_version: 7, last_error: null,
       worker_ready: true, reload_in_progress: false, reconnect_required: 0 };

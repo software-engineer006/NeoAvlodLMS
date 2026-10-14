@@ -14,7 +14,8 @@ from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from neoavlod.database import Database
-from neoavlod.models import NotificationOutbox, OutboxStatus, Parent
+from neoavlod.models import Attendance, Group, NotificationOutbox, OutboxStatus, Parent, Student
+from neoavlod.services.family_lock import family_lock
 from neoavlod.services.message_delivery import dispatch_pending_messages
 from neoavlod.services.telegram import DatabaseTelegramSender, TelegramSender
 from neoavlod.settings import Settings
@@ -23,6 +24,9 @@ logger = logging.getLogger(__name__)
 
 
 def format_attendance_message(payload: dict[str, Any]) -> str:
+    frozen = payload.get("message_text")
+    if isinstance(frozen, str):
+        return frozen
     student = payload.get("student_name", "Talaba")
     group = payload.get("group_name", "Guruh")
     date_val = payload.get("date", "")
@@ -83,12 +87,46 @@ async def process_outbox_item(
     item: NotificationOutbox,
     sender: TelegramSender,
     *,
+    worker_id: uuid.UUID,
     max_attempts: int = 5,
 ) -> bool:
-    item_in_session = await session.get(NotificationOutbox, item.id)
-    if item_in_session is None:
+    lesson = await session.execute(
+        select(Attendance.group_id, Attendance.student_id).where(
+            Attendance.id == item.attendance_id
+        )
+    )
+    identifiers = lesson.one_or_none()
+    if identifiers is None:
         return False
-    item = item_in_session
+    await family_lock(session, identifiers.student_id)
+    await session.scalar(select(Group.id).where(Group.id == identifiers.group_id).with_for_update())
+    current = await session.scalar(
+        select(NotificationOutbox)
+        .where(NotificationOutbox.id == item.id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if (
+        current is None
+        or current.status != OutboxStatus.PROCESSING
+        or current.locked_by != worker_id
+    ):
+        return False
+    item = current
+
+    # Reassignment cannot deliver a child's private history to the former guardian.
+    linked_parent = await session.scalar(
+        select(Student.parent_id)
+        .join(Attendance, Attendance.student_id == Student.id)
+        .where(Attendance.id == item.attendance_id)
+    )
+    if linked_parent != item.parent_id:
+        item.status = OutboxStatus.SKIPPED
+        item.locked_by = None
+        item.locked_until = None
+        item.last_error = "Ota-ona biriktirishi o‘zgargan"
+        await session.commit()
+        return False
 
     # Check if parent is connected to Telegram
     parent = await session.get(Parent, item.parent_id)
@@ -101,7 +139,7 @@ async def process_outbox_item(
         item.last_error = "Ota-ona yangi botga qayta ulanishi kutilmoqda"
         await session.commit()
         return False
-    telegram_id = parent.telegram_id if parent and parent.telegram_connected else item.telegram_id
+    telegram_id = parent.telegram_id if parent and parent.telegram_connected else None
     if telegram_id is None:
         if parent is not None and parent.telegram_connected:
             telegram_id = parent.telegram_id
@@ -179,7 +217,7 @@ async def dispatch_pending_outbox(
             active_sender = sender or DatabaseTelegramSender(session, settings, transport=transport)
             try:
                 success = await process_outbox_item(
-                    session, item, active_sender, max_attempts=max_attempts
+                    session, item, active_sender, worker_id=wid, max_attempts=max_attempts
                 )
                 if success:
                     delivered_count += 1

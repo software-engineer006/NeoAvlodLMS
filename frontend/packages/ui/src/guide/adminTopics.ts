@@ -231,6 +231,17 @@ export const adminTopics: GuideTopic[] = [
     ],
   },
   {
+    id: "admin-rooms", title: "Xonalarni yaratish va guruhga biriktirish", section: "Ta’lim",
+    permission: P.ROOMS_MANAGE, destination: "rooms", summary: "Xona katalogi, faollik va guruhga oson biriktirish.",
+    scene: adminScenes.rooms, previewAlt: "Xona yaratish, nom/izoh, faollik va guruhning xona tanlovi raqamlangan.",
+    steps: steps(
+      ["Xona qo‘shing", "Xonalar bo‘limida Xona qo‘shish tugmasini bosing. Nom yoki raqamni kiriting."],
+      ["Ma’lumotni saqlang", "Masalan 217 va zarur izohni yozib Saqlashni bosing. Bir xil nomdagi xona qayta yaratilmaydi."],
+      ["Guruhga biriktiring", "Guruh yaratish yoki tahrirlash formasidagi Xona tanlovidan faol xonani belgilang. Guruhni tahrirlash uchun tegishli guruh ruxsati ham kerak."],
+      ["Holatini boshqaring", "Xona nomi o‘zgarsa bog‘langan guruhlar jadvali ham yangilanadi. Faol guruhli xona faolsizlantirilmaydi, guruh bog‘langan xona o‘chirilmaydi."],
+    ), tips: ["Xonalar katalogi uchun rooms:manage ruxsati kerak. O‘qituvchi faqat o‘z guruhi jadvalidagi xonani ko‘radi."],
+  },
+  {
     id: "admin-groups",
     title: "Guruhlarni topish va jadvalni ko‘rish",
     section: "Ta’lim",
@@ -340,7 +351,7 @@ export const adminTopics: GuideTopic[] = [
       ],
       [
         "Ma’lumotlarni tekshiring",
-        "Profil, ota-ona, guruh/jadvalni ko‘ring. Kiritilmagan ma’lumot bo‘sh deb ko‘rsatiladi.",
+        "Profil va ota-onani tekshiring. Guruh va dars tafsilotlarida barcha kurslar, ularning ustozlari va jadvali ko‘rinadi. Bir o‘quvchi bir nechta guruhda bitta profil bilan o‘qishi mumkin.",
       ],
       [
         "Ulanish holati",
@@ -404,7 +415,7 @@ export const adminTopics: GuideTopic[] = [
       ],
       [
         "Ota-ona ma’lumotlari",
-        "Ota-onaning ism va aloqa ma’lumotlarini mavjud holatda yozing. Telefon bir xil bo‘lgani uchun turli ota-onalar avtomatik birlashtirilmaydi.",
+        "Ota-onani bog‘lashdan Mavjud ota-onani tanlashni belgilang, ism yoki telefon orqali topib tanlang. Bir ota-onaga bir nechta bola biriktiriladi va ularning xabarlari shu bitta Telegramga ism-familiyasi bilan boradi. Yangi ota-ona faqat mavjud bo‘lmasa yaratiladi; telefonlar avtomatik birlashtirilmaydi.",
       ],
       [
         "Ro‘yxatga oling",
@@ -429,11 +440,15 @@ export const adminTopics: GuideTopic[] = [
     steps: steps(
       [
         "Profilni tahrirlang",
-        "O‘quvchi profilidan Tahrirlashni ochib mavjud ma’lumotlarni to‘g‘rilang va saqlang.",
+        "O‘quvchi profilidan Tahrirlashni ochib ism, kontakt, sinf va maktabni to‘g‘rilang. Bo‘sh maydon tasdiqlanmagan ma’lumotni bildiradi; taxmin bilan to‘ldirmang.",
       ],
       [
-        "Guruhga ko‘chiring",
-        "Ko‘chirishni tanlang, yangi faol guruh sig‘imini tekshirib tasdiqlang. Oldingi davomat tarixi saqlanadi.",
+        "Kurs va guruh ma’lumotlari",
+        "Har bir guruhda Kurs ma’lumotlarini tahrirlash orqali daraja, MyGov holati va izohni yozing. MyGov maydoni status uchun. Qo‘shimcha guruhdan yangi kursga biriktiring; Guruhdan olish tarix va boshqa kurslarni saqlaydi. Ko‘chirish alohida amal.",
+      ],
+      [
+        "Tanlangan guruhdan ko‘chiring",
+        "Guruhni ko‘chirish oynasida Qaysi guruhdan ko‘chirish maydonini tekshiring, yangi faol guruhni qidiring va ko‘chirish sababini yozing. Guruhga ko‘chirish tugmasi faqat shu biriktirishni almashtiradi. Boshqa kurs, ota-ona va eski davomat saqlanadi; xodim, eski/yangi guruh va sabab auditga yoziladi. To‘lgan guruhga yangi o‘rin qo‘shilmaydi.",
       ],
       [
         "Telegramni ulang",
@@ -445,7 +460,7 @@ export const adminTopics: GuideTopic[] = [
       ],
     ),
     tips: [
-      "Havola faqat tegishli shaxsga beriladi. Bitta Telegram hisobiga noto‘g‘ri odamni bog‘lamang.",
+      "Ota-ona profili va havolasi barcha bog‘langan bolalar uchun umumiy. Ota-ona kontaktini tahrirlash barcha bolalarda ko‘rinadi. Mavjud ota-onani tanlash faqat bolaning biriktirishini almashtiradi; oldingi ota-onaga navbatdagi xabar yuborilmaydi.",
     ],
   },
   {
@@ -472,7 +487,7 @@ export const adminTopics: GuideTopic[] = [
       ],
     ),
     tips: [
-      "Import qilingan eski yozuvlar uchun taxminiy audit yaratilmaydi. Bo‘sh katak belgilanmaganini bildiradi, absent deb talqin qilinmaydi.",
+      "CSVdagi aniq «k»lar manba qoralamasi sifatida ko‘rinadi; import darsni yakunlamaydi yoki xabar yubormaydi. Taxminiy muallif/audit yaratilmaydi. Bo‘sh katak belgilanmaganini bildiradi, kelmadi deb talqin qilinmaydi. Administrator eski sanalarni tekshirishi va sabab bilan tuzatishi mumkin.",
     ],
   },
   {
@@ -563,7 +578,19 @@ export const adminTopics: GuideTopic[] = [
     ),
     tips: [
       "Teacher ham ayni guruhga yozishi mumkin; parallel saqlash va qayta urinish auditni dublikat qilmaydi. Yakunlangan dars tuzatishda yakunlangan holatda qoladi.",
+      "Administrator va superadmin tahriri ota-onaga xabar yubormaydi. Hali yuborilmagan eski xabar ham bekor qilinadi. O‘qituvchi tuzatish xabarini yuborishi mumkin; feedback muallifi izohni yozgan xodimdan olinadi.",
     ],
+  },
+  {
+    id: "admin-attendance-template", title: "Davomat xabari shablonini tahrirlash", section: "Davomat",
+    permission: P.ATTENDANCE_WRITE, destination: "attendance", summary: "Ota-onaga boradigan matnni namuna orqali tekshirib yangilang.",
+    scene: adminScenes.attendanceTemplate, previewAlt: "Xabar shabloni tabida majburiy belgilar, namuna va versiyali saqlash ko‘rsatilgan.",
+    steps: steps(
+      ["Shablonni oching", "Davomat bo‘limidagi Xabar shabloni tabini oching. Davomat yozish ruxsati kerak."],
+      ["Matnni yozing", "Bola, guruh, sana, dars vaqti, holat va feedback belgilari saqlanishi shart. Matn va yakuniy xabar hajmi serverda tekshiriladi."],
+      ["Namunani ko‘ring", "Matnni ko‘rib chiqish orqali sun’iy ma’lumotli namunani tekshiring. Bu amal ota-onaga xabar yubormaydi."],
+      ["Versiyani saqlang", "Shablonni saqlashni bosing. Boshqa xodim oldin yangilasa kiritgan matningiz shu oynada qoladi. Saqlangan versiyani tekshirishni bosing, yangi matnni solishtiring va namunani qayta tekshiring. Tahrir muallifi va vaqti logda qoladi."],
+    ), tips: ["Yangi shablon keyingi yangi xabarlar uchun. Avval navbatga qo‘shilgan xabarning matni va versiyasi saqlanadi."],
   },
   {
     id: "admin-messages",

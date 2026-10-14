@@ -79,8 +79,7 @@ compose_release "$RELEASE_ID" run --rm -T --no-deps migrations </dev/null
 compose_release "$RELEASE_ID" run --rm -T --no-deps --user 0:0 \
   -v "$ENV_FILE:/production.env:ro" -v "$RELEASE_DIR/scripts/deploy:/deploy:ro" \
   migrations python /deploy/provision_audit.py </dev/null
-import_educenter "$RELEASE_ID"
-import_english "$RELEASE_ID"
+import_business_data "$RELEASE_ID"
 compose_release "$RELEASE_ID" up -d --no-deps --no-build --force-recreate --wait --wait-timeout 120 api worker audit-archiver
 activate_links "$RELEASE_ID"
 install_nginx "$RELEASE_ID"

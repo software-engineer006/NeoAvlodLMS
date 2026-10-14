@@ -14,6 +14,7 @@ class AttendanceEntryOut(BaseModel):
     status: AttendanceStatus | None = None
     note: str | None = None
     marked_at: datetime | None = None
+    source_imported: bool = False
 
 
 class AttendanceSheetOut(BaseModel):

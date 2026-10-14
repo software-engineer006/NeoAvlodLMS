@@ -341,7 +341,9 @@ async def test_end_to_end_bootstrap_to_attendance_and_notification(
         assert p_chat == 70001
         assert "Davomat bildirishnomasi" in p_msg
         assert "Sardor Karimov" in p_msg
-        assert "Bor" in p_msg
+        assert "Holati: Keldi" in p_msg
+        assert "Toshkent vaqti" in p_msg
+        assert "O‘qituvchi Javohir Toshmatov" in p_msg
         assert "Yaxshi javob berdi" in p_msg
 
 

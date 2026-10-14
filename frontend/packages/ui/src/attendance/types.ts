@@ -1,6 +1,7 @@
 export type AttendanceStatusType = "present" | "absent" | "late";
 
 export interface AdminAttendanceItem {
+  source_imported?: boolean;
   attendance_id: string;
   date: string;
   group_id: string;
@@ -40,6 +41,7 @@ export function formatAttendanceStatus(status: AttendanceStatusType): {
 }
 
 export interface MonthlyAttendanceRecord {
+  source_imported?: boolean;
   attendance_id: string;
   student_id: string;
   student_name: string;

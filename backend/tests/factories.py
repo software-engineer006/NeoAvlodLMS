@@ -38,7 +38,7 @@ def parent(**overrides: Any) -> Parent:
     return Parent(**(values | overrides))
 
 
-def student(group_id: uuid.UUID, parent_id: uuid.UUID, **overrides: Any) -> Student:
+def student(group_id: uuid.UUID, parent_id: uuid.UUID | None, **overrides: Any) -> Student:
     values: dict[str, Any] = {
         "first_name": "Anvar",
         "last_name": "Valiyev",

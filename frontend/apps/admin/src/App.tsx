@@ -17,6 +17,7 @@ import {
   StaffManagementView,
   SubjectsManagementView,
   GroupsManagementView,
+  RoomsManagementView,
   StudentsManagementView,
   AdminAttendanceView,
   BotSettingsView,
@@ -52,6 +53,7 @@ const AdminContent: React.FC<{ activeTab: string; onNavigate?: (tab: string) => 
   if (activeTab === "groups" && user) {
     return <GroupsManagementView currentUser={user} />;
   }
+  if (activeTab === "rooms" && user) return <RoomsManagementView currentUser={user} />;
 
   if (activeTab === "students" && user) {
     return <StudentsManagementView currentUser={user} />;

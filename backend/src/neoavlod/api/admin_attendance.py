@@ -168,6 +168,7 @@ class AdminAttendanceOut(BaseModel):
     marked_at: datetime
     finalized: bool
     batch_id: uuid.UUID | None
+    source_imported: bool = False
 
     @classmethod
     def of(cls, row: service.AdminAttendanceRow) -> "AdminAttendanceOut":
@@ -185,6 +186,7 @@ class AdminAttendanceOut(BaseModel):
             marked_at=row.marked_at,
             finalized=row.finalized,
             batch_id=row.batch_id,
+            source_imported=row.source_imported,
         )
 
 
@@ -203,6 +205,7 @@ class MonthlyAttendanceRecordOut(BaseModel):
     date: date
     status: AttendanceStatus
     note: str | None
+    source_imported: bool = False
 
 
 class StudentMonthlyAttendanceSummaryOut(BaseModel):
@@ -277,7 +280,7 @@ async def get_attendance_history(
     group_id: Annotated[uuid.UUID, Query()],
     month: Annotated[str | None, Query(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")] = None,
 ) -> GroupMonthlyAttendanceHistoryOut:
-    target_month = month or datetime.now().strftime("%Y-%m")
+    target_month = month or service.attendance_now().strftime("%Y-%m")
     history = await service.get_group_monthly_attendance_history(session, group_id, target_month)
     return GroupMonthlyAttendanceHistoryOut.model_validate(history)
 
@@ -289,6 +292,6 @@ async def get_group_attendance_history(
     session: SessionDependency,
     month: Annotated[str | None, Query(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")] = None,
 ) -> GroupMonthlyAttendanceHistoryOut:
-    target_month = month or datetime.now().strftime("%Y-%m")
+    target_month = month or service.attendance_now().strftime("%Y-%m")
     history = await service.get_group_monthly_attendance_history(session, group_id, target_month)
     return GroupMonthlyAttendanceHistoryOut.model_validate(history)

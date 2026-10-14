@@ -174,9 +174,7 @@ async def test_atomic_student_parent_creation_and_deep_links(
         # Verify in DB that two distinct parent records exist
         async with model_database.session() as session:
             p_parents = (
-                await session.scalars(
-                    Parent.__table__.select().where(Parent.phone == shared_phone)
-                )
+                await session.scalars(Parent.__table__.select().where(Parent.phone == shared_phone))
             ).all()
             assert len(p_parents) == 2
 
@@ -213,9 +211,7 @@ async def test_validation_errors(model_database: Database) -> None:
         assert (await client.post(BASE, json=dict(base, age=101))).status_code == 422
 
         # Phone format invalid
-        assert (
-            await client.post(BASE, json=dict(base, phone="invalid_phone"))
-        ).status_code == 422
+        assert (await client.post(BASE, json=dict(base, phone="invalid_phone"))).status_code == 422
         bad_parent = {
             "first_name": "Karim",
             "last_name": "Sardorov",
@@ -382,7 +378,8 @@ async def test_transfer_and_deletion(model_database: Database) -> None:
 
         # Attempt to transfer Bobur to full grp2 -> 409
         bad_transfer = await client.post(
-            f"{BASE}/{s1_id}/transfer", json={"target_group_id": str(grp2.id)}
+            f"{BASE}/{s1_id}/transfer",
+            json={"target_group_id": str(grp2.id), "reason": "Jadval o‘zgardi"},
         )
         assert bad_transfer.status_code == 409
         assert "bo‘sh joy yo‘q" in bad_transfer.json()["detail"]
@@ -392,7 +389,8 @@ async def test_transfer_and_deletion(model_database: Database) -> None:
 
         # Transfer Bobur to grp3 -> 200
         ok_transfer = await client.post(
-            f"{BASE}/{s1_id}/transfer", json={"target_group_id": str(grp3.id)}
+            f"{BASE}/{s1_id}/transfer",
+            json={"target_group_id": str(grp3.id), "reason": "Jadval o‘zgardi"},
         )
         assert ok_transfer.status_code == 200
         assert ok_transfer.json()["group_id"] == str(grp3.id)

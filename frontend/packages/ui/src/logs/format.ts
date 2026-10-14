@@ -6,12 +6,18 @@ const entities: Record<string, string> = {
   staff: "Xodim", subject: "Fan", group: "Guruh", student: "O‘quvchi",
   parent: "Ota-ona", attendance: "Davomat", message: "Xabar", bot: "Bot",
   message_delivery: "Xabar yetkazilishi",
+  enrollment: "O‘quvchining guruhga biriktirishi",
+  room: "Xona",
+  attendance_template: "Davomat xabari shabloni",
+  dataset: "O‘quv ma’lumotlari",
 };
 const verbs: Record<string, string> = {
   insert: "qo‘shildi", update: "yangilandi", delete: "o‘chirildi",
   activated: "faollashtirildi", deactivated: "faolsizlantirildi",
   group_changed: "guruhga biriktirildi", draft: "qoralamasi saqlandi",
   correct: "tuzatildi", finalize: "yakunlandi",
+  transferred: "guruhlar orasida ko‘chirildi",
+  refreshed: "yangilandi",
 };
 const actions: Record<string, string> = {
   "auth.login": "Tizimga kirish", "auth.logout": "Tizimdan chiqish",

@@ -9,7 +9,7 @@ from sqlalchemy import func, select
 from neoavlod.api.deps import SessionDependency, require_permission
 from neoavlod.database import Database
 from neoavlod.message_schemas import MessageAudience, MessageDraft, MessageSend
-from neoavlod.models import Group, Student
+from neoavlod.models import Group, Student, StudentGroupEnrollment
 from neoavlod.models.common import Status
 from neoavlod.security.rbac import Permission
 from neoavlod.security.sessions import Identity
@@ -26,7 +26,16 @@ async def groups(_: MessageManager, session: SessionDependency) -> list[dict[str
     rows = (
         await session.execute(
             select(Group.id, Group.name, func.count(Student.id))
-            .outerjoin(Student, (Student.group_id == Group.id) & (Student.status == Status.ACTIVE))
+            .outerjoin(
+                StudentGroupEnrollment,
+                (StudentGroupEnrollment.group_id == Group.id)
+                & StudentGroupEnrollment.is_active.is_(True),
+            )
+            .outerjoin(
+                Student,
+                (Student.id == StudentGroupEnrollment.student_id)
+                & (Student.status == Status.ACTIVE),
+            )
             .where(Group.status == Status.ACTIVE)
             .group_by(Group.id, Group.name)
             .order_by(Group.name)

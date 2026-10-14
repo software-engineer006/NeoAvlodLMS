@@ -536,7 +536,7 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
         <Alert variant="info" title={canEdit ? "Davomatni tahrirlash mumkin" : "Davomat tahriri yopiq"}>
           {canEdit ? <>
             {sheet.finalized ? "Davomat yakunlangan. Status va izohni tuzatish mumkin. " : "Davomatni belgilash va yakunlash mumkin. "}
-            {sheet.edit_deadline ? <>Tahrirlash muddati: <strong>{deadlineLabel}</strong> (Toshkent vaqti).</> : "Administrator tuzatishlari sabab bilan tarixga saqlanadi."}
+            {sheet.edit_deadline ? <>Tahrirlash muddati: <strong>{deadlineLabel}</strong> (Toshkent vaqti).</> : "Administrator tuzatishlari sabab bilan tarixga saqlanadi. Ota-onaga tahrir haqida xabar yuborilmaydi; yuborilmagan eski xabar bekor qilinadi."}
           </> : (!dateValid ? "Avval to‘g‘ri dars sanasini kiriting." : sheet.edit_disabled_reason || "Davomatni tahrirlash uchun 2 kunlik muddat tugagan")}
         </Alert>
       )}
@@ -609,6 +609,7 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
         />
       ) : (
         <div className="space-y-4">
+          {sheet?.items.some(item => item.source_imported) && !sheet.finalized && <Alert variant="info">CSVdan olingan aniq «k»lar qoralama sifatida kiritilgan. Belgilanmagan o‘quvchilarni avtomatik kelmadi deb hisoblamang. Administrator eski sanalarni tekshirib tuzatishi mumkin.</Alert>}
           {/* Quick Mark All Bar */}
           {canEdit && (
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 p-3 sm:p-4 rounded-xl border border-slate-200">
@@ -815,7 +816,7 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900 flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                 <span>
-                  {portal === "admin" ? "Administrator yakunlangan va eski sanalardagi davomatni sabab bilan tuzatishi mumkin. O‘zgarish audit tarixida saqlanadi." : <>
+                  {portal === "admin" ? "Administrator yakunlangan va eski sanalardagi davomatni sabab bilan tuzatishi mumkin. Tahrir auditda saqlanadi; ota-onaga tahrir xabari yuborilmaydi." : <>
                     Yakunlangandan keyin ham dars sanasidan keyingi 2-kun oxirigacha
                     davomatni tuzatish mumkin. Tahrirlash muddati: {deadlineLabel} (Toshkent vaqti).
                   </>}

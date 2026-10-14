@@ -9,6 +9,7 @@ import { Select } from "../components/Select";
 import { Button } from "../components/Button";
 import { Alert } from "../components/Alert";
 import { User, Users } from "lucide-react";
+import { ParentSelector } from "./ParentSelector";
 
 export interface StudentModalProps {
   isOpen: boolean;
@@ -33,11 +34,15 @@ export const StudentModal: React.FC<StudentModalProps> = ({
   const [phone, setPhone] = useState<string>("");
   const [age, setAge] = useState<string>("16");
   const [groupId, setGroupId] = useState<string>("");
+  const [schoolGrade, setSchoolGrade] = useState("");
+  const [schoolName, setSchoolName] = useState("");
 
   // Parent fields
   const [parentFirstName, setParentFirstName] = useState<string>("");
   const [parentLastName, setParentLastName] = useState<string>("");
   const [parentPhone, setParentPhone] = useState<string>("");
+  const [parentMode, setParentMode] = useState("new");
+  const [parentId, setParentId] = useState("");
 
   // Group options
   const [groups, setGroups] = useState<StudentGroupOption[]>([]);
@@ -71,12 +76,15 @@ export const StudentModal: React.FC<StudentModalProps> = ({
   }, [isOpen, isEditing, initialGroupId]);
 
   useEffect(() => {
+    setParentMode("new"); setParentId(student?.parent_id ?? "");
     if (student) {
       setFirstName(student.first_name);
       setLastName(student.last_name ?? "");
       setPhone(student.phone ?? "");
       setAge(student.age == null ? "" : String(student.age));
       setGroupId(student.group_id);
+      setSchoolGrade(student.school_grade ?? "");
+      setSchoolName(student.school_name ?? "");
 
       setParentFirstName(student.parent?.first_name ?? "");
       setParentLastName(student.parent?.last_name ?? "");
@@ -84,13 +92,14 @@ export const StudentModal: React.FC<StudentModalProps> = ({
     } else {
       setFirstName("");
       setLastName("");
-      setPhone("+998");
-      setAge("16");
+      setPhone("");
+      setAge("");
       setGroupId(initialGroupId || "");
+      setSchoolGrade(""); setSchoolName("");
 
       setParentFirstName("");
       setParentLastName("");
-      setParentPhone("+998");
+      setParentPhone("");
     }
     setError(null);
   }, [student, isOpen, initialGroupId]);
@@ -117,7 +126,8 @@ export const StudentModal: React.FC<StudentModalProps> = ({
     }
 
     // Parent validation
-    const hasParent = !!(parentFirstName.trim() || parentLastName.trim() || parentPhone.trim());
+    const hasParent = parentMode === "new" && !!(parentFirstName.trim() || parentLastName.trim() || parentPhone.trim());
+    if (parentMode === "existing" && !parentId) { setError("Mavjud ota-onani tanlang"); return; }
     if (hasParent && (!parentFirstName.trim() || !parentLastName.trim())) {
       setError("Ota-ona ism va familiyasini kiriting");
       return;
@@ -133,6 +143,9 @@ export const StudentModal: React.FC<StudentModalProps> = ({
     try {
       if (isEditing && student) {
         const payload: StudentUpdateInput = {
+          ...(parentMode !== "new" ? { parent_id: parentMode === "existing" ? parentId : null } : {}),
+          ...(schoolGrade.trim() !== (student.school_grade ?? "") ? { school_grade: schoolGrade.trim() || null } : {}),
+          ...(schoolName.trim() !== (student.school_name ?? "") ? { school_name: schoolName.trim() || null } : {}),
           first_name: firstName.trim(),
           last_name: lastName.trim() || undefined,
           phone: phone.trim() || undefined,
@@ -150,6 +163,9 @@ export const StudentModal: React.FC<StudentModalProps> = ({
         onSuccess(updated);
       } else {
         const payload: StudentCreateInput = {
+          ...(parentMode === "existing" ? { parent_id: parentId } : {}),
+          ...(schoolGrade.trim() ? { school_grade: schoolGrade.trim() } : {}),
+          ...(schoolName.trim() ? { school_name: schoolName.trim() } : {}),
           first_name: firstName.trim(),
           last_name: lastName.trim() || null,
           phone: phone.trim() || null,
@@ -201,7 +217,6 @@ export const StudentModal: React.FC<StudentModalProps> = ({
             <User className="w-4 h-4 text-blue-600" />
             <span>O‘quvchi ma’lumotlari</span>
           </div>
-
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
               label="Ism"
@@ -240,6 +255,10 @@ export const StudentModal: React.FC<StudentModalProps> = ({
             />
           </div>
 
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Input label="Sinf" maxLength={100} value={schoolGrade} onChange={(event) => setSchoolGrade(event.target.value)} disabled={isLoading} />
+            <Input label="Maktabi" maxLength={150} value={schoolName} onChange={(event) => setSchoolName(event.target.value)} disabled={isLoading} />
+          </div>
           {!isEditing && (
             <Select
               label="Biriktiriladigan guruh"
@@ -270,6 +289,12 @@ export const StudentModal: React.FC<StudentModalProps> = ({
             <Users className="w-4 h-4 text-indigo-600" />
             <span>Ota-ona ma’lumotlari</span>
           </div>
+          <Select label="Ota-onani bog‘lash" value={parentMode} disabled={isLoading} onChange={event => setParentMode(event.target.value)}
+            options={[{ value: "new", label: student?.parent ? "Bog‘langan ota-onani tahrirlash" : "Yangi ota-ona (ixtiyoriy)" }, { value: "existing", label: "Mavjud ota-onani tanlash" }, { value: "none", label: "Ota-ona biriktirmaslik" }]} />
+          {parentMode === "existing" && <ParentSelector value={parentId} onChange={setParentId} current={student?.parent} disabled={isLoading} />}
+          {parentMode === "new" && <>
+          {(student?.parent?.child_count ?? 0) > 1 && <Alert variant="info">Bu ota-onaga {student?.parent?.child_count} ta bola bog‘langan. Ota-ona ma’lumotidagi tahrir barcha bolalarda ko‘rinadi.</Alert>}
+          {student?.parent && student.parent.child_count == null && <p className="text-xs text-slate-500">Bog‘langan ota-ona profili umumiy: unga bog‘langan barcha bolalarda bu tahrir ko‘rinadi.</p>}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
@@ -294,8 +319,9 @@ export const StudentModal: React.FC<StudentModalProps> = ({
                         value={parentPhone}
             onChange={(e) => setParentPhone(e.target.value)}
             disabled={isLoading}
-            helperText="Telegram bot bildirishnomalari ushbu raqamga bog‘lanadi"
+            helperText="Telefon ulanishni avtomatik yaratmaydi. Ota-ona o‘z havolasi orqali botda Start bosadi."
           />
+          </>}
         </div>
 
         <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">

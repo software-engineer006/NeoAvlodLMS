@@ -24,6 +24,7 @@ from neoavlod.models import (
     Parent,
     Staff,
     Student,
+    StudentGroupEnrollment,
 )
 from neoavlod.models.common import Status
 from neoavlod.security.rbac import Permission, has_permission
@@ -105,7 +106,12 @@ async def recipient(
             return None
         query = (
             select(Student.id)
-            .join(Group, Student.group_id == Group.id)
+            .join(
+                StudentGroupEnrollment,
+                (StudentGroupEnrollment.student_id == Student.id)
+                & StudentGroupEnrollment.is_active.is_(True),
+            )
+            .join(Group, StudentGroupEnrollment.group_id == Group.id)
             .where(
                 Student.parent_id == item.parent_id,
                 Student.status == Status.ACTIVE,
@@ -113,14 +119,19 @@ async def recipient(
             )
         )
         if group_ids is not None:
-            query = query.where(Student.group_id.in_(group_ids))
+            query = query.where(Group.id.in_(group_ids))
         active = await session.scalar(query.limit(1))
         return await session.get(Parent, item.parent_id) if active else None
     if item.student_id is None:
         return None
     query_pupil = (
         select(Student)
-        .join(Group, Student.group_id == Group.id)
+        .join(
+            StudentGroupEnrollment,
+            (StudentGroupEnrollment.student_id == Student.id)
+            & StudentGroupEnrollment.is_active.is_(True),
+        )
+        .join(Group, StudentGroupEnrollment.group_id == Group.id)
         .where(
             Student.id == item.student_id,
             Student.status == Status.ACTIVE,
@@ -128,7 +139,7 @@ async def recipient(
         )
     )
     if group_ids is not None:
-        query_pupil = query_pupil.where(Student.group_id.in_(group_ids))
+        query_pupil = query_pupil.where(Group.id.in_(group_ids))
     pupil: Student | None = await session.scalar(query_pupil)
     return pupil
 

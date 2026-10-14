@@ -198,6 +198,39 @@ if [[ "$*" == *release.txt* ]]; then basename "$(readlink "$WEB_ROOT/current")";
             self.assertIn("/import-source:ro", lines[imported])
             self.assertIn("--expected-plan " + "d" * 64, lines[imported])
 
+    def test_refresh_replaces_legacy_import_and_blocks_unsafe_rollback(self) -> None:
+        self.deploy(A)
+        private = self.app / "private/educenter-refresh-data"
+        private.mkdir(parents=True)
+        (private / "plan.sha256").write_text("e" * 64)
+        (self.app / "releases" / B / "backend/dataset_runtime.version").write_text("1\n")
+        self.deploy(B)
+        calls = (self.root / "calls").read_text().splitlines()
+        lines = [line for line in calls if line.startswith(B)]
+        refresh = next(i for i, line in enumerate(lines) if "neoavlod.dataset_refresh" in line)
+        migrate = next(i for i, line in enumerate(lines) if line.endswith("--no-deps migrations"))
+        start = next(i for i, line in enumerate(lines) if "--force-recreate" in line)
+        self.assertLess(migrate, refresh)
+        self.assertLess(refresh, start)
+        self.assertIn("/refresh-source:ro", lines[refresh])
+        self.assertIn("--expected-digest " + "e" * 64, lines[refresh])
+        self.assertFalse(any("neoavlod.educenter_import" in line or "neoavlod.english_import" in line for line in lines))
+        result = self.run_script("rollback.sh")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("archive boundary", result.stderr)
+        self.assertEqual((self.app / "current").readlink().name, B)
+
+    def test_refresh_invalid_or_missing_private_input_never_runs_import(self) -> None:
+        self.deploy(A)
+        private = self.app / "private/educenter-refresh-data"
+        private.mkdir(parents=True)
+        (private / "plan.sha256").write_text("invalid")
+        (self.app / "releases" / B / "backend/dataset_runtime.version").write_text("1\n")
+        result = self.run_script("deploy.sh", B)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual((self.app / "current").readlink().name, A)
+        self.assertNotIn("neoavlod.dataset_refresh", (self.root / "calls").read_text())
+
     def test_import_failure_and_unreviewed_data_restore_previous_release(self) -> None:
         self.deploy(A)
         private = self.app / "private/educenter_data"

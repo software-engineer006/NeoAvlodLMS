@@ -9,9 +9,14 @@ function buildRequests(): Record<string, string> {
     "GET /admin/attendance/pending": "Davomat olinmagan guruhlar olindi",
     "GET /admin/attendance/groups": "Davomat uchun guruhlar olindi",
     "GET /admin/attendance/history": "Davomat tarixi olindi",
+    "GET /admin/attendance/message-template": "Davomat xabari shabloni olindi",
+    "POST /admin/attendance/message-template/preview": "Davomat xabari namunasi tekshirildi",
+    "PUT /admin/attendance/message-template": "Davomat xabari shablonini saqlash so‘rovi",
     "GET /admin/attendance/groups/{group_id}/history": "Guruh davomat tarixi olindi",
     "GET /admin/lookups/group-options": "Guruh tanlash ro‘yxati olindi",
     "GET /admin/lookups/student-groups": "O‘quvchi guruhlari olindi",
+    "GET /admin/lookups/rooms": "Xona tanlash ro‘yxati olindi",
+    "GET /admin/lookups/parents": "Ota-ona tanlash ro‘yxati olindi",
     "GET /admin/logs": "Loglar ro‘yxati olindi",
     "GET /admin/logs/days": "Log mavjud kunlar olindi",
     "GET /admin/logs/{day}/download": "Kunlik log yuklash so‘rovi",
@@ -48,6 +53,7 @@ function buildRequests(): Record<string, string> {
   for (const [resource, singular, plural, id] of [
     ["staff", "Xodim", "Xodimlar", "staff_id"], ["subjects", "Fan", "Fanlar", "subject_id"],
     ["groups", "Guruh", "Guruhlar", "group_id"], ["students", "O‘quvchi", "O‘quvchilar", "student_id"],
+    ["rooms", "Xona", "Xonalar", "room_id"],
   ]) {
     const base = `/admin/${resource}`, item = `${base}/{${id}}`;
     Object.assign(requests, {
@@ -71,6 +77,8 @@ function buildRequests(): Record<string, string> {
   }
   requests["GET /admin/groups/{group_id}/attendance/history"] = "Guruh davomat tarixi olindi";
   requests["POST /admin/students/{student_id}/transfer"] = "O‘quvchini boshqa guruhga ko‘chirish so‘rovi";
+  requests["PUT /admin/students/{student_id}/groups/{group_id}"] = "O‘quvchining guruhga biriktirishini saqlash so‘rovi";
+  requests["PATCH /admin/students/{student_id}/groups/{group_id}"] = "O‘quvchining kurs ma’lumotlarini tahrirlash so‘rovi";
   requests["POST /admin/students/{student_id}/parent/telegram-link"] = "Ota-ona Telegram ulanish havolasi so‘raldi";
   requests["GET /teacher/groups/{group_id}/attendance/history"] = "Guruh davomat tarixi olindi";
   return requests;

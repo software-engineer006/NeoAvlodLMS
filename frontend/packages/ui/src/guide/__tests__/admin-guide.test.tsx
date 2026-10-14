@@ -26,6 +26,7 @@ const common = [
 const expected: Record<string, string[]> = {
   "staff:manage": ["admin-staff"],
   "subjects:manage": ["admin-subjects"],
+  "rooms:manage": ["admin-rooms"],
   "groups:read": ["admin-groups"],
   "groups:create": ["admin-groups", "admin-group-create"],
   "groups:edit": ["admin-groups", "admin-group-edit"],
@@ -37,6 +38,7 @@ const expected: Record<string, string[]> = {
     "admin-history",
     "admin-attendance",
     "admin-correction",
+    "admin-attendance-template",
   ],
   "messages:send": ["admin-messages", "admin-delivery"],
 };

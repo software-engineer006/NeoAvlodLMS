@@ -15,7 +15,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from neoavlod.errors import DomainError
 from neoavlod.message_schemas import MessageAudience, MessageDraft, MessageSend, format_message
-from neoavlod.models import Group, MessageCampaign, MessageDelivery, Parent, Student, SystemSettings
+from neoavlod.models import (
+    Group,
+    MessageCampaign,
+    MessageDelivery,
+    Parent,
+    Student,
+    StudentGroupEnrollment,
+    SystemSettings,
+)
 from neoavlod.models.common import Status
 from neoavlod.security.sessions import Identity
 from neoavlod.services.bot_settings import locked_bot_settings
@@ -60,7 +68,12 @@ async def candidates(
 ) -> list[Candidate]:
     query = (
         select(Student, Group.name)
-        .join(Group, Student.group_id == Group.id)
+        .join(
+            StudentGroupEnrollment,
+            (StudentGroupEnrollment.student_id == Student.id)
+            & StudentGroupEnrollment.is_active.is_(True),
+        )
+        .join(Group, StudentGroupEnrollment.group_id == Group.id)
         .where(
             Student.status == Status.ACTIVE,
             Group.status == Status.ACTIVE,
@@ -78,29 +91,32 @@ async def candidates(
         )
         if group_ids != set(audience.group_ids):
             raise DomainError("Tanlangan guruh mavjud emas yoki faol emas", 422)
-        query = query.where(Student.group_id.in_(audience.group_ids))
+        query = query.where(Group.id.in_(audience.group_ids))
     rows = (await session.execute(query)).all()
     parent_groups: dict[uuid.UUID, set[str]] = {}
     parent_students: dict[uuid.UUID, set[str]] = {}
-    result: list[Candidate] = []
+    pupils: dict[uuid.UUID, Candidate] = {}
     for pupil, group_name in rows:
         name = full_name(pupil.first_name, pupil.last_name)
-        result.append(
-            Candidate(
+        if pupil.id not in pupils:
+            pupils[pupil.id] = Candidate(
                 pupil.id,
                 "student",
                 name,
-                [group_name],
+                [],
                 [name],
                 pupil.telegram_id,
                 pupil.telegram_connected,
                 connection_reason(pupil),
             )
-        )
+        pupils[pupil.id].group_names.append(group_name)
         if pupil.parent_id is not None:
             parent_groups.setdefault(pupil.parent_id, set()).add(group_name)
             parent_students.setdefault(pupil.parent_id, set()).add(name)
     parents = (await session.scalars(select(Parent).where(Parent.id.in_(parent_groups)))).all()
+    result = list(pupils.values())
+    for row in result:
+        row.group_names.sort()
     result.extend(
         Candidate(
             p.id,

@@ -205,7 +205,7 @@ describe("Student Profile & Monthly Attendance Modal (Task 057)", () => {
       fireEvent.click(prevBtn);
 
       await waitFor(() => {
-        expect(getSpy).toHaveBeenCalledTimes(2);
+        expect(getSpy.mock.calls.filter(([path]) => path.startsWith("/api/v1/admin/students/std-100"))).toHaveLength(2);
       });
 
       // Click next month
@@ -213,7 +213,7 @@ describe("Student Profile & Monthly Attendance Modal (Task 057)", () => {
       fireEvent.click(nextBtn);
 
       await waitFor(() => {
-        expect(getSpy).toHaveBeenCalledTimes(3);
+        expect(getSpy.mock.calls.filter(([path]) => path.startsWith("/api/v1/admin/students/std-100"))).toHaveLength(3);
       });
     });
 

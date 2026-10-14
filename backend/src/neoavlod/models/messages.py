@@ -19,10 +19,10 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from neoavlod.database import Base
-from neoavlod.models.common import UUIDPrimaryKey
+from neoavlod.models.common import DatasetFields, UUIDPrimaryKey
 
 
-class MessageCampaign(UUIDPrimaryKey, Base):
+class MessageCampaign(DatasetFields, UUIDPrimaryKey, Base):
     __tablename__ = "message_campaigns"
     __table_args__ = (
         UniqueConstraint("author_id", "request_id", name="uq_message_campaigns_author_request"),
@@ -48,7 +48,7 @@ class MessageCampaign(UUIDPrimaryKey, Base):
     )
 
 
-class MessageDelivery(UUIDPrimaryKey, Base):
+class MessageDelivery(DatasetFields, UUIDPrimaryKey, Base):
     __tablename__ = "message_deliveries"
     __table_args__ = (
         UniqueConstraint("campaign_id", "parent_id", name="uq_message_deliveries_parent"),

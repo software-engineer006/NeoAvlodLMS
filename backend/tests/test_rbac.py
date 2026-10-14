@@ -118,6 +118,7 @@ def test_catalogue_is_exactly_the_documented_keys() -> None:
     assert PERMISSION_CATALOG == {
         "staff:manage",
         "subjects:manage",
+        "rooms:manage",
         "groups:read",
         "groups:create",
         "groups:edit",

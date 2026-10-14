@@ -4,6 +4,7 @@ export * from "./auth";
 export * from "./navigation";
 export * from "./staff";
 export * from "./academic";
+export { RoomsManagementView } from "./academic/RoomsManagementView";
 export * from "./students";
 export * from "./attendance";
 export * from "./settings";

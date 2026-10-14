@@ -114,6 +114,11 @@ describe("Admin Attendance History (Task 032)", () => {
   });
 
   describe("AdminAttendanceView Component", () => {
+    it("distinguishes imported source drafts from finalized attendance", async () => {
+      vi.spyOn(apiClient, "get").mockImplementation((url: string) => Promise.resolve(url.endsWith("/groups") ? sampleGroups : { items: [{ ...sampleRecords[0], source_imported: true, finalized: false, batch_id: null }], total: 1, page: 1, page_size: 15 }));
+      render(<AdminAttendanceView currentUser={adminUser} defaultTab="list" />);
+      await waitFor(() => expect(screen.getByText("CSV qoralamasi")).toBeDefined());
+    });
     it("fetches and renders attendance records in readonly table with stats", async () => {
       vi.spyOn(apiClient, "get").mockImplementation((url: string) => {
         if (url === "/api/v1/admin/attendance/groups") {
