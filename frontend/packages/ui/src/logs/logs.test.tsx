@@ -37,13 +37,26 @@ it("shows actor, exact seconds and immutable old/new/reason details safely", asy
   render(<LogsView currentUser={user} />);
   await screen.findAllByText("Namuna Ustoz");
   expect(screen.getByText(/12:00:01/)).toBeDefined();
+  expect(screen.getByText("14.10.2026 12:00:01")).toBeDefined();
   fireEvent.click(screen.getByRole("button", { name: /Davomat tuzatildi tafsilotlari/ }));
   await screen.findByRole("dialog");
   expect(screen.getByText("Jurnal tekshirildi")).toBeDefined();
   expect(screen.getByText("Kelmadi")).toBeDefined();
   expect(screen.getByText("Keldi")).toBeDefined();
-  expect(screen.getByText(/2026-10-14T07:00:01.123456Z/)).toBeDefined();
+  expect(screen.getByText(/14\.10\.2026 07:00:01\.123456/)).toBeDefined();
   expect(screen.queryByRole("button", { name: /O‘chirish|Tahrirlash/ })).toBeNull();
+});
+
+it("shows exact portal and resource for old HTTP logs in both row and details", async () => {
+  const http = { ...entry, action: "http.request", actor: { ...entry.actor!, role: "superadmin" as const },
+    details: { method: "GET", route: "/api/v1/admin/dashboard/stats", status: 200, outcome: "success" } };
+  mockPage({ ...page, items: [http], actions: [http.action] });
+  render(<LogsView currentUser={user} />);
+  await screen.findByText("Admin paneli — Dashboard ko‘rsatkichlari olindi");
+  expect(screen.queryByText("Paneldagi so‘rov")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: /Dashboard ko‘rsatkichlari olindi tafsilotlari/ }));
+  expect(screen.getByRole("dialog")).toBeDefined();
+  expect(screen.getByText("Admin paneli")).toBeDefined();
 });
 
 it("applies server filters and resets the cursor when the day changes", async () => {

@@ -300,3 +300,20 @@ unchanged,worker_ready and OTP180 verified. Scratch DB dropped. Python/English
 receipts read-only already_applied/created0; no credentials state mounted.
 Post-audit full DB plus encrypted files/key backup checked privately; API and
 archive healthy, real Telegram worker singleton running. Local realbot stopped.
+
+2026-10-14 follow-up115–116: concrete verified-session portal/resource/action
+labels, old HTTP compatibility and DD.MM.YYYY HH:mm:ss Tashkent/UTC microseconds;
+22 backend/249 frontend/type/lint/build checks and Chrome1440/768/360 passed.
+Admin-only label/time registries tree-shake out of teacher bundle. Guide aligned.
+Production actual HTTPS/cookie/CSRF/Origin correction verified with clearly
+labelled unlinked robot fixture,5min test sessions (not OTP login): teacher
+present->absent and administrator absent->late, exact actor ID/name/role,
+old/new status+note, reason, request correlation and timestamp window. Missing
+reason422/no mutation; full-grant admin+teacher12 log/legacy read/export checks403.
+Real superadmin test gzip contained identical2events; forced encrypted archive
+readback preserved both. Fixture3staff/1group/1student inactive and sessions
+revoked; reused cookies401. All original12table customer/credential/history/
+message/import per-ID hashes identical. One clearly labelled non-real attendance
+batch/student record and inactive fixtures remain for immutable audit/FK evidence;
+no real family sends. Private backup before test; current serving source b1a39b6.
+Final117 release/CI/production UI receipt follows.

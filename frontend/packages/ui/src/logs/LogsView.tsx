@@ -15,7 +15,7 @@ import { EmptyState } from "../components/EmptyState";
 import { LoadingState } from "../components/LoadingState";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../components/Table";
 import { LogDetails } from "./LogDetails";
-import { logActionLabel, logEntityLabel, logRejected, logTime, logValue } from "./format";
+import { logActionLabel, logDate, logEntityLabel, logEventLabel, logRejected, logTime, logValue } from "./format";
 import { useLogPage } from "./useLogPage";
 import type { LogDay, LogEvent } from "./types";
 
@@ -93,19 +93,19 @@ export function LogsView({ currentUser }: { currentUser: CurrentUser }) {
       {days.length > 0 && <div className="flex flex-wrap gap-2" aria-label="Oxirgi log kunlari">
         {days.slice(0, 7).map((d) => <Button key={d.day} size="sm" variant="ghost"
           onClick={() => { setFilters({ day: d.day, actor_id: "", action: "", outcome: "", entity: "" }); setCursors([""]); setSelected(null); }}>
-          {d.day} · {d.count}</Button>)}
+          {logDate(d.day)} · {d.count}</Button>)}
       </div>}
     </Card>
     {downloadError && <Alert variant="danger">{downloadError}</Alert>}
     {error ? <ErrorState message={error} onRetry={() => setRevision((n) => n + 1)} /> : loading ? <LoadingState /> :
       data?.items.length ? <Card className="overflow-hidden">
-        <Table><TableHeader><TableRow>{["Vaqt", "Xodim", "Amal / obyekt", "Natija", "Tafsilot"].map((label) => <TableHead key={label}>{label}</TableHead>)}</TableRow></TableHeader>
+        <Table><TableHeader><TableRow>{["Vaqt (Toshkent)", "Xodim", "Amal / obyekt", "Natija", "Tafsilot"].map((label) => <TableHead key={label}>{label}</TableHead>)}</TableRow></TableHeader>
           <TableBody>{data.items.map((entry) => <TableRow key={entry.id}>
             <TableCell className="whitespace-nowrap text-xs"><time dateTime={entry.at}>{logTime(entry.at)}</time></TableCell>
             <TableCell><p className="font-medium">{entry.actor?.name || "Tizim xizmati"}</p><p className="text-xs text-slate-500">{entry.actor?.username || entry.source}</p></TableCell>
-            <TableCell><p className="font-medium">{logActionLabel(entry.action)}</p><p className="text-xs text-slate-500 break-words">{entry.entity.name || logValue(entry.details.group) || logEntityLabel(entry.entity.type)}</p></TableCell>
+            <TableCell><p className="font-medium">{logEventLabel(entry)}</p><p className="text-xs text-slate-500 break-words">{entry.entity.name || (entry.action === "http.request" ? `${logValue(entry.details.method)} ${logValue(entry.details.route)}` : logValue(entry.details.group) || logEntityLabel(entry.entity.type))}</p></TableCell>
             <TableCell><Badge variant={logRejected(entry) ? "danger" : "success"}>{logRejected(entry) ? "Rad etilgan" : "Bajarilgan"}</Badge></TableCell>
-            <TableCell><Button size="sm" variant="outline" aria-label={`${logActionLabel(entry.action)} tafsilotlari`}
+            <TableCell><Button size="sm" variant="outline" aria-label={`${logEventLabel(entry)} tafsilotlari`}
               onClick={() => setSelected({ owner: currentUser.id, entry })}>Ko‘rish</Button></TableCell>
           </TableRow>)}</TableBody></Table>
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 p-4 text-sm">

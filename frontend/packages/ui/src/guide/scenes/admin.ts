@@ -53,7 +53,7 @@ export const adminScenes = {
     { buttons: ["Tekshirish va saqlash"] }, { badges: ["Bot: namuna_bot", "Worker: tayyor"], note: "Bot nomi o‘zgarsa, yangi ulanish havolalari yangilanadi." }),
   logs: scene("Kunlik loglar — superadmin", { fields: [{ label: "Log kuni", type: "date", value: "2026-10-14" }] },
     { fields: [choice("Xodim", "Barcha xodimlar", "Namuna Ustoz"), choice("Amal", "Davomat tuzatildi"), choice("Natija", "Bajarilgan")] },
-    { table: { columns: ["Vaqt", "Xodim", "Oldingi", "Yangi"], rows: [["12:00:01", "Namuna Ustoz", "Kelmadi", "Keldi"]] },
+    { table: { columns: ["Vaqt (Toshkent)", "Xodim", "Oldingi", "Yangi"], rows: [["14.10.2026 12:00:01", "Namuna Ustoz", "Kelmadi", "Keldi"]] },
       fields: [field("Sabab", "Jurnal qayta tekshirildi")], buttons: ["Ko‘rish"] },
     { buttons: ["Kunlik logni yuklash"], note: ".jsonl.gz: tanlangan kunning barcha yozuvlari. Tahrirlash va o‘chirish yo‘q." }),
 };

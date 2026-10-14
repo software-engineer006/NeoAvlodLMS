@@ -30,6 +30,7 @@ class AuditHTTPMiddleware(BaseHTTPMiddleware):
             database = cast(Database, request.app.state.database)
             async with database.session() as session:
                 actor = getattr(request.state, "audit_actor", None)
+                portal = getattr(request.state, "audit_portal", None)
                 verified = actor is not None
                 session.info["audit_context"] = {
                     "source": "http",
@@ -39,18 +40,22 @@ class AuditHTTPMiddleware(BaseHTTPMiddleware):
                 # never authorizes business operations. Unknown cookies log no PII.
                 raw = request.cookies.get(ACCESS_COOKIE, "")
                 if actor is None and raw and len(raw) <= 128:
-                    person = await session.scalar(
-                        select(Staff)
+                    known = (await session.execute(
+                        select(Staff, AuthSession.portal)
                         .join(AuthSession, AuthSession.staff_id == Staff.id)
                         .where(AuthSession.access_token_hash == token_hash(raw))
-                    )
-                    if person is not None:
+                    )).one_or_none()
+                    if known is not None:
+                        person, known_portal = known
+                        portal = known_portal.value
                         await bind_actor(session, person, verified=False)
                         actor = session.info["audit_context"]["actor"]
                 elif actor is not None:
                     session.info["audit_context"]["actor"] = actor
                 if actor is not None:
                     route = getattr(request.scope.get("route"), "path", "/api/v1/{unknown}")
+                    if portal not in ("admin", "teacher"):
+                        portal = "teacher" if actor["role"] == "teacher" else "admin"
                     await emit(
                         session,
                         "http.request",
@@ -60,6 +65,7 @@ class AuditHTTPMiddleware(BaseHTTPMiddleware):
                             "status": status,
                             "outcome": "success" if status < 400 else "rejected",
                             "authenticated": verified,
+                            "portal": portal,
                         },
                     )
                     await session.commit()

@@ -669,7 +669,7 @@ export const adminTopics: GuideTopic[] = [
     previewAlt: "React namuna ekranida log kuni, xodim/amal filtrlari, eski-yangi qiymat va kunlik yuklash raqamlangan.",
     steps: steps(
       ["Kunni tanlang", "Loglar bo‘limida Log kuni orqali kerakli sanani tanlang. Kunlar Toshkent vaqti bo‘yicha ajratiladi."],
-      ["Xodim va amalni toping", "Xodim, amal, obyekt turi va natija filtrlari bilan qidiring. Keyingi va Oldingi tugmalari sahifalarni ochadi. Vaqt soniyagacha ko‘rsatiladi."],
+      ["Xodim va amalni toping", "Xodim, amal, obyekt turi va natija filtrlari bilan qidiring. Har yozuvda panel, bo‘lim va bajarilgan amal ko‘rsatiladi. Sana 14.10.2026, vaqt Toshkent vaqti bilan soniyagacha. Keyingi va Oldingi tugmalari sahifalarni ochadi."],
       ["Tafsilotlarni tekshiring", "Ko‘rish tugmasi bilan eski/yangi qiymat, davomat sababi, xodim va vaqtni solishtiring. Aniq vaqt bo‘limida UTC mikrosoniyalari ham bor."],
       ["Kunlik logni yuklang", "Kunlik logni yuklash tanlangan kunning barcha yozuvlarini .jsonl.gz faylga oladi. Filtrlar kunlik eksportni qisqartirmaydi. Faylni ochgach har qator alohida JSON yozuvidir."],
     ),

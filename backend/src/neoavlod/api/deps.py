@@ -38,6 +38,7 @@ async def current_identity(request: Request, session: SessionDependency) -> Iden
     """Active staff + live session on every request; portal is checked by callers."""
     identity = await authenticate(session, request.cookies.get(ACCESS_COOKIE))
     await bind_actor(session, identity.staff)
+    request.state.audit_portal = identity.session.portal.value
     return identity
 
 

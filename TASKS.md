@@ -136,7 +136,18 @@ invariantlari tekshiruvdan o‘tdi.
 
 ## Davom ettirish checkpoint
 
-2026-10-14 YAKUNIY:001–114done, faol task yo‘q. Production source
+2026-10-14 faol117[/]:001–116done. Yangi talab: aniq portal/amal loglari,
+DD.MM.YYYY HH:mm:ss Toshkent UI.115:22backend/249frontend/3viewport
+passed; oldHTTPlabel compatibility, spoof rejection and teacher bundle isolation.
+116: actual productionHTTPS teacher+admin2corrections, exact actor/timestamp/
+old-new/note/reason/requestID,12role403checks and real gzip export verified.
+Test3staff/1group/1student inactive, sessions revoked; all original12table
+rows hashes preserved. Both corrections archived/decrypt-readback unchanged,
+no real family sends, test sessions not OTP login.117 next: fullbackend then
+secret scan/push/exact greenCI/production UI actual events/final docs.
+No external input needed. Old114 checkpoint follows as historical.
+
+2026-10-14 TARIXIY:001–114done, faol task yo‘q. Production source
 b1a39b64cc8cedcaff9f309792438a007d4c5b44; Actions38547243448 test va
 deploySUCCESS (362backend/240frontend/mypy145/13agent/16deploy tests).
 React qo‘llanma33scenes, super-only Loglar va all-role correction reason
@@ -1275,3 +1286,15 @@ provision production restricted DB URLs/stable audit key/private folder,
 archiver startup/backup/rollback plus old-pre-audit rollback enforcement and
 real disposable production smoke.114 Git push/exact greenCI/liveVPS acceptance.
 No source push/deploy yet;no external user input needed.
+
+### Aniq log tavsifi va production davomat qabuli (2026-10-14)
+
+- [x] 115 — Loglarda portal/amallarni aniq ko‘rsatish va Toshkent sanasini formatlash.
+  - Qabul: verified session portal HTTP log detailsga yoziladi; oldingi route/method yozuvlar ham aniq o‘zbekcha bo‘lim/amal bilan render qilinadi. Tizimga kirish, o‘qish, tahrir, rad etish ajratiladi; API so‘rovi asossiz page-click deb ko‘rsatilmaydi. Sana DD.MM.YYYY, vaqt HH:mm:ss Asia/Tashkent; kun tugmalari/dars sanasi/detail mos, ISO faqat wire/cursor/raw dalil uchun saqlanadi. Docker backend attribution va frontend meaningful labels/time/UI checks/build/checksum o‘tadi.
+  - Dalil: Verified server session portal added to HTTP outcome details including known expired/inactive and cross-portal denials; spoofed X-Portal ignored. Old route/method/actor logs render concrete Uzbek portal/resource/action without invented page clicks; rejected reads say requested/rejected. DD.MM.YYYY HH:mm:ss Asia/Tashkent row/detail/day chips and lesson dates; exact UTC microseconds formatted without ISO display, ISO retained only wire/cursor.22PostgreSQL attribution/API/stress and Ruff/mypy2 passed. Full249Vitest/typecheck/lint/clean build passed; final19log tests/build/source-checksum passed. Actual closed-synthetic Chrome1440/768/360 confirms concrete dashboard label,14.10.2026 15:37:47, role deny/details/gzip/reason/no overflow/JS errors. Guide scene/prose aligned; pure registry/time factories keep teacher bundle free of admin log labels and unchanged311.82KB.
+- [x] 116 — Haqiqiy production HTTP davomat audit va role taqiqlarini sinash.
+  - Bog‘liq:115. Qabul: private backup va mavjud biznes qatorlari baseline; aniq ajratilgan test fixture/session bilan actual production authenticated HTTP attendance correction, old/new/note/reason/actor/seconds/correlation va kunlik export/archive integrity tekshiriladi. Full-permission admin va teacher barcha log/legacy audit read/download APIlarda403, anon401; admin UI/teacher UI ham logni bermaydi. Test sessiyalar revoke, fixture inactive; haqiqiy o‘quvchi/davomat/credential/config o‘zgarmaydi, real Telegram xabari yuborilmaydi. Immutable test dalillari o‘chirilmaydi; test session OTP login sifatida ko‘rsatilmaydi.
+  - Dalil: Private pre-test pg_dump and per-original-ID12table hash baseline. Actual production public HTTPS+cookie/CSRF/Origin authentication with explicit5min robot test sessions (not OTP login):teacher finalize, teacher correction present->absent and admin correction absent->late; both status/note deltas, exact actor ID/name/role, reason, Tashkent day, timestamp within request window and response request_id matched logs. Missing reasons422/no mutation. Full-catalog admin and teacher:12GET list/days/detail/download/legacyaudit checks403. Real superadmin test daily gzip/no-store included byte-for-value same2events. Test sessions revoked and3staff/1group/1non-real student inactive; post-cleanup token requests401. All original customer/credential/history/message/import rows identical; no real recipients/Telegram messages. Immutable fixture evidence retained, not deleted. Forced production archive+decrypt/readback finds both correction events unchanged; singleton restarted healthy. Original business totals unchanged except clearly labelled inactive test entities/one test attendance batch retained for FK/audit integrity.
+- [/] 117 — Aniq log UI release push/deploy va production yakuniy qabuli.
+  - Bog‘liq:116. Qabul: final public diff/secret/PII scan, professional non-force push, exact-SHA green CI/CD. Production HTTPS assets/portal-route label/DD.MM.YYYY/Toshkent UI1440/768/360/role deny va archived actual116 correction render/export readback; API/worker/archive healthy, key/immutable folder/biznes ma’lumotlari preserved. TASKS/test/guide/operational docs dalillari to‘liq.
+  - Dalil: Kutilmoqda.

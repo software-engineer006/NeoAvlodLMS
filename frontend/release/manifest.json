@@ -1,12 +1,12 @@
 {
   "schema": 1,
-  "source_sha256": "89d1ef1e22c366034c4d650057751f4954789d2ade2878bb585fe2107090e14d",
+  "source_sha256": "875d6043336d3e72f4363bf1c793bd1231a92aa218fc4336de6b208d9dfa1613",
   "assets": {
     "admin": {
-      "assets/index-BgRDjJ1j.js": "0d6b01d94e5ceff4fa615bd4df59a1d134d7ce1d09c7dc701958a47a9f2b2719",
+      "assets/index-BDI_3RZd.js": "6a753c3b29f3132b21c32455b8e388bdd112fd3a11ec3311453cfd710fc3d766",
       "assets/index-C7t_Wu98.css": "4d247bafa9b3293c4a5011084e76b0d50517fa1fc6e9f084eba01da7abbd2a87",
       "favicon.svg": "781ebc9673d5e7b3306ea8c79b0c7d8846f327e19ae50bc90fc69677245678f3",
-      "index.html": "e6aeb8036a799e1deb294c7dd686857b5e07a3d3178cb9e5c38c0ea43a99654d",
+      "index.html": "ffa4c0a0b80f4504e96b94e7b4923741cf63e949cc1a9312fc70e8c7f25d30c3",
       "neoavlod-logo.svg": "780350296223e18c0a8c91ea04248ccb72918189a97166a76b40a0bd3ca2f467"
     },
     "teacher": {

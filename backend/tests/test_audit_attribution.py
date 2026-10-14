@@ -115,6 +115,7 @@ async def test_http_truthful_actor_outcome_correlation_and_secret_exclusion(
     assert {e.body["details"]["status"] for e in requests} == {201, 200, 403, 422, 405}
     assert requests[-1].actor_id == limited.staff_id
     assert requests[-1].body["details"]["outcome"] == "rejected"
+    assert all(e.body["details"]["portal"] == "admin" for e in requests)
     serialized = json.dumps([e.body for e in records])
     assert secret not in serialized and boss.tokens.access not in serialized
     assert boss.tokens.csrf not in serialized
@@ -141,6 +142,23 @@ async def test_rejected_known_session_is_not_falsely_authenticated(
     recorded = [e for e in await entries(model_database) if e.action == "http.request"]
     assert len(recorded) == 1 and recorded[0].actor_id == who.staff_id
     assert recorded[0].body["details"]["authenticated"] is False
+    assert recorded[0].body["details"]["portal"] == "admin"
+
+
+async def test_teacher_portal_is_verified_for_shared_and_rejected_admin_routes(
+    model_database: Database,
+) -> None:
+    who = await actor(model_database, role=Role.TEACHER)
+    async with client_for(who) as client:
+        response = await client.get("/api/v1/auth/teacher/me", headers={"X-Portal": "admin"})
+        assert response.status_code == 200
+        assert (await client.get("/api/v1/teacher/groups")).status_code == 200
+        assert (await client.get("/api/v1/admin/logs/days")).status_code == 403
+    recorded = [e for e in await entries(model_database) if e.action == "http.request"]
+    assert len(recorded) == 3
+    assert all(e.body["details"]["portal"] == "teacher" for e in recorded)
+    assert recorded[-1].body["details"]["route"] == "/api/v1/admin/logs/days"
+    assert recorded[-1].body["details"]["outcome"] == "rejected"
 
 
 async def test_login_otp_refresh_logout_semantics_no_credentials(model_database: Database) -> None:

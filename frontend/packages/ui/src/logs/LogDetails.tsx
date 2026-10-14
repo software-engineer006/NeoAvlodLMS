@@ -1,6 +1,7 @@
 import { Modal } from "../components/Modal";
 import { Badge } from "../components/Badge";
-import { logActionLabel, logFieldValue, logRejected, logTime, logValue } from "./format";
+import { logDate, logEventLabel, logExactUTC, logFieldValue, logRejected, logTime, logValue } from "./format";
+import { logPortalLabel } from "./requestLabels";
 import type { LogEvent } from "./types";
 
 const fields: Record<string, string> = {
@@ -20,7 +21,7 @@ export function LogDetails({ entry, onClose }: { entry: LogEvent | null; onClose
     description="Saqlangan yozuv faqat o‘qish uchun ochiladi.">
     {entry && <div className="space-y-5 min-w-0 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="font-semibold">{logActionLabel(entry.action)}</h3>
+        <h3 className="font-semibold">{logEventLabel(entry)}</h3>
         <Badge variant={logRejected(entry) ? "danger" : "success"}>
           {logRejected(entry) ? "Rad etilgan" : "Bajarilgan"}
         </Badge>
@@ -29,7 +30,8 @@ export function LogDetails({ entry, onClose }: { entry: LogEvent | null; onClose
         {[["Xodim", entry.actor ? `${entry.actor.name} (${entry.actor.username || entry.actor.role})` : "Tizim xizmati"],
           ["Vaqt (Toshkent)", logTime(entry.at)], ["Obyekt", entry.entity.name || logValue(entry.details.group)],
           ["Guruh", logValue(entry.details.group)], ["Sabab", logValue(entry.details.reason)], ["Manba", entry.source],
-          ["Dars sanasi", logValue(entry.details.lesson_date)]].map(([label, value]) =>
+          ["Panel", logPortalLabel(entry) || "—"],
+          ["Dars sanasi", logDate(logValue(entry.details.lesson_date))]].map(([label, value]) =>
           <div key={label}><dt className="text-slate-500">{label}</dt>
             <dd className="mt-1 break-words whitespace-pre-wrap font-medium">{value}</dd></div>)}
       </dl>
@@ -51,7 +53,7 @@ export function LogDetails({ entry, onClose }: { entry: LogEvent | null; onClose
       </p>}
       <details className="rounded-xl border border-slate-200 p-3">
         <summary className="cursor-pointer font-medium">Aniq vaqt va yozuv identifikatori</summary>
-        <p className="mt-2 break-all">UTC: {entry.at}</p>
+        <p className="mt-2 break-all">UTC: {logExactUTC(entry.at)}</p>
         <p className="mt-1 break-all">Log ID: {entry.id}</p>
         {entry.request_id && <p className="mt-1 break-all">So‘rov ID: {entry.request_id}</p>}
         {typeof entry.details.method === "string" && <p className="mt-2 break-all">So‘rov: {logValue(entry.details.method)} {logValue(entry.details.route)}</p>}
