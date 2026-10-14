@@ -136,17 +136,19 @@ invariantlari tekshiruvdan o‘tdi.
 
 ## Davom ettirish checkpoint
 
-2026-10-14 joriy102[/]: dastlabki uch karta 7ae8055 release orqali productionga
-chiqdi; Actions38512361880 test/deploySUCCESS, HTTPS42assets va real production
-frontend sintetik Chromium1440/768/360 o‘tdi. Faol ish davomida user ikkinchi
-screenshotdagi Boshqaruv paneli/hisob jadvalini ham olib tashlashni so‘radi;
-shu bitta dashboard task doirasi kengaytirildi. Blok va unga tegishli health
-so‘rovi/state/import olib tashlandi. Yangi guide matn/PNG/capture scripti mos;
-Docker typecheck/lint/196Vitest/ikkala build o‘tdi. Sintetik admin+superadmin
-1440/768/360 barcha to‘rtta blok yo‘q/statistikalar/profil/guruh navigatsiyasi
-va nooverflow/JSerrors tasdiqlandi. Keyingi: release/public scan, yangi
-commit/non-force push va exact-SHA CI/CD/HTTPS qabuli. 102 hali faol.
-001–101 bajarilgan. Quyidagi checkpointlar tarixiy.
+2026-10-14 YAKUNIY:001–102 bajarilgan, faol task yo‘q. Admin dashboarddagi
+uchta texnik karta va Boshqaruv paneli/tugmalar/hisob jadvali olib tashlandi.
+Guide matn/PNG/capture scripti yangi statistikalar ko‘rinishiga mos. Production
+release8db08f7ccd15f27fbda5a542ad6f09627da48834, Actions38513274875 test va
+deploySUCCESS;322backend/196frontend/migration/deploy/rollback checks o‘tdi.
+Public HTTPS42assets va ikkala marker exactSHA; health/ready200; ikki import
+receipt already_applied created0, API/worker healthy. Actual production frontend
+Docker Chromium closed syntheticAPI admin+superadmin1440/768/360: to‘rtta blok
+yo‘q, statistikalar/profil/guruh navigatsiyasi ishlaydi, nooverflow/JSerrors.
+UI dalili .private/ui-acceptance; real hisob ma’lumotlari screenshotga kirmadi.
+PrivateCSV/secret/key/output stage qilinmadi. Registry yakuni faqat hujjat
+commitida saqlanadi; runtime va release assetlari yuqoridagi tekshirilgan SHA.
+Keyingi: yangi foydalanuvchi topshirig‘i; task.sh validate. Quyidagi qaydlar tarixiy.
 
 2026-10-14 YAKUNIY:001–101 bajarilgan,faol task yo‘q. Actual feature/fix release
 c3f78986b2dc15962ee51c1603525c29c2962cd0,Actions38503421183 test+deploySUCCESS.
@@ -1186,6 +1188,7 @@ Qo‘llanma: `LOCAL_DEMO.md`; Docker socketi uchun sandbox escalation kerak bo�
   - Bog‘liq: 100. Qabul: backupdan keyin exact verified release SHA, migratsiyalar/import va singleton worker sog‘lom; HTTPS admin/teacher/guide assets/API/release marker va rol/permission/window/OTP/Xabarlar imkoniyati read-only tekshiriladi. English guruhlari/ikki teacher/Asila bo‘sh davomat/Jamshidbek k-only va oldingi Python/credential/history saqlanadi. Real oilalarga agent tomonidan test xabari yuborilmaydi; deploy xatosida rollback va aniq evidence. CI/CD deploy haqiqatan success bo‘ladi, cheklovlar yashirilmaydi.
   - Dalil: Production exactc3f78986b2dc15962ee51c1603525c29c2962cd0 via green Actions38503421183. Actualpre-release dump scratch restore and rowdigests preserve5oldstaff/password/Telegram/authUUID,4groups/62pupils/388attendance/24batches. Current6staff/7groups/118pupils/486attendance/24batches;English3groups56pupils98k-onlydrafts,Asilaempty/existingprofilepreserved,Jamshidcreated1.0010,realreadonlyAPI own1/2groups/admin200/teacher403/foreign404/anon401;realgetMe/immutablebotconfig/singletonheartbeat;OTP180/runtime15min+7days;HTTPS42assets/32PNG SHA256+markers.ProductionHTTPSbundles DockerChromium closed syntheticAPI:33topics/admin22/full20/limited6/teacher11,search/zoom/role/destination/messages preview-confirm/focus,1440/768/360 nooverflow/JSerrors.Receipt rerun readonlyDB/forbiddencallback/no writablecredentialmount bothcreated0.0campaign/delivery/outbox/send;localpollingstopped;privateCSV/credentials excluded.
 
-- [/] 102 — Admin dashboardidan texnik kartalar va hisob jadvalini olib tashlash.
+- [x] 102 — Admin dashboardidan texnik kartalar va hisob jadvalini olib tashlash.
   - Manba: 2026-10-14 ikki foydalanuvchi screenshoti: Backend API, Xodimlar bo‘limi/RBAC Ruxsatlari, Xavfsizlik protokoli/Telegram OTP hamda Boshqaruv paneli/tugmalar/joriy hisob jadvali.
   - Qabul: rasmdagi to‘rtta blok olib tashlanadi; dashboard statistikasi va qolgan navigatsiya ishlaydi, foydalanilmagan import/state/health so‘rovi tozalanadi. Qo‘llanmaning dashboard matni, rasmi va capture scripti yangi UIga mos. Docker frontend typecheck/lint/test/build/release checksum va sintetik Chromium 1440/768/360 ko‘rinishi o‘tadi. Secret/PII/unrelated faylsiz commit/non-force push, exact-SHA CI/CD deploy va public HTTPS bundle/marker read-only tasdiqlanadi; DB/import/Telegram ma’lumotlariga tahrir kiritilmaydi.
+  - Dalil: Docker clean typecheck/lint/196 Vitest and both builds passed; final dashboard guide PNG/text/capture script and32-image provenance/checksum audit verified. Admin+superadmin Chromium1440/768/360: four requested blocks absent, statistics/profile/group navigation work, no overflow/JS errors; repeated on actual production HTTPS bundles with closed synthetic API. Source8db08f7ccd15f27fbda5a542ad6f09627da48834 non-force pushed; Actions38513274875 test115686364287/deploy115687706843 SUCCESS:322 backend/196 frontend/migration/deploy/rollback checks. Public HTTPS42 assets/both markers match exactSHA; health/ready200; both import receipts already_applied created0, API/worker healthy. Public secret/PII scan passed; private data/unrelated output excluded.
