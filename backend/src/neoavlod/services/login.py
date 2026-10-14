@@ -10,6 +10,7 @@ from sqlalchemy import case, or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from neoavlod.audit_context import bind_actor, emit
 from neoavlod.errors import DomainError, telegram_not_linked
 from neoavlod.models import AuthRateLimit, OTPPurpose, Portal, Staff
 from neoavlod.security.passwords import hash_password, verify_password
@@ -92,6 +93,14 @@ async def deliver_challenge(
     telegram_id = person.telegram_id
     assert telegram_id is not None
     staff_id = person.id
+    await emit(
+        session,
+        "auth.challenge_requested",
+        entity_type="staff",
+        entity_id=person.id,
+        name=person.username,
+        details={"purpose": purpose.value, "portal": portal.value},
+    )
     # Release the DB transaction before network I/O.
     await session.commit()
     challenge = Challenge(
@@ -117,7 +126,23 @@ async def deliver_challenge(
     except BaseException:
         # An undelivered code must never stay valid.
         await store.discard(challenge.id)
+        await emit(
+            session,
+            "auth.challenge_delivery_failed",
+            entity_type="staff",
+            entity_id=staff_id,
+            details={"purpose": purpose.value},
+        )
+        await session.commit()
         raise
+    await emit(
+        session,
+        "auth.challenge_delivered",
+        entity_type="staff",
+        entity_id=staff_id,
+        details={"purpose": purpose.value, "ttl_seconds": OTP_TTL_SECONDS},
+    )
+    await session.commit()
     return challenge
 
 
@@ -147,10 +172,31 @@ async def begin_login(
         verify_password, person.hashed_password if person else _dummy_hash, password
     )
     if person is None or not valid:
+        await emit(
+            session,
+            "auth.password_rejected",
+            entity_type="staff",
+            entity_id=person.id if person else None,
+            name=person.username if person else None,
+            details={"portal": portal.value},
+        )
+        await session.commit()
         raise DomainError("Username yoki parol noto‘g‘ri", 401)
-    return await deliver_challenge(
-        session, person, portal, OTPPurpose.LOGIN, settings, sender, store
-    )
+    try:
+        return await deliver_challenge(
+            session, person, portal, OTPPurpose.LOGIN, settings, sender, store
+        )
+    except DomainError as error:
+        await emit(
+            session,
+            "auth.login_rejected",
+            entity_type="staff",
+            entity_id=person.id,
+            name=person.username,
+            details={"portal": portal.value, "status": error.status_code},
+        )
+        await session.commit()
+        raise
 
 
 async def verify_challenge(
@@ -170,8 +216,24 @@ async def verify_challenge(
         code_hash=code_hash(settings, challenge_id, purpose, code),
     )
     if result.verdict is OTPVerdict.MISMATCH:
+        await emit(
+            session,
+            "auth.otp_rejected",
+            details={"purpose": purpose.value, "portal": portal.value, "reason": "mismatch"},
+        )
+        await session.commit()
         raise DomainError("Tasdiqlash kodi noto‘g‘ri", 401)
     if result.verdict is not OTPVerdict.OK or result.staff_id is None:
+        await emit(
+            session,
+            "auth.otp_rejected",
+            details={
+                "purpose": purpose.value,
+                "portal": portal.value,
+                "reason": "expired_or_consumed",
+            },
+        )
+        await session.commit()
         raise DomainError("Tasdiqlash kodi yaroqsiz yoki muddati tugagan", 401)
     person = await session.scalar(
         select(Staff)
@@ -184,6 +246,7 @@ async def verify_challenge(
     ensure_portal(person, portal)
     if not person.telegram_connected:
         raise telegram_not_linked()
+    await bind_actor(session, person)
     return person
 
 
@@ -199,5 +262,6 @@ async def confirm_login(
         session, settings, store, challenge_id, code, portal, OTPPurpose.LOGIN
     )
     tokens = await issue_session(session, person, portal)
+    await emit(session, "auth.login", details={"portal": portal.value})
     await session.commit()
     return person, tokens

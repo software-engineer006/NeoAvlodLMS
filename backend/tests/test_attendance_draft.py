@@ -152,6 +152,7 @@ async def test_draft_validation_statuses_notes_and_foreign_students(
                 f"{BASE}/{grp.id}/attendance/draft",
                 json={
                     "date": "2026-10-05",
+                    "reason": "Davomat qayta tekshirildi",
                     "items": [{"student_id": str(st_ids[0]), "status": valid_status}],
                 },
             )
@@ -195,6 +196,7 @@ async def test_unique_upsert_and_finalized_date_rejection(
             f"{BASE}/{grp.id}/attendance/draft",
             json={
                 "date": d,
+                "reason": "Ustoz holat va izohni aniqlashtirdi",
                 "items": [
                     {"student_id": str(st_ids[0]), "status": "late", "note": "10 daqiqa kechikdi"},
                     {"student_id": str(st_ids[1]), "status": "present", "note": None},

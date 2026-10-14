@@ -11,4 +11,5 @@ export * from "./teacher";
 export * from "./profile";
 export * from "./dashboard";
 export * from "./messages";
+export * from "./logs";
 export * from "./guide";

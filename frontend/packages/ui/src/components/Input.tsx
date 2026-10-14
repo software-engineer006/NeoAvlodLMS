@@ -20,7 +20,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             {required && <span className="text-red-500 ml-1">*</span>}
           </label>
         )}
-        <div className="relative rounded-lg shadow-sm">
+        <div className="relative rounded-lg shadow-xs">
           {leftAddon && (
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
               {leftAddon}
@@ -30,7 +30,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             id={inputId}
             required={required}
-            className={`block w-full rounded-lg border text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-0 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed ${
+            className={`block w-full rounded-lg border text-sm transition-colors focus:outline-hidden focus:ring-2 focus:ring-offset-0 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed ${
               leftAddon ? "pl-10" : "pl-3"
             } ${rightAddon ? "pr-10" : "pr-3"} py-2 ${
               error

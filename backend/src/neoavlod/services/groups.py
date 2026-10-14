@@ -30,9 +30,7 @@ def _escape_like(value: str) -> str:
     return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
-async def get_group(
-    session: AsyncSession, group_id: uuid.UUID, *, lock: bool = False
-) -> Group:
+async def get_group(session: AsyncSession, group_id: uuid.UUID, *, lock: bool = False) -> Group:
     query = select(Group).where(Group.id == group_id).execution_options(populate_existing=True)
     if lock:
         query = query.with_for_update()
@@ -235,9 +233,7 @@ async def update_group(
     return await get_group_row(session, group_id)
 
 
-async def set_group_active(
-    session: AsyncSession, group_id: uuid.UUID, *, active: bool
-) -> GroupRow:
+async def set_group_active(session: AsyncSession, group_id: uuid.UUID, *, active: bool) -> GroupRow:
     group = await get_group(session, group_id, lock=True)
     if active:
         await validate_subject(session, group.subject_id)

@@ -45,7 +45,11 @@ async def test_initial_migration_upgrade_downgrade_and_schema_match(
         migration("upgrade", "head")
         async with test_database.engine.connect() as connection:
             tables = await connection.run_sync(lambda sync: inspect(sync).get_table_names())
-            assert set(tables) == set(Base.metadata.tables) | {"alembic_version"}
+            audit_tables = await connection.run_sync(
+                lambda sync: inspect(sync).get_table_names(schema="audit")
+            )
+            owned_tables = set(tables) | {f"audit.{name}" for name in audit_tables}
+            assert owned_tables == set(Base.metadata.tables) | {"alembic_version"}
             assert (
                 await connection.execute(text("SELECT version_num FROM alembic_version"))
             ).scalar_one() == ScriptDirectory.from_config(

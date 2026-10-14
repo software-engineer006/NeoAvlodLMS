@@ -93,4 +93,6 @@ class AttendanceChange(UUIDPrimaryKey, Base):
     old_note: Mapped[str | None] = mapped_column(Text)
     new_note: Mapped[str | None] = mapped_column(Text)
     reason: Mapped[str | None] = mapped_column(Text)
-    changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    changed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.clock_timestamp()
+    )

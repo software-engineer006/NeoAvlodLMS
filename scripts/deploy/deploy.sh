@@ -4,6 +4,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 RELEASE_ID="${1:?Usage: deploy.sh <full_git_sha>}"
 valid_release "$RELEASE_ID"
 lock_deploy
+bash "$(dirname "${BASH_SOURCE[0]}")/init_production_env.sh"
 RELEASE_DIR="$APP_ROOT/releases/$RELEASE_ID"
 [[ -f "$ENV_FILE" && -f "$RELEASE_DIR/compose.prod.yaml" ]] || fail 'Release source yoki production env yo‘q.'
 for portal in admin teacher; do
@@ -36,7 +37,7 @@ rollback_on_error() {
     if [[ ! -f "$NGINX_BACKUP/conf.d/eduneo.conf" ]]; then rm -f "$NGINX_CONFIG_ROOT/conf.d/eduneo.conf"; fi
     nginx -t && systemctl reload nginx
     if [[ "$RUNTIME_TOUCHED" == 1 && -z "$PREVIOUS" ]]; then
-      compose_release "$RELEASE_ID" stop api worker
+      compose_release "$RELEASE_ID" stop api worker audit-archiver
       rm -f "$APP_ROOT/current" "$WEB_ROOT/current" "$WEB_ROOT/admin" "$WEB_ROOT/teacher"
       printf 'Birinchi deploy xato: avvalgi release yo‘q, yangi API/worker to‘xtatildi.\n' >&2
     fi
@@ -63,13 +64,23 @@ umask 077
 compose_release "$RELEASE_ID" exec -T database sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' </dev/null > "$BACKUP.partial"
 [[ -s "$BACKUP.partial" ]]
 mv "$BACKUP.partial" "$BACKUP"
+AUDIT_DIR="$(sed -n 's/^NEOAVLOD_AUDIT_HOST_DIR=//p' "$ENV_FILE" | tail -n 1)"
+[[ "$AUDIT_DIR" == /* && ! -L "$AUDIT_DIR" ]] || fail 'Private audit katalogi noto‘g‘ri.'
+mkdir -p "$AUDIT_DIR"
+chown 1000:1000 "$AUDIT_DIR"
+chmod 700 "$AUDIT_DIR"
 # Stop old application writers across migrations and replace both services with the exact image.
 RUNTIME_TOUCHED=1
-compose_release "$RELEASE_ID" stop api worker
+compose_release "$RELEASE_ID" stop api worker audit-archiver
+tar -czf "$BACKUP.audit.tar.gz" -C "$(dirname "$AUDIT_DIR")" "$(basename "$AUDIT_DIR")" -C "$(dirname "$ENV_FILE")" "$(basename "$ENV_FILE")"
 compose_release "$RELEASE_ID" run --rm -T --no-deps migrations </dev/null
+touch "$APP_ROOT/.audit-enforced"
+compose_release "$RELEASE_ID" run --rm -T --no-deps --user 0:0 \
+  -v "$ENV_FILE:/production.env:ro" -v "$RELEASE_DIR/scripts/deploy:/deploy:ro" \
+  migrations python /deploy/provision_audit.py </dev/null
 import_educenter "$RELEASE_ID"
 import_english "$RELEASE_ID"
-compose_release "$RELEASE_ID" up -d --no-deps --no-build --force-recreate --wait --wait-timeout 120 api worker
+compose_release "$RELEASE_ID" up -d --no-deps --no-build --force-recreate --wait --wait-timeout 120 api worker audit-archiver
 activate_links "$RELEASE_ID"
 install_nginx "$RELEASE_ID"
 check_health "$RELEASE_ID"

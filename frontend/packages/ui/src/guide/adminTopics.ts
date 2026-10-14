@@ -1,30 +1,7 @@
+import { adminScenes } from "./scenes/admin";
 import { PERMISSIONS as P } from "../navigation/permissions";
 import type { GuideTopic } from "./types";
 
-const images = {
-  login: /* @__PURE__ */ new URL("./images/admin-login.png", import.meta.url).href,
-  otp: /* @__PURE__ */ new URL("./images/admin-otp.png", import.meta.url).href,
-  profile: /* @__PURE__ */ new URL("./images/admin-profile.png", import.meta.url).href,
-  password: /* @__PURE__ */ new URL("./images/admin-password.png", import.meta.url).href,
-  dashboard: /* @__PURE__ */ new URL("./images/admin-dashboard.png", import.meta.url).href,
-  staff: /* @__PURE__ */ new URL("./images/admin-staff.png", import.meta.url).href,
-  grants: /* @__PURE__ */ new URL("./images/admin-grants.png", import.meta.url).href,
-  subjects: /* @__PURE__ */ new URL("./images/admin-subjects.png", import.meta.url).href,
-  groups: /* @__PURE__ */ new URL("./images/admin-groups.png", import.meta.url).href,
-  groupForm: /* @__PURE__ */ new URL("./images/admin-group-form.png", import.meta.url).href,
-  students: /* @__PURE__ */ new URL("./images/admin-students.png", import.meta.url).href,
-  studentStats: /* @__PURE__ */ new URL("./images/admin-student-stats.png", import.meta.url)
-    .href,
-  studentForm: /* @__PURE__ */ new URL("./images/admin-student-form.png", import.meta.url).href,
-  studentEdit: /* @__PURE__ */ new URL("./images/admin-student-edit.png", import.meta.url).href,
-  history: /* @__PURE__ */ new URL("./images/admin-history.png", import.meta.url).href,
-  audit: /* @__PURE__ */ new URL("./images/admin-audit.png", import.meta.url).href,
-  attendance: /* @__PURE__ */ new URL("./images/admin-attendance.png", import.meta.url).href,
-  correction: /* @__PURE__ */ new URL("./images/admin-correction.png", import.meta.url).href,
-  messages: /* @__PURE__ */ new URL("./images/admin-messages.png", import.meta.url).href,
-  delivery: /* @__PURE__ */ new URL("./images/admin-delivery.png", import.meta.url).href,
-  bot: /* @__PURE__ */ new URL("./images/admin-bot.png", import.meta.url).href,
-};
 const steps = (...values: [string, string][]) =>
   values.map(([title, text]) => ({ title, text }));
 
@@ -34,8 +11,8 @@ export const adminTopics: GuideTopic[] = [
     title: "Telegram orqali kirish",
     section: "Boshlash",
     summary: "Shaxsiy login, parol va Telegram kodi bilan panelga kiring.",
-    image: images.login,
-    imageAlt:
+    scene: adminScenes.login,
+    previewAlt:
       "Admin kirish ekranida login, parol va kirish tugmasi raqamlar bilan belgilangan.",
     steps: steps(
       [
@@ -61,8 +38,8 @@ export const adminTopics: GuideTopic[] = [
     title: "3 daqiqalik kod va 7 kunlik sessiya",
     section: "Boshlash",
     summary: "Kodni vaqtida tasdiqlang; kundalik qayta login talab qilinmaydi.",
-    image: images.otp,
-    imageAlt:
+    scene: adminScenes.otp,
+    previewAlt:
       "Tasdiqlash ekranida 6 xonali kod, uch daqiqalik taymer va tasdiqlash belgilangan.",
     steps: steps(
       [
@@ -88,8 +65,8 @@ export const adminTopics: GuideTopic[] = [
     title: "Panel va bo‘limlar bilan tanishish",
     section: "Boshlash",
     summary: "Menyu, statistikalar va shaxsiy profil joylashuvini bilib oling.",
-    image: images.dashboard,
-    imageAlt:
+    scene: adminScenes.dashboard,
+    previewAlt:
       "Admin panel menyusi, asosiy statistikalar va Profilim tugmasi belgilangan.",
     destination: "dashboard",
     steps: steps(
@@ -115,8 +92,8 @@ export const adminTopics: GuideTopic[] = [
     title: "Shaxsiy profil va rasm",
     section: "Hisob",
     summary: "Ism, aloqa ma’lumotlari va profil rasmini yangilang.",
-    image: images.profile,
-    imageAlt:
+    scene: adminScenes.profile,
+    previewAlt:
       "Profil modalida rasm, shaxsiy ma’lumotlar va saqlash tugmasi belgilangan.",
     steps: steps(
       [
@@ -142,8 +119,8 @@ export const adminTopics: GuideTopic[] = [
     section: "Hisob",
     summary:
       "Amaldagi parolni yangilang yoki unutilgan parolni Telegram kodi bilan tiklang.",
-    image: images.password,
-    imageAlt:
+    scene: adminScenes.password,
+    previewAlt:
       "Parol formasida joriy parol, yangi parol va saqlash belgilangan.",
     steps: steps(
       [
@@ -170,8 +147,8 @@ export const adminTopics: GuideTopic[] = [
     permission: P.STAFF_MANAGE,
     destination: "staff",
     summary: "Teacher hisobini oching, profil va faol holatini boshqaring.",
-    image: images.staff,
-    imageAlt:
+    scene: adminScenes.staff,
+    previewAlt:
       "Teacher yaratish formasida ism, login va yaratish tugmasi belgilangan; admin permission boshqaruvi ko‘rsatilmagan.",
     steps: steps(
       [
@@ -200,8 +177,8 @@ export const adminTopics: GuideTopic[] = [
     destination: "staff",
     summary:
       "Administratorga kerakli amallarni yoki katalogdagi barcha ruxsatlarni bering.",
-    image: images.grants,
-    imageAlt:
+    scene: adminScenes.grants,
+    previewAlt:
       "Superadmin formasida Administrator roli, barcha ruxsatlar tugmasi va alohida checkboxlar belgilangan.",
     steps: steps(
       [
@@ -222,7 +199,7 @@ export const adminTopics: GuideTopic[] = [
       ],
     ),
     tips: [
-      "Full permission adminni superadmin roliga aylantirmaydi. Bot sozlamalari va administrator permissionlarini berish faqat superadmin uchun.",
+      "Full permission adminni superadmin roliga aylantirmaydi. Loglarni ko‘rish/yuklash, bot sozlamalari va administrator ruxsatlarini berish faqat superadmin uchun.",
       "Oxirgi faol superadminni faolsiz qilish/o‘chirish himoyalangan.",
     ],
   },
@@ -233,8 +210,8 @@ export const adminTopics: GuideTopic[] = [
     permission: P.SUBJECTS_MANAGE,
     destination: "subjects",
     summary: "Fan katalogini boshqaring va guruhga biriktirishga tayyorlang.",
-    image: images.subjects,
-    imageAlt: "Fan formasida nom, izoh va yaratish tugmasi belgilangan.",
+    scene: adminScenes.subjects,
+    previewAlt: "Fan formasida nom, izoh va yaratish tugmasi belgilangan.",
     steps: steps(
       [
         "Fan nomi",
@@ -261,8 +238,8 @@ export const adminTopics: GuideTopic[] = [
     destination: "groups",
     summary:
       "Qidiruv, fan/teacher/kun va status filtrlari bilan kerakli guruhni toping.",
-    image: images.groups,
-    imageAlt:
+    scene: adminScenes.groups,
+    previewAlt:
       "Read-only guruh ekranida qidiruv, filtrlar va jadval belgilangan; yozish tugmalari yo‘q.",
     steps: steps(
       [
@@ -289,8 +266,8 @@ export const adminTopics: GuideTopic[] = [
     permission: P.GROUPS_CREATE,
     destination: "groups",
     summary: "Fan, teacher, toq/juft kunlar va aniq dars vaqtini belgilang.",
-    image: images.groupForm,
-    imageAlt:
+    scene: adminScenes.groupForm,
+    previewAlt:
       "Guruh yaratish formasida nom, fan/teacher, dars kunlari va yaratish belgilangan.",
     steps: steps(
       [
@@ -321,8 +298,8 @@ export const adminTopics: GuideTopic[] = [
     permission: P.GROUPS_EDIT,
     destination: "groups",
     summary: "Mavjud guruh jadvali, teacheri va sig‘imini to‘g‘rilang.",
-    image: images.groupForm,
-    imageAlt:
+    scene: adminScenes.groupForm,
+    previewAlt:
       "Guruh formasida tahrirlanadigan nom, fan/teacher va jadval belgilangan; namuna yaratish formasi shu maydonlarni ko‘rsatadi.",
     steps: steps(
       [
@@ -353,8 +330,8 @@ export const adminTopics: GuideTopic[] = [
     permission: P.STUDENTS_READ,
     destination: "students",
     summary: "O‘quvchi, ota-ona, guruh va bot ulanish holatini ko‘ring.",
-    image: images.students,
-    imageAlt:
+    scene: adminScenes.students,
+    previewAlt:
       "Read-only o‘quvchi profilida shaxsiy ma’lumotlar, guruh va Telegram holati belgilangan.",
     steps: steps(
       [
@@ -384,8 +361,8 @@ export const adminTopics: GuideTopic[] = [
     destination: "students",
     summary:
       "Profil va davomatni ko‘rish ruxsatlari bilan oylik qatnashuvni tahlil qiling.",
-    image: images.studentStats,
-    imageAlt:
+    scene: adminScenes.studentStats,
+    previewAlt:
       "O‘quvchi statistikasi ekranida oy tanlovi, davomat sonlari va foiz belgilangan.",
     steps: steps(
       [
@@ -413,8 +390,8 @@ export const adminTopics: GuideTopic[] = [
     destination: "students",
     summary:
       "Guruh sig‘imi doirasida o‘quvchi va ota-ona ma’lumotini birga saqlang.",
-    image: images.studentForm,
-    imageAlt:
+    scene: adminScenes.studentForm,
+    previewAlt:
       "Yangi o‘quvchi formasida o‘quvchi ma’lumotlari, guruh, ota-ona va yaratish belgilangan.",
     steps: steps(
       [
@@ -446,8 +423,8 @@ export const adminTopics: GuideTopic[] = [
     destination: "students",
     summary:
       "Ma’lumotlarni to‘ldiring, guruhni almashtiring va bot ulanishini boshqaring.",
-    image: images.studentEdit,
-    imageAlt:
+    scene: adminScenes.studentEdit,
+    previewAlt:
       "O‘quvchi profilida tahrirlash, guruhga ko‘chirish va Telegram ulanish amallari belgilangan.",
     steps: steps(
       [
@@ -478,8 +455,8 @@ export const adminTopics: GuideTopic[] = [
     permission: P.ATTENDANCE_READ,
     destination: "attendance",
     summary: "Guruh/oy matritsasi, statuslar va kim o‘zgartirganini ko‘ring.",
-    image: images.history,
-    imageAlt: "Davomat tarixida guruh, oy va status kataklari belgilangan.",
+    scene: adminScenes.history,
+    previewAlt: "Davomat tarixida guruh, oy va status kataklari belgilangan.",
     steps: steps(
       [
         "Guruhni tanlang",
@@ -500,19 +477,20 @@ export const adminTopics: GuideTopic[] = [
   },
   {
     id: "admin-audit",
+    superadminOnly: true,
     title: "Davomat auditi: kim va nima sababli o‘zgartirgan",
     section: "Davomat",
     permission: P.ATTENDANCE_READ,
     destination: "attendance",
     summary:
-      "Ko‘rish ruxsati bilan ham o‘zgarishlar muallifi va eski/yangi qiymatni tekshiring.",
-    image: images.audit,
-    imageAlt:
+      "Superadmin davomat o‘zgarishlarining muallifi, sabab va eski/yangi qiymatlarini tekshiradi.",
+    scene: adminScenes.audit,
+    previewAlt:
       "Audit ekranida guruh, dars sanasi va muallif/sabab/old-new jadvali raqamlangan.",
     steps: steps(
       [
         "Audit guruhini tanlang",
-        "Davomat → Audit tarixi. Tekshiriladigan guruhni tanlang; yozish ruxsati talab qilinmaydi.",
+        "Davomat → Audit tarixi. Tekshiriladigan guruhni tanlang; audit faqat superadmin uchun ochiq.",
       ],
       [
         "Dars sanasi",
@@ -534,8 +512,8 @@ export const adminTopics: GuideTopic[] = [
     permission: P.ATTENDANCE_WRITE,
     destination: "attendance",
     summary: "Kerakli guruh va sanani tanlab har bir o‘quvchini belgilang.",
-    image: images.attendance,
-    imageAlt:
+    scene: adminScenes.attendance,
+    previewAlt:
       "Admin davomat ekranida guruh/sana, o‘quvchi statuslari, qoralama va yakunlash belgilangan.",
     steps: steps(
       [
@@ -566,8 +544,8 @@ export const adminTopics: GuideTopic[] = [
     permission: P.ATTENDANCE_WRITE,
     destination: "attendance",
     summary: "O‘tgan kun yoki oy yozuvini tahrirlang, audit sababini yozing.",
-    image: images.correction,
-    imageAlt:
+    scene: adminScenes.correction,
+    previewAlt:
       "Yakunlangan admin davomatida status, tuzatish sababi va tuzatishni saqlash belgilangan.",
     steps: steps(
       [
@@ -595,8 +573,8 @@ export const adminTopics: GuideTopic[] = [
     destination: "messages",
     summary:
       "Ota-ona/o‘quvchilarga matn tayyorlang va yuborish auditoriyasini tekshiring.",
-    image: images.messages,
-    imageAlt:
+    scene: adminScenes.messages,
+    previewAlt:
       "Xabarlar ekranida auditoriya turi, sarlavha, matn va yuborish tasdig‘i raqamlangan.",
     steps: steps(
       [
@@ -628,8 +606,8 @@ export const adminTopics: GuideTopic[] = [
     permission: P.MESSAGES_SEND,
     destination: "messages",
     summary: "Har bir qabul qiluvchi holatini kuzating va navbatni boshqaring.",
-    image: images.delivery,
-    imageAlt:
+    scene: adminScenes.delivery,
+    previewAlt:
       "Xabar tafsilotlarida holatlar, xatoli qayta urinish va navbatni to‘xtatish belgilangan.",
     steps: steps(
       [
@@ -658,8 +636,8 @@ export const adminTopics: GuideTopic[] = [
     destination: "bot-settings",
     summary:
       "Production botini tekshirib ulang va worker tayyorligini kuzating.",
-    image: images.bot,
-    imageAlt:
+    scene: adminScenes.bot,
+    previewAlt:
       "Superadmin bot ekranida amaldagi holat, yangi token va tekshirilgan username belgilangan; token yopiq.",
     steps: steps(
       [
@@ -679,5 +657,25 @@ export const adminTopics: GuideTopic[] = [
       "O‘sha botning nom/token rotatsiyasi ulanishlarni saqlaydi. Boshqa botda eski parol, Telegram ID va davomat tarixi o‘chmaydi, ammo qayta Startgacha OTP/yetkazish kutadi.",
       "Tokenni screenshot, chat yoki public faylga chiqarmang. Full-admin permission bu bo‘limni ochmaydi.",
     ],
+  },
+  {
+    id: "admin-logs",
+    title: "Kunlik loglarni ko‘rish va yuklab olish",
+    section: "Xavfsizlik",
+    superadminOnly: true,
+    destination: "logs",
+    summary: "Xodim amallari, aniq vaqt va o‘zgarishlarni tekshiring. Loglarni tahrirlash yoki o‘chirish mumkin emas.",
+    scene: adminScenes.logs,
+    previewAlt: "React namuna ekranida log kuni, xodim/amal filtrlari, eski-yangi qiymat va kunlik yuklash raqamlangan.",
+    steps: steps(
+      ["Kunni tanlang", "Loglar bo‘limida Log kuni orqali kerakli sanani tanlang. Kunlar Toshkent vaqti bo‘yicha ajratiladi."],
+      ["Xodim va amalni toping", "Xodim, amal, obyekt turi va natija filtrlari bilan qidiring. Keyingi va Oldingi tugmalari sahifalarni ochadi. Vaqt soniyagacha ko‘rsatiladi."],
+      ["Tafsilotlarni tekshiring", "Ko‘rish tugmasi bilan eski/yangi qiymat, davomat sababi, xodim va vaqtni solishtiring. Aniq vaqt bo‘limida UTC mikrosoniyalari ham bor."],
+      ["Kunlik logni yuklang", "Kunlik logni yuklash tanlangan kunning barcha yozuvlarini .jsonl.gz faylga oladi. Filtrlar kunlik eksportni qisqartirmaydi. Faylni ochgach har qator alohida JSON yozuvidir."],
+    ),
+    tips: ["Faqat faol superadmin logni ko‘rishi/yuklashi mumkin. Barcha ruxsatli administratorga ham log ruxsati berilmaydi.",
+      "Superadmin ham logni o‘chira yoki o‘zgartira olmaydi. Loglar private papkada siqilgan va shifrlangan holda saqlanadi.",
+      "Logni ko‘rish/yuklashning o‘zi ham qayd etiladi. Parol, tasdiqlash kodi, token va shaxsiy ulanish havolalari logga yozilmaydi.",
+      "Oldingi importlarga taxminiy muallif yozilmaydi. Xotira tejaladi, tasdiqlangan arxivlar avtomatik o‘chirilmaydi."],
   },
 ];

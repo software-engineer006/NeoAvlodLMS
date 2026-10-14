@@ -6,7 +6,7 @@ import {
   CheckCircle2,
   ChevronRight,
   ExternalLink,
-  Image,
+  PanelsTopLeft,
   Search,
   ShieldCheck,
   ZoomIn,
@@ -23,6 +23,7 @@ import {
   visibleGuideTopics,
   type GuideTopic,
 } from "./types";
+import { GuidePreview } from "./scenes/GuidePreview";
 
 interface Props {
   currentUser: CurrentUser;
@@ -37,7 +38,6 @@ export function GuideView({ currentUser, portal, topics, onNavigate }: Props) {
   const [selectedId, setSelectedId] = useState("");
   const [zoomId, setZoomId] = useState<string | null>(null);
   const [learned, setLearned] = useState<string[]>([]);
-  const [failed, setFailed] = useState<string[]>([]);
   const allowed = useMemo(
     () => visibleGuideTopics(currentUser, portal, topics),
     [currentUser, portal, topics],
@@ -96,7 +96,7 @@ export function GuideView({ currentUser, portal, topics, onNavigate }: Props) {
               </p>
               <h1 className="text-2xl sm:text-3xl font-bold mt-1">Qo‘llanma</h1>
               <p className="text-sm text-slate-300 mt-2 max-w-xl">
-                {roleName} uchun ekran rasmlari va bosqichma-bosqich amaliy
+                {roleName} uchun namuna ekranlari va bosqichma-bosqich amaliy
                 yo‘riqnomalar.
               </p>
             </div>
@@ -127,7 +127,7 @@ export function GuideView({ currentUser, portal, topics, onNavigate }: Props) {
             : portal === "teacher"
               ? "Yo‘riqnomalar o‘zingizga biriktirilgan guruhlar bilan ishlash uchun."
               : "Faqat hisobingizga berilgan ruxsatlar bo‘yicha mavzular ko‘rsatiladi."}{" "}
-          Rasmlardagi ism va ma’lumotlar namuna.
+          Namuna ekranlaridagi ism va ma’lumotlar o‘rganish uchun. Namuna ichida hech qanday amal bajarilmaydi.
         </p>
       </div>
       <Card className="p-4 space-y-3">
@@ -221,34 +221,13 @@ export function GuideView({ currentUser, portal, topics, onNavigate }: Props) {
                 </p>
               </header>
               <figure className="rounded-xl border border-slate-200 overflow-hidden bg-slate-50">
-                {failed.includes(selected.image) ? (
-                  <div className="p-6 text-sm text-slate-500">
-                    Rasm yuklanmadi. Quyidagi matnli qadamlar orqali davom
-                    eting.
-                  </div>
-                ) : (
-                  <button
-                    className="block w-full text-left relative group"
-                    onClick={() => setZoomId(selected.id)}
-                    aria-label={`Rasmni kattalashtirish: ${selected.title}`}
-                  >
-                    <img
-                      src={selected.image}
-                      alt={selected.imageAlt}
-                      loading="lazy"
-                      className="w-full h-auto"
-                      onError={() =>
-                        setFailed((values) => [...values, selected.image])
-                      }
-                    />
-                    <span className="absolute right-2 top-2 rounded-lg bg-white/95 border border-slate-200 p-2 shadow-sm text-blue-700">
-                      <ZoomIn className="w-4 h-4" />
-                    </span>
-                  </button>
-                )}
-                <figcaption className="p-3 border-t border-slate-200 flex gap-2 text-xs text-slate-500">
-                  <Image className="w-4 h-4 shrink-0" /> Raqamli belgilar
-                  quyidagi qadamlarga mos. Batafsil ko‘rish uchun rasmni bosing.
+                <GuidePreview scene={selected.scene} description={selected.previewAlt} />
+                <figcaption className="p-3 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
+                  <span className="flex gap-2"><PanelsTopLeft className="w-4 h-4 shrink-0" /> Raqamli belgilar quyidagi qadamlarga mos.</span>
+                  <Button size="sm" variant="outline" leftIcon={<ZoomIn className="h-4 w-4" />}
+                    onClick={() => setZoomId(selected.id)} aria-label={`Namunani kattalashtirish: ${selected.title}`}>
+                    Kattalashtirish
+                  </Button>
                 </figcaption>
               </figure>
               <ol className="space-y-4" aria-label="Amaliy qadamlar">
@@ -339,21 +318,16 @@ export function GuideView({ currentUser, portal, topics, onNavigate }: Props) {
         isOpen={Boolean(zoom)}
         onClose={() => setZoomId(null)}
         title={zoom?.title}
-        description="Rasmni yon tomonga surib belgilarni batafsil ko‘ring"
+        description="Namunani yon tomonga surib belgilarni batafsil ko‘ring."
         size="2xl"
       >
         {zoom && (
           <div
             className="overflow-auto rounded-xl border border-slate-200"
             tabIndex={0}
-            aria-label="Kattalashtirilgan rasm"
+            aria-label="Kattalashtirilgan namuna"
           >
-            <img
-              src={zoom.image}
-              alt={zoom.imageAlt}
-              className="max-w-none h-auto"
-              style={{ minWidth: 1000 }}
-            />
+            <div className="min-w-[1000px]"><GuidePreview scene={zoom.scene} description={zoom.previewAlt} zoom /></div>
           </div>
         )}
       </Modal>

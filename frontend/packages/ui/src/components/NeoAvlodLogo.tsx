@@ -90,7 +90,7 @@ const PORTAL_THEMES: Record<
   }
 > = {
   admin: {
-    badgeGradient: "bg-gradient-to-br from-blue-600 via-blue-600 to-indigo-700",
+    badgeGradient: "bg-linear-to-br from-blue-600 via-blue-600 to-indigo-700",
     badgeShadow: "shadow-md shadow-blue-500/20",
     badgeRing: "ring-1 ring-white/10",
     iconColor: "text-white",
@@ -98,7 +98,7 @@ const PORTAL_THEMES: Record<
     defaultSubtitle: "Admin Shell",
   },
   teacher: {
-    badgeGradient: "bg-gradient-to-br from-emerald-600 via-emerald-600 to-teal-700",
+    badgeGradient: "bg-linear-to-br from-emerald-600 via-emerald-600 to-teal-700",
     badgeShadow: "shadow-md shadow-emerald-500/20",
     badgeRing: "ring-1 ring-white/10",
     iconColor: "text-white",
@@ -106,7 +106,7 @@ const PORTAL_THEMES: Record<
     defaultSubtitle: "O‘qituvchi Portali",
   },
   neutral: {
-    badgeGradient: "bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900",
+    badgeGradient: "bg-linear-to-br from-slate-700 via-slate-800 to-slate-900",
     badgeShadow: "shadow-md shadow-slate-900/20",
     badgeRing: "ring-1 ring-white/10",
     iconColor: "text-white",

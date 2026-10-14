@@ -36,7 +36,7 @@ class ReleaseTests(unittest.TestCase):
         self.command(
             "docker",
             """echo "${NEOAVLOD_RELEASE_ID:-inspect} $*" >> "$CALLS"
-if [[ "$*" == *"ps --status running -q worker"* ]]; then echo worker; fi
+if [[ "$*" == *"ps --status running -q "* ]]; then echo singleton; fi
 if [[ "$*" == *pg_dump* ]]; then echo backup; fi
 if [[ "${FAIL_STEP:-}" == migration && "${NEOAVLOD_RELEASE_ID:-}" == """
             + C
@@ -52,6 +52,7 @@ if [[ "${FAIL_STEP:-}" == english && "$*" == *neoavlod.english_import* ]]; then 
             + """ ]]; then exit 1; fi""",
         )
         self.command("systemctl", "exit 0")
+        self.command("chown", "exit 0")
         self.command(
             "curl",
             """if [[ "${FAIL_STEP:-}" == health ]]; then exit 1; fi
@@ -67,6 +68,8 @@ if [[ "$*" == *release.txt* ]]; then basename "$(readlink "$WEB_ROOT/current")";
             ):
                 (folder / path).mkdir(parents=True)
             (folder / "compose.prod.yaml").write_text("source")
+            (folder / "backend").mkdir()
+            (folder / "backend/audit_runtime.version").write_text("1\n")
             (folder / "nginx/conf.d/eduneo.conf").write_text(release)
             (folder / "nginx/snippets/ssl-params.conf").write_text(release)
             for portal in ("admin", "teacher"):
@@ -115,6 +118,26 @@ if [[ "$*" == *release.txt* ]]; then basename "$(readlink "$WEB_ROOT/current")";
         self.assertNotEqual(self.run_script("deploy.sh", A).returncode, 0)
         self.assertNotEqual(self.run_script("deploy.sh", "../../etc").returncode, 0)
         self.assertFalse((self.app / "current").exists())
+
+    def test_pre_audit_rollback_refuses_unsafe_runtime_and_preserves_archive(self) -> None:
+        self.deploy(A)
+        self.deploy(B)
+        archive = self.app / "audit-logs/evidence.fernet"
+        archive.write_bytes(b"immutable encrypted fixture")
+        (self.app / "releases" / A / "backend/audit_runtime.version").unlink()
+        result = self.run_script("rollback.sh")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Auditdan oldingi runtime", result.stderr)
+        self.assertEqual(archive.read_bytes(), b"immutable encrypted fixture")
+        self.assertEqual((self.app / "current").readlink().name, B)
+
+    def test_environment_upgrade_retains_keys_and_credentials_on_repeat(self) -> None:
+        first = self.run_script("init_production_env.sh")
+        self.assertEqual(first.returncode, 0, first.stderr)
+        baseline = (self.app / ".env.production").read_bytes()
+        self.assertEqual(self.run_script("init_production_env.sh").returncode, 0)
+        self.assertEqual((self.app / ".env.production").read_bytes(), baseline)
+        self.assertEqual(baseline.count(b"NEOAVLOD_AUDIT_ENCRYPTION_KEY="), 1)
 
     def test_migration_and_nginx_failure_restore_both_previous_releases(self) -> None:
         self.deploy(A)

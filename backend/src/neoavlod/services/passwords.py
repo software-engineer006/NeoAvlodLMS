@@ -7,6 +7,7 @@ import httpx
 from sqlalchemy import or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from neoavlod.audit_context import bind_actor, emit
 from neoavlod.database import Database
 from neoavlod.errors import DomainError
 from neoavlod.models import AuthSession, OTPPurpose, Portal, Staff
@@ -64,6 +65,8 @@ async def change_password(
     person.must_change_password = False
     person.temporary_password_encrypted = None
     person.temporary_password_expires_at = None
+    await bind_actor(session, person)
+    await emit(session, "auth.password_changed", details={"portal": portal.value})
     await revoke_account(session, person.id)
     await session.commit()
     await store.revoke_staff(person.id)
@@ -131,5 +134,6 @@ async def reset_password(
     person.temporary_password_encrypted = None
     person.temporary_password_expires_at = None
     await revoke_account(session, person.id)
+    await emit(session, "auth.password_reset", details={"portal": portal.value})
     await session.commit()
     await store.revoke_staff(person.id)

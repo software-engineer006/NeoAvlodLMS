@@ -28,6 +28,7 @@ async def test_shared_teacher_admin_records_reason_history_and_retry(
     teacher, group, students = await seed(model_database)
     admin = await actor(model_database, permissions=["attendance:read", "attendance:write"])
     other = await actor(model_database, role=Role.TEACHER)
+    boss = await actor(model_database, role=Role.SUPERADMIN)
     base = f"/api/v1/admin/attendance/groups/{group.id}/attendance"
     teacher_base = f"/api/v1/teacher/groups/{group.id}/attendance"
     payload: dict[str, Any] = {
@@ -66,6 +67,10 @@ async def test_shared_teacher_admin_records_reason_history_and_retry(
             *[client.post(base + "/correct", json=correction) for _ in range(2)]
         )
         assert all(response.status_code == 200 for response in responses)
+        assert (
+            await client.get(base + "/changes", params={"date": payload["date"]})
+        ).status_code == 403
+    async with client_for(boss) as client:
         history = await client.get(base + "/changes", params={"date": payload["date"]})
         assert history.status_code == 200, history.text
         assert history.json()["total"] == 5  # 2 drafts + 2 finalizations + one correction
@@ -96,11 +101,11 @@ async def test_shared_teacher_admin_records_reason_history_and_retry(
         )
         assert (
             await client.get(teacher_base + "/changes", params={"date": payload["date"]})
-        ).json()["total"] == 5
+        ).status_code == 403
     async with client_for(other) as client:
         assert (
             await client.get(teacher_base + "/changes", params={"date": payload["date"]})
-        ).status_code == 404
+        ).status_code == 403
         assert (await client.post(base + "/correct", json=correction)).status_code == 403
     async with model_database.session() as session:
         assert await session.scalar(select(func.count()).select_from(Attendance)) == 2

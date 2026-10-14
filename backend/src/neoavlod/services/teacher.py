@@ -48,10 +48,7 @@ async def list_teacher_groups(
     )
 
     result = await session.execute(stmt)
-    return [
-        TeacherGroupRow(group=item[0], current_students=int(item[1]))
-        for item in result.all()
-    ]
+    return [TeacherGroupRow(group=item[0], current_students=int(item[1])) for item in result.all()]
 
 
 async def get_teacher_group(

@@ -318,9 +318,14 @@ describe("Teacher Attendance Flow (Task 036)", () => {
       fireEvent.click(screen.getAllByRole("button", { name: "Kelmadi" })[0]);
       fireEvent.change(screen.getAllByPlaceholderText(/Izoh yozish/)[0], { target: { value: "Aniqlashtirildi" } });
       fireEvent.click(screen.getByRole("button", { name: "Tuzatishni saqlash" }));
+      expect(post).not.toHaveBeenCalled();
+      expect(screen.getByText("Davomat tuzatish sababini kiritish shart")).toBeDefined();
+      fireEvent.change(screen.getByLabelText(/Tuzatish sababi/), { target: { value: "Jurnal qayta tekshirildi" } });
+      fireEvent.click(screen.getByRole("button", { name: "Tuzatishni saqlash" }));
       await screen.findByText("Davomat tuzatishlari muvaffaqiyatli saqlandi.");
       expect(post).toHaveBeenCalledWith("/api/v1/teacher/groups/grp-1/attendance/correct", expect.objectContaining({
         items: expect.arrayContaining([expect.objectContaining({ student_id: "std-1", status: "absent", note: "Aniqlashtirildi" })]),
+        reason: "Jurnal qayta tekshirildi",
       }));
       expect(screen.queryByText("Saqlanmagan o‘zgarishlar bor")).toBeNull();
     });

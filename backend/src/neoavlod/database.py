@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.orm import DeclarativeBase
 
+from neoavlod.audit_context import request_context
 from neoavlod.settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -73,4 +74,5 @@ class Database:
 async def get_session(request: Request) -> AsyncIterator[AsyncSession]:
     database = cast(Database, request.app.state.database)
     async with database.session() as session:
+        request_context(session, request)
         yield session

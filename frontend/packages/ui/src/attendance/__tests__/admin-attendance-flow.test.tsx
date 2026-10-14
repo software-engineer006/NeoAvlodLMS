@@ -24,7 +24,7 @@ describe("Shared administrator attendance", () => {
   beforeEach(() => { vi.restoreAllMocks(); vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date("2026-10-05T10:00:00Z")); });
   afterEach(() => { vi.useRealTimers(); });
 
-  it("opens all groups, requires a reason and displays the saved change history", async () => {
+  it("opens all groups, requires a reason and keeps audit hidden from administrators", async () => {
     vi.spyOn(apiClient, "get").mockImplementation((url) => {
       if (url.endsWith("/groups")) return Promise.resolve(groups);
       if (url.includes("/pending")) return Promise.resolve([groups[1]]);
@@ -48,17 +48,16 @@ describe("Shared administrator attendance", () => {
     fireEvent.change(screen.getByPlaceholderText(/Izoh yozish/), { target: { value: "Kasal" } });
     fireEvent.click(screen.getByRole("button", { name: "Tuzatishni saqlash" }));
     expect(post).not.toHaveBeenCalled();
-    expect(screen.getByText("Administrator tuzatish sababini kiritishi shart")).toBeDefined();
-    fireEvent.change(screen.getByLabelText("Tuzatish sababi"), { target: { value: "Jurnal tekshirildi" } });
+    expect(screen.getByText("Davomat tuzatish sababini kiritish shart")).toBeDefined();
+    fireEvent.change(screen.getByLabelText(/Tuzatish sababi/), { target: { value: "Jurnal tekshirildi" } });
     fireEvent.click(screen.getByRole("button", { name: "Tuzatishni saqlash" }));
     await screen.findByText("Davomat tuzatishlari muvaffaqiyatli saqlandi.");
     expect(post).toHaveBeenCalledWith("/api/v1/admin/attendance/groups/group1/attendance/correct", {
       date: "2026-10-05", items: [{ student_id: "s1", status: "absent", note: "Kasal" }], reason: "Jurnal tekshirildi",
     });
-    fireEvent.click(screen.getByRole("button", { name: "O‘zgarishlar tarixi" }));
-    await screen.findByText("Jurnal tekshirildi");
-    expect(screen.getByText("Oldingi izoh")).toBeDefined();
-    expect(screen.getByText("Administrator")).toBeDefined();
+    expect(screen.queryByRole("button", { name: "O‘zgarishlar tarixi" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Audit tarixi" })).toBeNull();
+    expect(apiClient.get).not.toHaveBeenCalledWith(expect.stringContaining("/changes"), expect.anything());
   });
 
   it("saves a new lesson and finalizes it through the admin routes", async () => {

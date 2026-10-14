@@ -14,6 +14,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from neoavlod.audit_context import bind_source
 from neoavlod.database import Database
 from neoavlod.models import Attendance, AttendanceBatch, AttendanceStatus, Group, Staff, Student
 from neoavlod.settings import Settings
@@ -378,6 +379,7 @@ async def apply_attendance_import(
 
     Applies the attendance plan idempotently with advisory locking.
     """
+    await bind_source(session, "attendance_import")
     await session.execute(
         text("SELECT pg_advisory_xact_lock(:key)"), {"key": ATTENDANCE_IMPORT_LOCK}
     )

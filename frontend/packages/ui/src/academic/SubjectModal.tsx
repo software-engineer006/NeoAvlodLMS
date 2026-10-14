@@ -117,7 +117,7 @@ export const SubjectModal: React.FC<SubjectModalProps> = ({
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             disabled={isLoading}
-            className="block w-full rounded-lg border border-slate-300 text-sm p-3 transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 disabled:bg-slate-50 disabled:text-slate-500"
+            className="block w-full rounded-lg border border-slate-300 text-sm p-3 transition-colors focus:border-blue-500 focus:outline-hidden focus:ring-2 focus:ring-blue-200 disabled:bg-slate-50 disabled:text-slate-500"
           />
         </div>
 

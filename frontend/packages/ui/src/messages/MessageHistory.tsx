@@ -219,7 +219,7 @@ export const MessageHistory: React.FC<Props> = ({ focus, onSummary }) => {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <button
-                        className="text-sm sm:text-base text-blue-700 font-semibold hover:underline text-left break-words focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+                        className="text-sm sm:text-base text-blue-700 font-semibold hover:underline text-left break-words focus:outline-hidden focus:ring-2 focus:ring-blue-500 rounded-sm"
                         onClick={() => openDetail(item.id)}
                       >
                         {item.title}

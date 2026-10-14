@@ -276,7 +276,7 @@ export const StudentsManagementView: React.FC<StudentsManagementViewProps> = ({ 
                   <TableCell>
                     <button
                       type="button"
-                      className="text-left focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-0.5 group"
+                      className="text-left focus:outline-hidden focus:ring-2 focus:ring-blue-500 rounded-sm p-0.5 group"
                       onClick={(e) => {
                         e.stopPropagation();
                         setDrawerStudentId(student.id);

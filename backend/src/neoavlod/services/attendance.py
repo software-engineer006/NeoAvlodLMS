@@ -32,6 +32,7 @@ from neoavlod.security.rbac import (
     ensure_group_owner,
     ensure_permissions,
     ensure_portal_session,
+    ensure_superadmin,
     has_permission,
 )
 from neoavlod.security.sessions import Identity
@@ -229,8 +230,8 @@ def _audit(
 
 
 def _require_reason(actor: Identity, reason: str | None) -> None:
-    if actor.staff.role != Role.TEACHER and not (reason and reason.strip()):
-        raise DomainError("Administrator tuzatish sababini kiritishi shart", 422)
+    if not (reason and reason.strip()):
+        raise DomainError("Davomat tuzatish sababini kiritish shart", 422)
 
 
 async def _upsert_items(
@@ -644,6 +645,7 @@ async def list_attendance_changes(
     page: int = 1,
     page_size: int = 20,
 ) -> dict[str, object]:
+    ensure_superadmin(actor)
     await ensure_attendance_access(session, actor, group_id)
     query = (
         select(AttendanceChange, Student)

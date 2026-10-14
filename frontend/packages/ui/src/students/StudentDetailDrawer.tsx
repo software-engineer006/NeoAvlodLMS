@@ -620,7 +620,7 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({
                       if (e.target.value) handleMonthChange(e.target.value);
                     }}
                     disabled={isStatsLoading}
-                    className="px-2.5 py-1 text-xs font-medium border border-slate-300 rounded-lg bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="px-2.5 py-1 text-xs font-medium border border-slate-300 rounded-lg bg-white text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                     aria-label="Oy tanlash"
                   />
                   <Button

@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from neoavlod.audit_context import bind_source
 from neoavlod.models import Role, Staff
 from neoavlod.security.passwords import hash_password, validate_password
 
@@ -34,6 +35,7 @@ async def bootstrap_superadmin(
     password: str,
 ) -> BootstrapResult:
     validate_password(password)
+    await bind_source(session, "bootstrap")
     # Serialize absent-row creation as well as retries by concurrent operators.
     await session.execute(select(func.pg_advisory_xact_lock(0x4E454F01)))
     existing = (

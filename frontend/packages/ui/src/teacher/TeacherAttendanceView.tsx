@@ -6,7 +6,6 @@ import type {
   TeacherDraftItemIn,
 } from "./types";
 import { apiClient } from "../api/client";
-import { AttendanceChangesView } from "../attendance/AttendanceChangesView";
 import { Button } from "../components/Button";
 import { Card, CardContent } from "../components/Card";
 import { Input } from "../components/Input";
@@ -96,6 +95,11 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
   const [sheet, setSheet] = useState<TeacherAttendanceSheet | null>(null);
   const [entries, setEntries] = useState<Record<string, LocalEntryState>>({});
   const [initialEntriesSnapshot, setInitialEntriesSnapshot] = useState<string>("");
+  const hasExistingChanges = Boolean(sheet?.items.some((original) => {
+    const local = entries[original.student_id];
+    return original.status !== null && local?.status != null &&
+      (local.status !== original.status || local.note.trim() !== (original.note || ""));
+  }));
 
   const [isLoadingGroups, setIsLoadingGroups] = useState<boolean>(false);
   const [isLoadingSheet, setIsLoadingSheet] = useState<boolean>(false);
@@ -311,14 +315,19 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
   }, [entries]);
 
   // Save Draft
+  const requireReason = (setMessage = setError) => {
+    if (hasExistingChanges && !reason.trim()) {
+      setMessage("Davomat tuzatish sababini kiritish shart");
+      return false;
+    }
+    return true;
+  };
+
   const handleSaveDraft = async () => {
     if (!selectedGroupId || controlsDisabled) return false;
     setError(null);
     setSuccessMessage(null);
-    if (portal === "admin" && !reason.trim() && (sheet?.finalized || sheet?.items.some((item) => item.status !== null))) {
-      setError("Administrator tuzatish sababini kiritishi shart");
-      return false;
-    }
+    if (!requireReason()) return false;
 
     const itemsToSave: TeacherDraftItemIn[] = Object.values(entries)
       .filter((e) => e.status !== null)
@@ -340,7 +349,7 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
         {
           date,
           items: itemsToSave,
-          ...(portal === "admin" ? { reason: reason.trim() || null } : {}),
+          reason: reason.trim() || null,
         }
       );
       applySheet(updatedSheet);
@@ -374,6 +383,7 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
     if (controlsDisabled || sheet?.finalized) return;
     setError(null);
     setValidationError(null);
+    if (!requireReason()) return;
 
     if (counts.unmarked > 0) {
       setValidationError(
@@ -387,6 +397,7 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
   const handleConfirmFinalize = async () => {
     if (!selectedGroupId || controlsDisabled || sheet?.finalized || counts.unmarked > 0) return;
     setError(null);
+    if (!requireReason(setValidationError)) return;
     setIsFinalizing(true);
 
     const itemsToSubmit: TeacherDraftItemIn[] = Object.values(entries).map((e) => ({
@@ -401,7 +412,7 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
         {
           date,
           items: itemsToSubmit,
-          ...(portal === "admin" ? { reason: reason.trim() || null } : {}),
+          reason: reason.trim() || null,
         }
       );
       applySheet(finalizedSheet);
@@ -533,7 +544,7 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
         </Alert>
       )}
 
-      {portal === "admin" && canEdit && <Input label="Tuzatish sababi" value={reason} maxLength={2000}
+      {canEdit && <Input label="Tuzatish sababi" value={reason} maxLength={2000} required={hasExistingChanges}
         onChange={(event) => setReason(event.target.value)} disabled={controlsDisabled}
         placeholder="Mavjud yozuvni o‘zgartirsangiz, sababini kiriting" />}
 
@@ -767,8 +778,6 @@ export const TeacherAttendanceView: React.FC<TeacherAttendanceViewProps> = ({
       )}
 
       {/* Confirmation Modal for Finalize */}
-      {sheet && !isLoadingSheet && <AttendanceChangesView key={`${selectedGroupId}/${date}`}
-        endpoint={`${apiBase}/groups/${selectedGroupId}/attendance/changes?date=${date}`} revision={revision} />}
 
       <Modal
         isOpen={isConfirmFinalizeOpen}

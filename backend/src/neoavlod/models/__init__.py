@@ -1,11 +1,14 @@
 """Import the model registry for Alembic and application services."""
 
+from neoavlod.audit_schema import register_metadata
+from neoavlod.database import Base
 from neoavlod.models.attendance import (
     Attendance,
     AttendanceBatch,
     AttendanceChange,
     AttendanceStatus,
 )
+from neoavlod.models.audit import AuditEvent, AuditSegment
 from neoavlod.models.auth import (
     AuthRateLimit,
     AuthSession,
@@ -20,11 +23,15 @@ from neoavlod.models.staff import Role, Staff
 from neoavlod.models.subject import Subject
 from neoavlod.models.system import NotificationOutbox, OutboxStatus, SystemSettings
 
+register_metadata(Base.metadata)
+
 __all__ = [
     "Attendance",
     "AttendanceBatch",
     "AttendanceChange",
     "AttendanceStatus",
+    "AuditEvent",
+    "AuditSegment",
     "AuthSession",
     "AuthRateLimit",
     "Group",

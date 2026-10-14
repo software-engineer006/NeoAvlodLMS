@@ -7,9 +7,10 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 from sqlalchemy import select
 
 from neoavlod.api.deps import IdentityDependency, OTPStoreDependency, SessionDependency
+from neoavlod.audit_context import bind_actor, emit
 from neoavlod.database import Database
 from neoavlod.errors import DomainError
-from neoavlod.models import AuthSession, Portal, RefreshToken, Role
+from neoavlod.models import AuthSession, Portal, RefreshToken, Role, Staff
 from neoavlod.models.common import Status
 from neoavlod.security.passwords import validate_password
 from neoavlod.security.sessions import (
@@ -192,6 +193,13 @@ async def password_reset_confirm(
 ) -> None:
     settings = cast(Settings, request.app.state.settings)
     ensure_origin(request, settings, portal)
+    await rate_limit(
+        session,
+        settings,
+        str(body.challenge_id),
+        request.client.host if request.client else "unknown",
+        "reset-otp",
+    )
     await reset_password(
         session,
         settings,
@@ -239,6 +247,13 @@ async def login_confirm(
 ) -> StaffProfile:
     settings = cast(Settings, request.app.state.settings)
     ensure_origin(request, settings, portal)
+    await rate_limit(
+        session,
+        settings,
+        str(body.challenge_id),
+        request.client.host if request.client else "unknown",
+        "login-otp",
+    )
     person, tokens = await confirm_login(
         session, settings, store, body.challenge_id, body.code, portal
     )
@@ -345,6 +360,10 @@ async def logout(
         if auth.portal != portal:
             raise DomainError("Ushbu panelga kirish taqiqlangan", 403)
         ensure_csrf(request, auth)
+        person = await session.get(Staff, auth.staff_id)
+        if person is not None:
+            await bind_actor(session, person)
+        await emit(session, "auth.logout", details={"portal": portal.value})
         auth.revoked_at = datetime.now(UTC)
         await session.commit()
     clear_cookies(response, settings)

@@ -255,7 +255,7 @@ export const GroupModal: React.FC<GroupModalProps> = ({
               <button
                 type="button"
                 onClick={() => applyPresetDays([1, 3, 5])}
-                className="text-blue-600 hover:text-blue-800 font-medium px-1.5 py-0.5 rounded hover:bg-blue-50"
+                className="text-blue-600 hover:text-blue-800 font-medium px-1.5 py-0.5 rounded-sm hover:bg-blue-50"
               >
                 Toq kunlar
               </button>
@@ -263,7 +263,7 @@ export const GroupModal: React.FC<GroupModalProps> = ({
               <button
                 type="button"
                 onClick={() => applyPresetDays([2, 4, 6])}
-                className="text-blue-600 hover:text-blue-800 font-medium px-1.5 py-0.5 rounded hover:bg-blue-50"
+                className="text-blue-600 hover:text-blue-800 font-medium px-1.5 py-0.5 rounded-sm hover:bg-blue-50"
               >
                 Juft kunlar
               </button>
@@ -271,7 +271,7 @@ export const GroupModal: React.FC<GroupModalProps> = ({
               <button
                 type="button"
                 onClick={() => applyPresetDays([1, 2, 3, 4, 5, 6])}
-                className="text-blue-600 hover:text-blue-800 font-medium px-1.5 py-0.5 rounded hover:bg-blue-50"
+                className="text-blue-600 hover:text-blue-800 font-medium px-1.5 py-0.5 rounded-sm hover:bg-blue-50"
               >
                 Har kuni
               </button>
@@ -289,7 +289,7 @@ export const GroupModal: React.FC<GroupModalProps> = ({
                   checked={daysOfWeek.includes(day.value)}
                   onChange={() => toggleDay(day.value)}
                   disabled={isLoading}
-                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  className="rounded-sm border-slate-300 text-blue-600 focus:ring-blue-500"
                 />
                 <span>{day.label}</span>
               </label>

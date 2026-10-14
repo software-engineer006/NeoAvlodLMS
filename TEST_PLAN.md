@@ -6,6 +6,39 @@ shu faylning qabul jadvaliga yoziladi. Bajarilmagan sinov “o‘tdi” deb belg
 
 ## Ruxsat va rol matriksi
 
+2026-10-14 kengaytma: AUDIT_PLAN.md va TASKS103–114 bo‘yicha quyidagi case
+matriks qo‘shildi.103–111 dalillari quyida qayd qilinadi;112–114 hali yakunlanmagan.
+Davomat o‘zgarish auditi yangi talab bo‘yicha faqat superadmin,
+oddiy davomat tarixi/statistikasi esa mavjud biznes huquqlarida qoladi.
+
+| ID | Audit/DOM qo‘llanma sinovi | Qabul |
+| --- | --- | --- |
+| L01 | Subject/group/student/staff/assignment/profile/bot/campaign mutations | Verified actor snapshot, entity/action/old-new/sabab, UTC precision va Tashkent kun; atomik yozuv |
+| L02 | Audit capture failure/no-op/parallel transaction | Business rollback; no-op mutation yo‘q, retry/concurrent commit event yo‘qotmaydi |
+| L03 | Login/OTP/reset/logout/refresh/Telegram/worker | Haqiqiy provenance va outcome; OTP/token/parol/hash/cookie/link logda yo‘q |
+| L04 | Read/403/422/5xx, caller spoof | Server identity/correlation; raw body/query/IP proxy spoof yoki actor inputga ishonch yo‘q |
+| L05 | Har rol uchun attendance correction reason | Existing status/note o‘zgarsa sabab, first-entry/no-op/finalize farqi, old-new actor/time |
+| L06 | Super/full-admin/teacher/anon/inactive/expired | Faqat faol superadmin logs va eski attendance auditga200; qolganlar403/401 |
+| L07 | API/DB/folder immutability | Delete/edit endpoint yo‘q; runtime SQL UPDATE/DELETE/TRUNCATE rad; API FS read-only |
+| L08 | Archive crash/disk full/retry/orphan/two workers | Fsync/read-back/metadata oldin prune yo‘q; yo‘qotish/dublikat va watermark skip yo‘q |
+| L09 | Encryption/key/payload/path/symlink/corruption | Authenticated decrypt/checksum/count/IDs; safe regular private file; tamper fail-closed |
+| L10 | Kunlik filters/cursor/download/snapshot | Toshkent boundary, seconds, persisted+pending dedup, safe attachment/no-store; download ham audit |
+| L11 | Bounded memory/compression | Synthetic large day streaming, max batch/payload, measured compression; doimiy DB payload arxivga o‘tadi |
+| L12 | Upgrade/redeploy/business rollback | Audit schema/folder/key/dalil saqlanadi; old credentials/history/import receipts o‘zgarmaydi |
+| H01 | Dashboard welcome yo‘q | Faqat asosiy ko‘rsatkichlar; profil/sidebar/navigation ishlaydi |
+| H02 | Tailwind latest stable/lock/build | Rasmiy upgrade/compatibility, Docker registry, ikki portal va shared source classes |
+| H03 | Barcha React scene/marker/qadamlar | Shared React UI/SVG tiniq zoom, read-only/inert synthetic previews, raster dependency yo‘q |
+| H04 | Demo network va privilege isolation | Preview API/mutation/secret yo‘q; teacher bundle log/bot/grant materialini olmaydi |
+| H05 | Guide role/search/zoom/revocation/mobile | Superadmin logs topic, admin/teacher audit topic yo‘q;1440/768/360 klaviatura/overflow/JS checks |
+
+105 qabul dalili: Docker registry Tailwind4.3.3/@tailwindcss-vite4.3.3 va
+Vite8.3.4/Reactplugin6.1.2, Node22.23.3; root/workspace deps deduped, npm audit
+0 advisories. Shared CSSfirst/source/theme; utility compatibility va teacher
+mobile header min-width/shrink tuzatildi.196 full Vitest, typecheck/lint, ikkala
+build; yakuniy teacher9 flow va actual guide1440/768/360 qayta passed.32 actual
+synthetic app ekranlari private tailwind-105da; message/admin guide/dashboard
+brauzer oqimlari passed. Yangi React qo‘llanma111da shu sinovlarni almashtiradi.
+
 Barcha endpointlar faol xodim va tirik sessionni tekshiradi. Admin endpointlari
 admin portal sessiyasini, teacher endpointlari teacher rolini talab qiladi.
 Yozish so‘rovlari Origin va sessionga bog‘liq double-submit CSRFni tekshiradi.
@@ -77,11 +110,11 @@ id/nom/sig‘im/band sonini qaytaradi. Tanlovlar 100 ta bilan jimgina kesilmaydi
 | G01 | Admin rol va grant mavzulari | Grantsiz umumiy mavzular; har bir grant uchun action mavzusi; fulladmin bot mavzusi yo‘q |
 | G02 | Teacher to‘liq mavzulari | Guruh/profil/statistika/davomat/tarix/session/OTP, admin boshqaruvi yo‘q |
 | G03 | Qo‘llanma qidiruv va bo‘lim tanlash | Ism/keyword/step bo‘yicha; unauthorized mavzu searchda ham chiqmaydi; empty state va reset |
-| G04 | Rasm va raqamli qadam mosligi | Har screenshot actual app DOM; marker1..N qadamga mos; alt text, matnli qadam, broken asset yo‘q |
+| G04 | React namuna va raqamli qadam mosligi | Shared UI atomlari, inert namuna; marker1..N qadamga mos; accessible description, matnli qadam, raster asset yo‘q |
 | G05 | Ruxsat o‘zgarsa ochiq qo‘llanma | Oldingi mavzu yopiladi, yangi topics qayta hisoblanadi; stale selection ochilmaydi |
 | U01 | 1440/768/360px | Sidebar/mobile menu, guide/topic/card/grid/dialog; horizontal overflow yo‘q; private screenshot review |
 | U02 | Klaviatura va matn | Nomlangan dialog, focus trap/restore, Tab/Escape, form labels, alt; shared modal tests+browser |
-| U03 | Console/network | JS exception yo‘q; rasm200; sintetik script orqali to‘liq UI oqim; API spy unknownblocked |
+| U03 | Console/network | JS exception yo‘q; native React previews APIga tegmaydi; sintetik script orqali to‘liq UI oqim; API spy unknownblocked |
 | D01 | Migratsiya | Upgrade/downgrade/head/model match, eski FK/credential/history saqlanadi; test_migrations.py |
 | D02 | Haqiqiy private import | Hash/backup restore, rerun0, Asila bo‘sh, Jamshid k-only98; admin keyingi tahriri saqlanadi |
 | R01 | Full Docker gate | check_backend/frontend/agent, pytest/Vitest, release build/checksum; TASKS evidence |
@@ -188,3 +221,48 @@ checksum/publicscan o‘tdi. Latest fix commit/CI va101production qabul kutilmoq
   paketiga tegishli emas. Public diff whitespace check passed.
 - R02–R05: user authorized push/deploy, lekin exact commit/Actions/VPS dalillari
   099–101da olinadi. Local real bot worker polling konflikti uchun stopped.
+
+## 2026-10-14 audit va React qo‘llanma dalillari (103–111)
+
+Oldingi 095–102 PNG va rol qabul qaydlari tarixiy release dalilidir. Joriy
+qo‘llanma33 React mavzu (admin23/fulladmin19/limited6/teacher10), rastrsiz.
+L01–L11: whitelist PostgreSQL capture/seconds/Tashkent/snapshots, business
+rollback/noop/concurrency/actor-spoof/auth/CSRF/reason, exclusive superadmin
+GET-only API va legacy audit denial, runtime/archiver privileges, immutable
+folder/hash/key/fsync/exact-prune faultlar Dockerda tasdiqlandi. Full356backend
+va final15API boundary/memory cases,11archive faults, extra21capture/API/
+migration tests learner-name snapshotdan keyin o‘tdi.128x30KB archival peak
+<40MiB,8192x5KB export <12MiB traced Python RAM; compression fixture<1/8.
+Actual Docker readonly audit mount write/unlink/chmodni rad etdi.
+
+H01–H05/G01–G05/U01–U03: latest locked Tailwind4.3.3/Vite8.3.4, dashboard
+welcome removed. Logs browser filters/diffs/reason/seconds/CSRF gzip download
+and admin/teacher hidden/reason enforcement1440/768/360 passed. Full207UI
+followed by54 guide-specific/full240Vitest/typecheck/lint passed. All33 scenes
+have exact sequential markers, inert readonly keyboard-free controls, no
+network/credentials or PNG. Actual guide browser search/zoom/inert/font16+
+role/destination/all topics and1440/768/360 no overflow/JS errors passed;
+synthetic captures visually reviewed.32 public PNG removed; GUIDES.md and
+source-checksum/provenance audit updated. Clean builds/release checks and
+local-data/production rollback verification are finalized in112–114.
+
+2026-10-14 audit final acceptance: full362 PostgreSQL/backend tests,
+Ruff/mypy145 files,240 frontend tests including54 guide cases,13 agent cases,
+clean builds and Node/Python source+asset checksums passed. Actual closed
+synthetic Chromium covers all33 React guide scenes and Logs/attendance reason
+flows at1440/768/360. Local pre-audit backup restored to scratch, all public
+business/credential hashes matched;0012 upgrade/model match and23 actual-data
+read-only ownership/role API checks passed without real login or sends.
+
+Production infrastructure113:15 deployment/rollback unit+actionlint cases,
+12 archive fault/security cases and actual disposable TLS production integration
+passed. UID1000 API/worker/archiver; restricted LOGIN app role not superuser;
+encrypted104-event read-back, API readonly mount/direct DELETE denial,
+persistent files/key hashes unchanged after two releases, automatic Nginx-error
+rollback and manual rollback, checked pg_dump plus private archive/key backup.
+Unsafe pre-audit rollback denied, evidence retained and compatible runtime
+restarted. Production VPS previous release/readiness and private backup listing
+verified; baseline6staff/7groups/118students/486attendance/24batches/0messages,
+private persistent0700folder and stable new secrets ready.213 public staged
+paths scanned:98 actual pupil names/credentials/capability links/raw CSV and
+unrelated output absent. Real CI/CD and production role/UI acceptance114 next.

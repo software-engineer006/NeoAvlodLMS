@@ -32,10 +32,9 @@ const expected: Record<string, string[]> = {
   "students:read": ["admin-students"],
   "students:create": ["admin-students", "admin-student-create"],
   "students:edit": ["admin-students", "admin-student-edit"],
-  "attendance:read": ["admin-history", "admin-audit"],
+  "attendance:read": ["admin-history"],
   "attendance:write": [
     "admin-history",
-    "admin-audit",
     "admin-attendance",
     "admin-correction",
   ],
@@ -58,9 +57,11 @@ describe("Ruxsatga mos admin qo‘llanmasi", () => {
   it("full administrator sees every admin topic but cannot learn superadmin-only grants or bot changes", () => {
     const full = { ...user, permissions: Object.values(PERMISSIONS) };
     const topics = visibleGuideTopics(full, "admin", adminTopics);
-    expect(topics.length).toBe(adminTopics.length - 2);
+    expect(topics.length).toBe(adminTopics.length - 4);
     expect(topics.map((topic) => topic.id)).not.toContain("admin-grants");
     expect(topics.map((topic) => topic.id)).not.toContain("admin-bot");
+    expect(topics.map((topic) => topic.id)).not.toContain("admin-audit");
+    expect(topics.map((topic) => topic.id)).not.toContain("admin-logs");
     expect(topics.map((topic) => topic.id)).toContain("admin-student-stats");
     expect(
       visibleGuideTopics({ ...user, role: "superadmin" }, "admin", adminTopics),
@@ -130,9 +131,9 @@ describe("Ruxsatga mos admin qo‘llanmasi", () => {
         .length,
     ).toBe(4);
     const img = within(article).getByRole("img");
-    expect(img.getAttribute("alt")).toMatch(/raqamlangan/);
+    expect(img.getAttribute("aria-label")).toMatch(/raqamlangan/);
     fireEvent.click(
-      within(article).getByRole("button", { name: /Rasmni kattalashtirish/ }),
+      within(article).getByRole("button", { name: /Namunani kattalashtirish/ }),
     );
     expect(
       screen.getByRole("dialog", { name: /Tanlanganlarga/ }),
@@ -162,7 +163,7 @@ describe("Ruxsatga mos admin qo‘llanmasi", () => {
         .querySelectorAll("button")[6],
     );
     fireEvent.click(
-      screen.getByRole("button", { name: /Rasmni kattalashtirish/ }),
+      screen.getByRole("button", { name: /Namunani kattalashtirish/ }),
     );
     expect(screen.getByRole("dialog")).toBeDefined();
     view.rerender(<GuideView currentUser={user} portal="admin" />);

@@ -34,7 +34,7 @@ export const OccupancyBadge: React.FC<OccupancyBadgeProps> = ({
     <div className={`inline-flex flex-col gap-1 ${className}`}>
       <div className="flex items-center gap-1.5">
         <span
-          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold border ${statusColor}`}
+          className={`inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-semibold border ${statusColor}`}
           title={`${current} / ${safeMax} o‘quvchi (${percentage}% bandlik - ${statusText})`}
         >
           {current} / {safeMax}

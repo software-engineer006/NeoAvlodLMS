@@ -51,7 +51,7 @@ export const Alert: React.FC<AlertProps> = ({
         <button
           type="button"
           onClick={onDismiss}
-          className="p-1 -mr-1 -mt-1 text-current opacity-70 hover:opacity-100 rounded-sm focus:outline-none focus:ring-2 focus:ring-current"
+          className="p-1 -mr-1 -mt-1 text-current opacity-70 hover:opacity-100 rounded-xs focus:outline-hidden focus:ring-2 focus:ring-current"
           aria-label="Yopish"
         >
           <X className="w-4 h-4" />

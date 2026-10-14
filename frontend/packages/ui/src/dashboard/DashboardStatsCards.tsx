@@ -48,11 +48,11 @@ export const DashboardStatsCards: React.FC<DashboardStatsCardsProps> = ({
         {[1, 2, 3].map((idx) => (
           <Card key={idx} className="p-6 animate-pulse">
             <div className="flex items-center justify-between pb-2">
-              <div className="h-4 bg-slate-200 rounded w-24" />
+              <div className="h-4 bg-slate-200 rounded-sm w-24" />
               <div className="w-8 h-8 bg-slate-200 rounded-lg" />
             </div>
-            <div className="h-8 bg-slate-200 rounded w-16 my-2" />
-            <div className="h-3 bg-slate-200 rounded w-40" />
+            <div className="h-8 bg-slate-200 rounded-sm w-16 my-2" />
+            <div className="h-3 bg-slate-200 rounded-sm w-40" />
           </Card>
         ))}
       </div>

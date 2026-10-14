@@ -195,7 +195,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
                 <button
                   type="button"
                   onClick={onForgotPassword}
-                  className="text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors focus:outline-none focus:underline"
+                  className="text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors focus:outline-hidden focus:underline"
                 >
                   Parolni unutdingizmi?
                 </button>

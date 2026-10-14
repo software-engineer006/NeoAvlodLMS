@@ -1,5 +1,6 @@
 import type { CurrentUser, PortalType } from "../api/types";
 import { hasPermission, type PermissionKey } from "../navigation/permissions";
+import type { GuideScene } from "./scenes/types";
 
 export interface GuideStep {
   title: string;
@@ -13,8 +14,8 @@ export interface GuideTopic {
   permission?: PermissionKey;
   requiresAll?: PermissionKey[];
   superadminOnly?: boolean;
-  image: string;
-  imageAlt: string;
+  scene: GuideScene;
+  previewAlt: string;
   steps: GuideStep[];
   tips: string[];
   destination?: string;

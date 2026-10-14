@@ -170,7 +170,7 @@ export const RecipientPicker: React.FC<Props> = ({
             >
               <input
                 type="checkbox"
-                className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                className="mt-1 h-4 w-4 shrink-0 rounded-sm border-slate-300 text-blue-600 focus:ring-blue-500"
                 disabled={disabled}
                 checked={selected.includes(row.id)}
                 onChange={() => onToggle(row)}

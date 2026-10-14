@@ -70,17 +70,17 @@ export class ApiClient {
   }
 
   public async request<T = unknown>(path: string, options: RequestOptions = {}): Promise<T> {
-    const { params, body, headers = {}, ...rest } = options;
+    const { params, body, headers = {}, responseType = "json", ...rest } = options;
     const url = this.buildUrl(path, params);
     const method = (options.method || "GET").toUpperCase();
 
     const reqHeaders = new Headers(headers);
     if (!reqHeaders.has("Accept")) {
-      reqHeaders.set("Accept", "application/json");
+      reqHeaders.set("Accept", responseType === "blob" ? "application/gzip" : "application/json");
     }
 
-    // Attach CSRF token on mutating requests
-    if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+    const csrfProtected = ["POST", "PUT", "PATCH", "DELETE"].includes(method) || responseType === "blob";
+    if (csrfProtected) {
       const csrf = getCsrfToken();
       if (csrf && !reqHeaders.has("X-CSRF-Token")) {
         reqHeaders.set("X-CSRF-Token", csrf);
@@ -110,15 +110,15 @@ export class ApiClient {
       // The backend rejects expired access before running the mutation, so the
       // same attendance payload can be sent once more without losing edits.
       const csrf = getCsrfToken();
-      if (csrf && ["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+      if (csrf && csrfProtected) {
         reqHeaders.set("X-CSRF-Token", csrf);
       }
       response = await send();
     }
-    return this.decodeResponse<T>(response);
+    return this.decodeResponse<T>(response, responseType);
   }
 
-  private async decodeResponse<T = unknown>(response: Response): Promise<T> {
+  private async decodeResponse<T = unknown>(response: Response, responseType: "json" | "blob" = "json"): Promise<T> {
     if (!response.ok) {
       let detail = `Server xatosi (${response.status})`;
       let errors: ApiValidationError[] | undefined;
@@ -146,7 +146,7 @@ export class ApiClient {
       return undefined as T;
     }
 
-    return (await response.json()) as T;
+    return (responseType === "blob" ? await response.blob() : await response.json()) as T;
   }
 
   public get<T = unknown>(path: string, options?: RequestOptions): Promise<T> {

@@ -80,6 +80,7 @@ async def test_finalized_correction_preserves_batch_updates_stats_and_pending_pa
         original = (batch.id, batch.finalized_at)
     payload = {
         "date": "2026-10-05",
+        "reason": "Darsdagi qatnashuv qayta tekshirildi",
         "items": [
             {"student_id": str(students[0]), "status": "absent", "note": "  Tuzatildi  "},
         ],
@@ -176,6 +177,7 @@ async def test_delivered_notification_gets_one_correction_on_concurrent_retries(
         await session.commit()
     payload = {
         "date": "2026-10-05",
+        "reason": "Kechikish vaqti aniqlashtirildi",
         "items": [
             {"student_id": str(students[0]), "status": "late", "note": "Aniqlashtirildi"},
         ],

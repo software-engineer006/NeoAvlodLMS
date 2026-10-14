@@ -6,6 +6,7 @@ from pydantic import BaseModel, SecretStr
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from neoavlod.audit_context import bind_actor, bind_source, emit
 from neoavlod.errors import DomainError
 from neoavlod.models import Parent, Role, Staff, Student, SystemSettings
 from neoavlod.models.common import Status, link_expiry
@@ -156,12 +157,8 @@ async def link_telegram_account(
 
     entity = await resolve_link(session, payload)
 
-    staff_match = await session.scalar(
-        select(Staff.id).where(Staff.telegram_id == telegram_id)
-    )
-    parent_match = await session.scalar(
-        select(Parent.id).where(Parent.telegram_id == telegram_id)
-    )
+    staff_match = await session.scalar(select(Staff.id).where(Staff.telegram_id == telegram_id))
+    parent_match = await session.scalar(select(Parent.id).where(Parent.telegram_id == telegram_id))
     student_match = await session.scalar(
         select(Student.id).where(Student.telegram_id == telegram_id)
     )
@@ -174,10 +171,16 @@ async def link_telegram_account(
             "Ushbu Telegram hisobi allaqachon boshqa foydalanuvchiga biriktirilgan", 409
         )
 
+    await bind_source(session, "telegram")
+    if isinstance(entity, Staff):
+        await bind_actor(session, entity, verified=False)
     entity.telegram_id = telegram_id
     entity.telegram_reconnect_required = False
     entity.auth_used_at = datetime.now(UTC)
     await session.flush()
+    await emit(
+        session, "telegram.account_linked", entity_type=entity_kind(entity), entity_id=entity.id
+    )
 
     kind = entity_kind(entity)
     display_name = f"{entity.first_name} {entity.last_name or ''}".strip()
@@ -191,12 +194,9 @@ async def link_telegram_account(
             portal_name = "Admin portali"
 
         temp_pw: str | None = None
-        if (
-            entity.temporary_password_encrypted is not None
-            and (
-                entity.temporary_password_expires_at is None
-                or entity.temporary_password_expires_at > datetime.now(UTC)
-            )
+        if entity.temporary_password_encrypted is not None and (
+            entity.temporary_password_expires_at is None
+            or entity.temporary_password_expires_at > datetime.now(UTC)
         ):
             try:
                 if settings is not None:

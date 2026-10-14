@@ -68,11 +68,13 @@ async function installFixtures(page, state) {
         students_summary: [{ student_id: ids.student, student_name: 'Namuna O‘quvchi', ...student.attendance_stats }],
         summary: { total_lessons: 3, total_records: 3, present_count: 1, late_count: 1, absent_count: 1 } };
     } else if (path.includes('/groups/') && path.includes('/attendance')) {
-      const day = url.searchParams.get('date') || '2026-10-12';
+      const payload = method === 'POST' ? route.request().postDataJSON() : null;
+      const day = url.searchParams.get('date') || payload?.date || '2026-10-12';
       const end = new Date(`${day}T18:59:59Z`); end.setUTCDate(end.getUTCDate() + 2);
       body = { group_id: ids.group, date: day, finalized: Boolean(state.finalized),
         finalized_at: state.finalized ? now : null, can_edit: true, edit_deadline: state.user?.role === 'teacher' ? end.toISOString() : null, edit_disabled_reason: null,
-        items: [{ student_id: ids.student, student_first_name: 'Namuna', student_last_name: 'O‘quvchi', status: 'present', note: state.finalized ? 'Tekshirildi' : null, marked_at: now }] };
+        items: [{ student_id: ids.student, student_first_name: 'Namuna', student_last_name: 'O‘quvchi',
+          status: payload?.items?.[0]?.status || 'present', note: payload?.items?.[0]?.note || (state.finalized ? 'Tekshirildi' : null), marked_at: now }] };
     } else if (path.endsWith('/pending')) body = [];
     else if (path.endsWith('/attendance/groups')) body = [{ id: ids.group, name: 'English A', teacher_id: ids.teacher, teacher_name: 'Namuna Ustoz' }];
     else if (path.endsWith('/admin/attendance')) body = pageOf([], url);

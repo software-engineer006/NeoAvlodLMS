@@ -16,7 +16,14 @@ services:
     restart: unless-stopped
 
   backend:
+    volumes:
+      - type: bind
+        source: ./.private/audit-logs
+        target: /workspace/.private/audit-logs
+        read_only: true
     environment:
+      NEOAVLOD_AUDIT_DIR: /workspace/.private/audit-logs
+      NEOAVLOD_AUDIT_ENCRYPTION_KEY: ${NEOAVLOD_AUDIT_ENCRYPTION_KEY:?Local audit key must be set}
       NEOAVLOD_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-neoavlod}:${POSTGRES_PASSWORD}@demo-database:5432/neoavlod_demo
       NEOAVLOD_REDIS_URL: redis://redis:6379/2
       NEOAVLOD_ADMIN_ORIGIN: http://localhost:3000

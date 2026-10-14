@@ -21,7 +21,7 @@ export const Button: React.FC<ButtonProps> = ({
   ...props
 }) => {
   const baseClasses =
-    "inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed select-none";
+    "inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-hidden focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed select-none";
 
   const sizeClasses = {
     sm: "text-xs px-2.5 py-1.5 gap-1.5",
@@ -30,9 +30,9 @@ export const Button: React.FC<ButtonProps> = ({
   };
 
   const variantClasses = {
-    primary: "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 shadow-sm",
+    primary: "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 shadow-xs",
     secondary: "bg-slate-100 text-slate-800 hover:bg-slate-200 focus:ring-slate-400",
-    danger: "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 shadow-sm",
+    danger: "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 shadow-xs",
     outline: "border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 focus:ring-blue-500",
     ghost: "text-slate-700 hover:bg-slate-100 focus:ring-slate-400",
   };

@@ -9,7 +9,9 @@ init_env() {
     (umask 077; printf 'POSTGRES_USER=neoavlod\nPOSTGRES_DB=neoavlod\nPOSTGRES_PASSWORD=%s\nAPI_PORT=8000\n' "$password" > "$AGENT_ROOT/.env")
     printf 'Local .env yaratildi; secret yashirildi.\n'
   fi
-  for key in NEOAVLOD_SECURITY_SECRET NEOAVLOD_BOT_ENCRYPTION_KEY; do
+  mkdir -p "$AGENT_ROOT/.private/audit-logs"
+  chmod 700 "$AGENT_ROOT/.private/audit-logs"
+  for key in NEOAVLOD_SECURITY_SECRET NEOAVLOD_BOT_ENCRYPTION_KEY NEOAVLOD_AUDIT_ENCRYPTION_KEY; do
     local present=false line value
     while IFS= read -r line; do
       if [[ "$line" == "$key="* && -n "${line#*=}" ]]; then present=true; fi

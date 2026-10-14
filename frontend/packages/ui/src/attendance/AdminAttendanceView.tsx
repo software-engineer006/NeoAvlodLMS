@@ -27,7 +27,7 @@ import { MonthlyAttendanceHistoryView } from "./MonthlyAttendanceHistoryView";
 import { AdminChangesHistoryView } from "./AdminChangesHistoryView";
 import { TeacherAttendanceView } from "../teacher/TeacherAttendanceView";
 import type { AttendanceGroupOption } from "../teacher/TeacherAttendanceView";
-import { hasPermission, PERMISSIONS } from "../navigation/permissions";
+import { canViewLogs, hasPermission, PERMISSIONS } from "../navigation/permissions";
 
 export interface AdminAttendanceViewProps {
   currentUser: CurrentUser;
@@ -39,6 +39,7 @@ export const AdminAttendanceView: React.FC<AdminAttendanceViewProps> = ({
   defaultTab,
 }) => {
   const canWrite = hasPermission(_currentUser, PERMISSIONS.ATTENDANCE_WRITE);
+  const canAudit = canViewLogs(_currentUser);
   const [activeTab, setActiveTab] = useState<"matrix" | "list" | "mark" | "changes">(defaultTab || (canWrite ? "mark" : "matrix"));
   const [records, setRecords] = useState<AdminAttendanceItem[]>([]);
   const [total, setTotal] = useState<number>(0);
@@ -145,7 +146,7 @@ export const AdminAttendanceView: React.FC<AdminAttendanceViewProps> = ({
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Davomat</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Barcha guruhlar bo‘yicha davomat, oylik natijalar va o‘zgarishlar tarixi
+            Barcha guruhlar bo‘yicha davomat va oylik natijalar
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -189,13 +190,13 @@ export const AdminAttendanceView: React.FC<AdminAttendanceViewProps> = ({
         >
           Yozuvlar ro‘yxati
         </button>
-        <button type="button" onClick={() => setActiveTab("changes")}
+        {canAudit && <button type="button" onClick={() => setActiveTab("changes")}
           className={`py-2.5 px-4 text-sm font-medium border-b-2 ${activeTab === "changes" ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-500"}`}>
           Audit tarixi
-        </button>
+        </button>}
       </div>
 
-      {activeTab === "changes" ? <AdminChangesHistoryView groups={groups} /> : activeTab === "mark" && canWrite ? <TeacherAttendanceView portal="admin" /> : activeTab === "matrix" ? (
+      {activeTab === "changes" && canAudit ? <AdminChangesHistoryView groups={groups} /> : activeTab === "mark" && canWrite ? <TeacherAttendanceView portal="admin" /> : activeTab === "matrix" ? (
         <MonthlyAttendanceHistoryView
           portal="admin"
           groups={groups}
@@ -387,7 +388,7 @@ export const AdminAttendanceView: React.FC<AdminAttendanceViewProps> = ({
                   </TableCell>
 
                   <TableCell>
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
                       {record.group_name}
                     </span>
                   </TableCell>

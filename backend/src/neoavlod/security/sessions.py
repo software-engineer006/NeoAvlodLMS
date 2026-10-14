@@ -9,6 +9,7 @@ from fastapi import Request, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from neoavlod.audit_context import bind_actor, emit
 from neoavlod.errors import DomainError, telegram_not_linked
 from neoavlod.models import AuthSession, Portal, RefreshToken, Role, Staff
 from neoavlod.models.common import Status
@@ -156,17 +157,20 @@ async def rotate_refresh(
     if auth is None or auth.portal != portal:
         raise DomainError("Ushbu panelga kirish taqiqlangan", 403)
     csrf = ensure_csrf(request, auth)
+    person = await session.get(Staff, auth.staff_id)
+    if person is None:
+        raise DomainError("Hisob topilmadi", 401)
+    await bind_actor(session, person, verified=False)
     now = datetime.now(UTC)
     if previous.used_at is not None:
         auth.revoked_at = now
+        await emit(session, "auth.refresh_replay", details={"portal": portal.value})
         await session.commit()
         raise DomainError("Refresh token qayta ishlatilgan; sessiya bekor qilindi", 401)
     if auth.revoked_at is not None or auth.expires_at <= now or previous.expires_at <= now:
         raise DomainError("Refresh muddati tugagan", 401)
-    person = await session.get(Staff, auth.staff_id)
-    if person is None:
-        raise DomainError("Hisob topilmadi", 401)
     ensure_portal(person, portal)
+    await bind_actor(session, person)
     access, refresh = secrets.token_urlsafe(32), secrets.token_urlsafe(32)
     replacement = RefreshToken(
         id=uuid.uuid4(),
@@ -181,6 +185,7 @@ async def rotate_refresh(
     previous.replaced_by_id = replacement.id
     auth.access_token_hash = token_hash(access)
     auth.access_expires_at = min(now + timedelta(minutes=15), auth.expires_at)
+    await emit(session, "auth.refresh", details={"portal": portal.value})
     await session.commit()
     return Tokens(access, refresh, csrf, auth.id, auth.access_expires_at, auth.expires_at)
 

@@ -172,11 +172,11 @@ export const TeacherShell: React.FC<TeacherShellProps> = ({
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Header */}
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 sm:px-6 lg:px-8 shrink-0">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-1 min-w-0 items-center gap-2 sm:gap-3">
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(true)}
-              className="p-2 -ml-2 text-slate-600 hover:text-slate-900 rounded-lg lg:hidden"
+              className="p-2 -ml-2 text-slate-600 hover:text-slate-900 rounded-lg shrink-0 lg:hidden"
               aria-label="Menyuni ochish"
             >
               <Menu className="w-6 h-6" />

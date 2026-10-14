@@ -95,6 +95,8 @@ check_health() {
   local release="$1"
   compose_release "$release" exec -T api python -c 'import urllib.request; [urllib.request.urlopen("http://127.0.0.1:8000/api/v1/"+p, timeout=5) for p in ("health","ready")]' </dev/null || return 1
   [[ "$(compose_release "$release" ps --status running -q worker | wc -l | tr -d ' ')" == 1 ]] || { fail 'Bitta worker ishlashi kerak.'; return 1; }
+  [[ "$(compose_release "$release" ps --status running -q audit-archiver | wc -l | tr -d ' ')" == 1 ]] || { fail 'Bitta audit arxivchi ishlashi kerak.'; return 1; }
+  compose_release "$release" exec -T audit-archiver python -c "import os,time; assert time.time()-os.stat('/tmp/neoavlod-audit-heartbeat').st_mtime < 45" </dev/null || return 1
   local portal host marker actual
   local tls_args=()
   [[ -z "${PORTAL_CA_FILE:-}" ]] || tls_args=(--cacert "$PORTAL_CA_FILE")
@@ -113,8 +115,16 @@ restore_release() {
   local release="$1"
   valid_release "$release" || return 1
   [[ -f "$APP_ROOT/releases/$release/.successful" && -d "$WEB_ROOT/releases/$release" ]] || { fail 'Ishchi release topilmadi.'; return 1; }
+  if [[ -e "$APP_ROOT/.audit-enforced" && "$(cat "$APP_ROOT/releases/$release/backend/audit_runtime.version" 2>/dev/null)" != 1 ]]; then
+    # Older owner-credential runtimes cannot safely attribute writes or enforce audit RBAC.
+    local current
+    current="$(basename "$(readlink "$APP_ROOT/current")")"
+    compose_release "$current" stop api worker || true
+    fail 'Auditdan oldingi runtime rollback rad etildi; loglar saqlandi, xavfsiz release kerak.'
+    return 1
+  fi
   docker image inspect "neoavlod-backend:$release" >/dev/null || return 1
-  compose_release "$release" up -d --no-deps --no-build --force-recreate --wait --wait-timeout 120 api worker || return 1
+  compose_release "$release" up -d --no-deps --no-build --force-recreate --wait --wait-timeout 120 api worker audit-archiver || return 1
   activate_links "$release" || return 1
   install_nginx "$release" || return 1
   check_health "$release"

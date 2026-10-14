@@ -31,6 +31,7 @@ export interface ApiErrorPayload {
 }
 
 export interface RequestOptions extends Omit<RequestInit, "body"> {
+  responseType?: "json" | "blob";
   params?: Record<string, string | number | boolean | undefined | null>;
   body?: unknown;
 }

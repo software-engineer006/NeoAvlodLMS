@@ -14,6 +14,7 @@ from sqlalchemy import select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from neoavlod.audit_context import bind_source
 from neoavlod.database import Database
 from neoavlod.errors import DomainError
 from neoavlod.models import (
@@ -193,6 +194,7 @@ async def apply_educenter(
     session: AsyncSession, plan: EducPlan, *, capacity: int = 30
 ) -> dict[str, int]:
     """Caller owns transaction. Conflicting finalized/manual history is never overwritten."""
+    await bind_source(session, "educenter_import")
     await session.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": 0x4E454F076})
     for spec in plan.roster.groups:
         existing = await session.scalar(

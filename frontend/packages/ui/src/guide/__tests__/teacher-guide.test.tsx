@@ -7,14 +7,15 @@ import { visibleGuideTopics } from "../types";
 
 const teacher: CurrentUser = { id: "teacher", username: "teacher", first_name: "Namuna", last_name: null,
   phone: null, role: "teacher", status: "active", permissions: ["staff:manage", "messages:send"] };
-it("offers all eleven teacher topics and no admin actions even with forged grants", () => {
-  expect(visibleGuideTopics(teacher, "teacher", teacherTopics).length).toBe(11);
+it("offers all ten teacher topics and no audit or admin actions even with forged grants", () => {
+  expect(visibleGuideTopics(teacher, "teacher", teacherTopics).length).toBe(10);
   render(<TeacherGuideView currentUser={teacher} />);
   const nav = screen.getByRole("navigation", { name: "Qo‘llanma mavzulari" });
-  expect(within(nav).getAllByRole("button").length).toBe(11);
+  expect(within(nav).getAllByRole("button").length).toBe(10);
   expect(within(nav).queryByText(/Administrator va barcha/)).toBeNull();
   expect(within(nav).queryByText(/barchaga xabar/)).toBeNull();
-  expect(teacherTopics.every((topic) => topic.id.startsWith("teacher-") && topic.imageAlt && topic.steps.length >= 3)).toBe(true);
+  expect(teacherTopics.every((topic) => topic.id.startsWith("teacher-") && topic.previewAlt && topic.steps.length >= 3)).toBe(true);
+  expect(teacherTopics.some((topic) => topic.id.includes("audit"))).toBe(false);
 });
 it.each(["admin", "superadmin"] as const)("denies the %s role in teacher documentation", (role) => {
   render(<TeacherGuideView currentUser={{ ...teacher, role }} />);
@@ -31,7 +32,7 @@ it("searches the exact Tashkent correction boundary and navigates only to teache
 });
 it("closes the guide if the teacher account becomes inactive", () => {
   const view = render(<TeacherGuideView currentUser={teacher} />);
-  fireEvent.click(screen.getByRole("button", { name: /Rasmni kattalashtirish/ }));
+  fireEvent.click(screen.getByRole("button", { name: /Namunani kattalashtirish/ }));
   view.rerender(<TeacherGuideView currentUser={{ ...teacher, status: "inactive" }} />);
   expect(screen.queryByRole("dialog")).toBeNull();
   expect(screen.queryByRole("article")).toBeNull();

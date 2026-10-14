@@ -63,14 +63,10 @@ def main() -> int:
     )
     for name in ("username", "phone", "first-name", "last-name"):
         bootstrap.add_argument(f"--{name}", required=True)
-    bootstrap.add_argument(
-        "--password-stdin", action="store_true", help="Read a secret from stdin"
-    )
+    bootstrap.add_argument("--password-stdin", action="store_true", help="Read a secret from stdin")
 
     bot_cmd = commands.add_parser("set-bot-token", help="Set Telegram bot token securely")
-    bot_cmd.add_argument(
-        "--token-stdin", action="store_true", help="Read bot token from stdin"
-    )
+    bot_cmd.add_argument("--token-stdin", action="store_true", help="Read bot token from stdin")
 
     worker_cmd = commands.add_parser("bot-worker", help="Run Telegram bot background worker")
     worker_cmd.add_argument(
@@ -94,6 +90,7 @@ def main() -> int:
     args = parser.parse_args()
 
     if args.command == "worker":
+
         async def _run_worker_all() -> int:
             settings = Settings()
             database = Database(settings)
@@ -112,6 +109,7 @@ def main() -> int:
                         )
                     )
                 else:
+
                     def _handle_stop() -> None:
                         bot_worker.stop()
                         outbox_worker.stop()
@@ -133,6 +131,7 @@ def main() -> int:
         return asyncio.run(_run_worker_all())
 
     if args.command == "outbox-worker":
+
         async def _run_outbox() -> int:
             settings = Settings()
             database = Database(settings)
@@ -150,6 +149,7 @@ def main() -> int:
         return asyncio.run(_run_outbox())
 
     if args.command == "bot-worker":
+
         async def _run_worker() -> int:
             settings = Settings()
             database = Database(settings)

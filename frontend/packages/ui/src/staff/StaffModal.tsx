@@ -249,7 +249,7 @@ export const StaffModal: React.FC<StaffModalProps> = ({
                     checked={selectedPermissions.includes(perm.key)}
                     onChange={() => togglePermission(perm.key)}
                     disabled={isLoading}
-                    className="rounded-sm border-slate-300 text-blue-600 focus:ring-blue-500"
+                    className="rounded-xs border-slate-300 text-blue-600 focus:ring-blue-500"
                   />
                   <span>{perm.label}</span>
                 </label>

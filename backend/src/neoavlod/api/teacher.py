@@ -15,6 +15,7 @@ from neoavlod.api.attendance_schemas import (
     FinalizeIn,
 )
 from neoavlod.api.deps import SessionDependency, TeacherDependency
+from neoavlod.errors import DomainError
 from neoavlod.models import Student
 from neoavlod.models.common import Status
 from neoavlod.services import attendance as attendance_service
@@ -385,6 +386,4 @@ async def get_attendance_changes(
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> AttendanceChangesOut:
-    return AttendanceChangesOut.model_validate(await attendance_service.list_attendance_changes(
-        session, teacher, group_id, target_date, page=page, page_size=page_size
-    ))
+    raise DomainError("Audit loglari faqat superadmin uchun", 403)

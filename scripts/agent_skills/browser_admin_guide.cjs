@@ -2,6 +2,7 @@ const { chromium } = require('playwright');
 const fs = require('node:fs');
 const assert = require('node:assert/strict');
 const { user, installFixtures } = require('./browser_fixtures.cjs');
+const { verifyPreview, verifyZoom } = require('./browser_guide_helpers.cjs');
 const catalogue = ['staff:manage', 'subjects:manage', 'groups:read', 'groups:create', 'groups:edit',
   'students:read', 'students:create', 'students:edit', 'attendance:read', 'attendance:write', 'messages:send'];
 (async () => {
@@ -21,34 +22,30 @@ const catalogue = ['staff:manage', 'subjects:manage', 'groups:read', 'groups:cre
     await open();
     const nav = page.getByRole('navigation', { name: 'Qo‘llanma mavzulari' });
     const count = await nav.getByRole('button').count();
-    assert.equal(count, 22);
+    assert.equal(count, 23);
     if (width === 1440) {
       for (let index = 0; index < count; index++) {
         await nav.getByRole('button').nth(index).click();
-        const image = page.getByRole('article').locator('img');
-        await image.scrollIntoViewIfNeeded();
-        await image.evaluate((node) => node.decode());
-        assert(await image.evaluate((node) => node.naturalWidth > 300 && node.naturalHeight > 200));
-        assert(await image.getAttribute('alt'));
-        assert(await page.getByRole('list', { name: 'Amaliy qadamlar' }).locator('li').count() >= 3);
+        await verifyPreview(page);
       }
     }
     await page.getByLabel('Qo‘llanmadan qidirish').fill('navbat');
     await nav.getByRole('button', { name: /Xabar tarixi/ }).click();
-    await page.getByRole('article').locator('img').evaluate((node) => node.decode());
+    await verifyPreview(page);
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     const exit = await page.locator('header').getByRole('button', { name: 'Chiqish', exact: true }).boundingBox();
     assert(exit.x + exit.width <= width && exit.x >= 0, 'Header exit button must be fully visible');
     fs.mkdirSync('/workspace/.private/ui-acceptance', { recursive: true, mode: 0o700 });
     await page.screenshot({ path: `/workspace/.private/ui-acceptance/admin-guide-${width}.png`, fullPage: true });
-    await page.getByRole('button', { name: /Rasmni kattalashtirish/ }).click();
-    const dialog = page.getByRole('dialog'); await dialog.waitFor();
-    await dialog.locator('img').evaluate((node) => node.decode());
-    assert(await dialog.locator('img').evaluate((node) => node.naturalWidth > 0));
-    await page.keyboard.press('Escape'); await dialog.waitFor({ state: 'hidden' });
+    await verifyZoom(page);
+    await page.getByLabel('Qo‘llanmadan qidirish').fill('kunlik loglarni');
+    await nav.getByRole('button', { name: /Kunlik loglarni/ }).click();
+    await verifyPreview(page);
+    await verifyZoom(page);
     state.user = { ...user, permissions: catalogue };
     await open();
-    assert.equal(await nav.getByRole('button').count(), 20);
+    assert.equal(await nav.getByRole('button').count(), 19);
+    assert.equal(await nav.getByRole('button', { name: /Kunlik loglarni|Davomat auditi/ }).count(), 0);
     await page.getByLabel('Qo‘llanmadan qidirish').fill('botni sozlash');
     await page.getByText('Mavzu topilmadi', { exact: true }).waitFor();
     state.user = { ...user, permissions: ['groups:read'] };
@@ -60,5 +57,5 @@ const catalogue = ['staff:manage', 'subjects:manage', 'groups:read', 'groups:cre
     await page.close();
   }
   await browser.close(); assert.deepEqual(failures, []);
-  console.log('Admin guide browser: superadmin22/fulladmin20/limited6,22 decoded assets, search/zoom,1440/768/360 no overflow/JS error; synthetic only.');
+  console.log('Admin React guide: superadmin23/fulladmin19/limited6, all scene markers/inert controls, search/zoom/log manual,1440/768/360 no overflow/JS error; synthetic only.');
 })().catch((error) => { console.error(error.message); process.exit(1); });

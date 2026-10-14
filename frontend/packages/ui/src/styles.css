@@ -1,0 +1,13 @@
+@import "tailwindcss" source(none);
+@source ".";
+
+@theme {
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+@layer base {
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-slate-400);
+  }
+}

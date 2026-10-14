@@ -21,7 +21,7 @@ cleanup() {
   # invoking user's ownership before host cleanup (GitHub runners are nonroot).
   if docker image inspect neoavlod-release-smoke-runner >/dev/null 2>&1; then
     docker run --rm --user 0:0 -v "$TEST_DIR:/cleanup" \
-      neoavlod-release-smoke-runner sh -c 'chown -R "$1:$2" /cleanup' \
+      neoavlod-release-smoke-runner sh -c 'find /cleanup -type d -exec chown "$1:$2" {} \;' \
       sh "$(id -u)" "$(id -g)"
   fi
   rm -rf "$TEST_DIR"
@@ -31,12 +31,14 @@ trap cleanup EXIT
 for release in "$A" "$B" "$C"; do
   mkdir -p "$APP_ROOT/releases/$release"
   tar -C "$AGENT_ROOT" --exclude='node_modules' --exclude='dist' --exclude='*.tsbuildinfo' --exclude='__pycache__' \
-    -cf - backend/src backend/alembic backend/alembic.ini backend/pyproject.toml backend/Dockerfile \
+    -cf - backend/src backend/alembic backend/alembic.ini backend/pyproject.toml backend/Dockerfile backend/audit_runtime.version \
     compose.prod.yaml .dockerignore scripts/deploy nginx frontend | tar -xf - -C "$APP_ROOT/releases/$release"
   sed -i.bak 's/server 127.0.0.1:8000;/server api:8000;/' "$APP_ROOT/releases/$release/nginx/conf.d/eduneo.conf"
   rm "$APP_ROOT/releases/$release/nginx/conf.d/eduneo.conf.bak"
 done
-bash "$AGENT_ROOT/scripts/deploy/init_production_env.sh"
+docker run --rm --user "$(id -u):$(id -g)" -e APP_ROOT \
+  -v "$AGENT_ROOT:/workspace:ro" -v "$TEST_DIR:$TEST_DIR" \
+  neoavlod-backend:development bash /workspace/scripts/deploy/init_production_env.sh
 # Private import is exercised with synthetic CSVs only, never the user's rosters.
 docker run --rm -i --user "$(id -u):$(id -g)" \
   -v "$AGENT_ROOT:/workspace:ro" -v "$TEST_DIR:$TEST_DIR" -e APP_ROOT \
@@ -116,6 +118,9 @@ C=cccccccccccccccccccccccccccccccccccccccc
 TEST_DIR="$(dirname "$APP_ROOT")"
 fail() { echo "$*" >&2; exit 1; }
 bash "$AGENT_ROOT/scripts/deploy/deploy.sh" "$A" </dev/null
+for service in api worker audit-archiver; do
+  [[ "$(bash "$AGENT_ROOT/scripts/deploy/appctl.sh" exec -T "$service" id -u </dev/null)" == 1000 ]]
+done
 # Later manual edits must survive the next deployment's import hooks.
 bash "$AGENT_ROOT/scripts/deploy/appctl.sh" exec -T api python - <<'PY'
 import asyncio
@@ -123,10 +128,15 @@ from sqlalchemy import select
 from neoavlod.database import Database
 from neoavlod.settings import Settings
 from neoavlod.models import Group, Attendance
+from neoavlod.audit_context import bind_source
+from sqlalchemy import text
 async def edit():
     db = Database(Settings())
     try:
         async with db.session() as s, s.begin():
+            await bind_source(s, 'deployment-fixture')
+            await s.execute(text("SELECT set_config('neoavlod.audit_context',:ctx,true)"),
+                            {'ctx': '{"source":"deployment-fixture","reason":"Reviewed synthetic correction"}'})
             group = await s.scalar(select(Group))
             record = await s.scalar(select(Attendance))
             group.name = 'Admin edited production fixture'
@@ -135,6 +145,50 @@ async def edit():
         await db.close()
 asyncio.run(edit())
 PY
+bash "$AGENT_ROOT/scripts/deploy/appctl.sh" stop audit-archiver
+bash "$AGENT_ROOT/scripts/deploy/appctl.sh" run --rm -T --no-deps audit-archiver python -m neoavlod.audit_archiver --once </dev/null
+bash "$AGENT_ROOT/scripts/deploy/appctl.sh" exec -T api python - <<'PY'
+import asyncio, json
+from pathlib import Path
+from sqlalchemy import text
+from sqlalchemy.exc import DBAPIError
+from neoavlod.database import Database
+from neoavlod.settings import Settings
+from neoavlod.audit_store import AuditStore, SegmentProof
+async def verify():
+    db = Database(Settings())
+    try:
+        async with db.session() as s:
+            assert await s.scalar(text('SELECT current_user')) == 'neoavlod_app'
+            assert not await s.scalar(text("SELECT rolsuper FROM pg_roles WHERE rolname=current_user"))
+            segments = (await s.execute(text('SELECT * FROM audit.segments'))).mappings().all()
+            assert segments
+            store = AuditStore(Settings())
+            for segment in segments:
+                store.read(SegmentProof(segment['object_name'], segment['local_day'],
+                           segment['event_ids'], segment['plain_sha256'],
+                           segment['cipher_sha256'], segment['key_id']))
+            try:
+                await s.execute(text('DELETE FROM audit.events'))
+            except DBAPIError:
+                await s.rollback()
+            else:
+                raise AssertionError('Runtime deleted evidence')
+        path = Path('/app/audit-logs')
+        try:
+            (path / 'forbidden-test').write_text('forbidden')
+        except OSError:
+            pass
+        else:
+            raise AssertionError('API archive mount is writable')
+        print('OK: restricted app, encrypted readback and immutable API mount')
+    finally:
+        await db.close()
+asyncio.run(verify())
+PY
+find "$APP_ROOT/audit-logs" -type f -exec sha256sum {} \; > "$TEST_DIR/audit-before.sha256"
+sha256sum "$APP_ROOT/.env.production" > "$TEST_DIR/keys-before.sha256"
+bash "$AGENT_ROOT/scripts/deploy/appctl.sh" up -d --no-deps audit-archiver
 bash "$AGENT_ROOT/scripts/deploy/deploy.sh" "$B" </dev/null
 # Both releases import the same source; counts must stay unchanged after rerun.
 bash "$AGENT_ROOT/scripts/deploy/appctl.sh" exec -T api python - <<'PY'
@@ -165,12 +219,21 @@ if bash "$AGENT_ROOT/scripts/deploy/deploy.sh" "$C" </dev/null > "$TEST_DIR/fail
 [[ "$(basename "$(readlink "$WEB_ROOT/current")")" == "$B" ]]
 [[ ! -f "$APP_ROOT/releases/$C/.successful" ]]
 bash "$AGENT_ROOT/scripts/deploy/rollback.sh" </dev/null
+sha256sum -c "$TEST_DIR/audit-before.sha256"
+sha256sum -c "$TEST_DIR/keys-before.sha256"
 [[ "$(basename "$(readlink "$APP_ROOT/current")")" == "$A" ]]
 [[ "$(basename "$(readlink "$WEB_ROOT/current")")" == "$A" ]]
 IMAGE="$(bash "$AGENT_ROOT/scripts/deploy/appctl.sh" ps -q api)"
 [[ "$(docker inspect --format '{{.Config.Image}}' "$IMAGE")" == "neoavlod-backend:$A" ]]
 BACKUP="$(find "$BACKUP_ROOT" -name '*.dump' -print -quit)"
 bash "$AGENT_ROOT/scripts/deploy/appctl.sh" exec -T database pg_restore --list < "$BACKUP" >/dev/null
+[[ -s "$BACKUP.audit.tar.gz" ]]
+# A pre-audit runtime can never regain owner credentials through rollback.
+rm "$APP_ROOT/releases/$B/backend/audit_runtime.version"
+if bash "$AGENT_ROOT/scripts/deploy/rollback.sh" "$B" </dev/null > "$TEST_DIR/unsafe-rollback.log" 2>&1; then fail 'Unsafe old audit runtime restored'; fi
+sha256sum -c "$TEST_DIR/audit-before.sha256"
+# Restart the known compatible release after the deliberate fail-closed check.
+bash "$AGENT_ROOT/scripts/deploy/appctl.sh" up -d --no-deps --wait api worker audit-archiver
 printf 'OK: real versioned backend + 2 static portals, backup/migrations, automatic and manual rollback, valid TLS probes.\n'
 touch "$TEST_DIR/passed"
 LINUX_TEST

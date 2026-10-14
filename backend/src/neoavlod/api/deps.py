@@ -6,6 +6,7 @@ from typing import Annotated, cast
 from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from neoavlod.audit_context import bind_actor
 from neoavlod.database import get_session
 from neoavlod.errors import DomainError
 from neoavlod.models import Portal
@@ -27,13 +28,17 @@ from neoavlod.security.sessions import (
 from neoavlod.services.otp_store import OTPStore
 from neoavlod.settings import Settings
 
-SessionDependency = Annotated[AsyncSession, Depends(get_session)]
+# Release business/read connections before response middleware starts its
+# independent outcome transaction. Holding both can exhaust the same pool.
+SessionDependency = Annotated[AsyncSession, Depends(get_session, scope="function")]
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 
 
 async def current_identity(request: Request, session: SessionDependency) -> Identity:
     """Active staff + live session on every request; portal is checked by callers."""
-    return await authenticate(session, request.cookies.get(ACCESS_COOKIE))
+    identity = await authenticate(session, request.cookies.get(ACCESS_COOKIE))
+    await bind_actor(session, identity.staff)
+    return identity
 
 
 IdentityDependency = Annotated[Identity, Depends(current_identity)]

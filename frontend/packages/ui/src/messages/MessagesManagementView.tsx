@@ -272,7 +272,7 @@ export const MessagesManagementView: React.FC<{ currentUser: CurrentUser }> = ({
     <div className="max-w-7xl mx-auto space-y-5">
       <div className="flex flex-col sm:flex-row gap-4 justify-between sm:items-center">
         <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-blue-600 p-3 text-white shadow-sm">
+          <div className="rounded-xl bg-blue-600 p-3 text-white shadow-xs">
             <MessageSquare className="h-6 w-6" />
           </div>
           <div>
@@ -340,7 +340,7 @@ export const MessagesManagementView: React.FC<{ currentUser: CurrentUser }> = ({
             setMode("compose");
             setFocus(null);
           }}
-          className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold ${mode === "compose" ? "bg-white shadow-sm text-blue-700" : "text-slate-500"}`}
+          className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold ${mode === "compose" ? "bg-white shadow-xs text-blue-700" : "text-slate-500"}`}
         >
           <Send className="h-4 w-4" />
           Yangi xabar
@@ -353,7 +353,7 @@ export const MessagesManagementView: React.FC<{ currentUser: CurrentUser }> = ({
             setMode("history");
             setFocus(null);
           }}
-          className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold ${mode === "history" ? "bg-white shadow-sm text-blue-700" : "text-slate-500"}`}
+          className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold ${mode === "history" ? "bg-white shadow-xs text-blue-700" : "text-slate-500"}`}
         >
           <History className="h-4 w-4" />
           Yuborishlar tarixi
@@ -518,7 +518,7 @@ export const MessagesManagementView: React.FC<{ currentUser: CurrentUser }> = ({
                         >
                           <input
                             type="checkbox"
-                            className="mt-1 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                            className="mt-1 rounded-sm border-slate-300 text-blue-600 focus:ring-blue-500"
                             disabled={sending}
                             checked={groupIds.includes(group.id)}
                             aria-label={`Guruhni tanlash: ${group.name}`}
@@ -611,7 +611,7 @@ export const MessagesManagementView: React.FC<{ currentUser: CurrentUser }> = ({
                     rows={7}
                     placeholder="Xabaringizni yozing..."
                     onChange={(e) => setBody(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 p-3 text-sm leading-6 text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-slate-50"
+                    className="w-full rounded-xl border border-slate-300 p-3 text-sm leading-6 text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-hidden disabled:bg-slate-50"
                   />
                   <div className="flex justify-between gap-3 mt-1">
                     <p className="text-xs text-slate-500">
@@ -649,7 +649,7 @@ export const MessagesManagementView: React.FC<{ currentUser: CurrentUser }> = ({
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
-                <div className="rounded-xl bg-white border border-slate-100 p-4 text-sm leading-6 whitespace-pre-wrap break-words shadow-sm min-h-32">
+                <div className="rounded-xl bg-white border border-slate-100 p-4 text-sm leading-6 whitespace-pre-wrap break-words shadow-xs min-h-32">
                   {title || body
                     ? text
                     : "Xabar yozilgach ko‘rinishi shu yerda paydo bo‘ladi."}

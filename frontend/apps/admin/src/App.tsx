@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import {
   AdminShell,
-  Alert,
   AuthProvider,
   Card,
   CardContent,
@@ -22,6 +21,7 @@ import {
   AdminAttendanceView,
   BotSettingsView,
   MessagesManagementView,
+  LogsView,
   useAuth,
 } from "@neoavlod/ui";
 import { AdminGuideView } from "@neoavlod/ui/admin-guide";
@@ -35,11 +35,6 @@ const AdminContent: React.FC<{ activeTab: string; onNavigate?: (tab: string) => 
   if (activeTab === "dashboard") {
     return (
       <div className="space-y-6 max-w-7xl mx-auto">
-        <Alert variant="info" title="Xush kelibsiz">
-          Siz tizimga <strong>{user?.username}</strong> ({user?.role === "superadmin" ? "Superadmin" : "Admin"}) sifatida kirdingiz.
-          Admin boshqaruv paneli orqali ruxsat berilgan bo‘limlarni boshqarishingiz mumkin.
-        </Alert>
-
         {/* Real Statistics Cards */}
         <DashboardStatsCards onNavigate={onNavigate} />
       </div>
@@ -72,6 +67,7 @@ const AdminContent: React.FC<{ activeTab: string; onNavigate?: (tab: string) => 
   if (activeTab === "messages" && user) {
     return <MessagesManagementView currentUser={user} />;
   }
+  if (activeTab === "logs" && user) return <LogsView currentUser={user} />;
   if (activeTab === "guide" && user) {
     return <AdminGuideView currentUser={user} onNavigate={onNavigate} />;
   }

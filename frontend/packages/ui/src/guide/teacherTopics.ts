@@ -1,42 +1,5 @@
+import { teacherScenes } from "./scenes/teacher";
 import type { GuideTopic } from "./types";
-const images = {
-  login: /* @__PURE__ */ new URL("./images/teacher-login.png", import.meta.url)
-    .href,
-  otp: /* @__PURE__ */ new URL("./images/teacher-otp.png", import.meta.url)
-    .href,
-  profile: /* @__PURE__ */ new URL(
-    "./images/teacher-profile.png",
-    import.meta.url,
-  ).href,
-  password: /* @__PURE__ */ new URL(
-    "./images/teacher-password.png",
-    import.meta.url,
-  ).href,
-  groups: /* @__PURE__ */ new URL(
-    "./images/teacher-groups.png",
-    import.meta.url,
-  ).href,
-  students: /* @__PURE__ */ new URL(
-    "./images/teacher-students.png",
-    import.meta.url,
-  ).href,
-  draft: /* @__PURE__ */ new URL("./images/teacher-draft.png", import.meta.url)
-    .href,
-  finalize: /* @__PURE__ */ new URL(
-    "./images/teacher-finalize.png",
-    import.meta.url,
-  ).href,
-  correction: /* @__PURE__ */ new URL(
-    "./images/teacher-correction.png",
-    import.meta.url,
-  ).href,
-  history: /* @__PURE__ */ new URL(
-    "./images/teacher-history.png",
-    import.meta.url,
-  ).href,
-  audit: /* @__PURE__ */ new URL("./images/teacher-audit.png", import.meta.url)
-    .href,
-};
 const steps = (...values: [string, string][]) =>
   values.map(([title, text]) => ({ title, text }));
 export const teacherTopics: GuideTopic[] = [
@@ -46,8 +9,8 @@ export const teacherTopics: GuideTopic[] = [
     section: "Boshlash",
     summary:
       "Shaxsiy bot ulanishi, login va parol orqali teacher paneliga kiring.",
-    image: images.login,
-    imageAlt:
+    scene: teacherScenes.login,
+    previewAlt:
       "Teacher kirish ekranida login, parol va Kirish tugmasi raqamlangan.",
     steps: steps(
       [
@@ -73,8 +36,8 @@ export const teacherTopics: GuideTopic[] = [
     section: "Boshlash",
     summary:
       "Kodni tasdiqlang; sessiya davomida access yangilanishi avtomatik ishlaydi.",
-    image: images.otp,
-    imageAlt:
+    scene: teacherScenes.otp,
+    previewAlt:
       "Teacher OTP ekranida kod maydoni, uch daqiqalik taymer va Tasdiqlash belgilangan.",
     steps: steps(
       [
@@ -101,8 +64,8 @@ export const teacherTopics: GuideTopic[] = [
     section: "Guruhlar",
     destination: "groups",
     summary: "Faqat sizga biriktirilgan guruhlar, jadval va sig‘imni ko‘ring.",
-    image: images.groups,
-    imageAlt:
+    scene: teacherScenes.groups,
+    previewAlt:
       "Teacher guruh jadvalida jadval, o‘quvchilar ro‘yxati va davomatga o‘tish belgilangan.",
     steps: steps(
       [
@@ -129,8 +92,8 @@ export const teacherTopics: GuideTopic[] = [
     destination: "groups",
     summary:
       "O‘z guruhingiz o‘quvchilari, ota-ona va oylik qatnashuvini ko‘ring.",
-    image: images.students,
-    imageAlt:
+    scene: teacherScenes.students,
+    previewAlt:
       "Teacher o‘quvchi profilida ism, ota-ona/guruh va davomat statistikasi raqamlangan.",
     steps: steps(
       [
@@ -157,8 +120,8 @@ export const teacherTopics: GuideTopic[] = [
     section: "Davomat",
     destination: "attendance",
     summary: "Guruh/sana bo‘yicha o‘quvchi statusi va izohni xavfsiz saqlang.",
-    image: images.draft,
-    imageAlt:
+    scene: teacherScenes.draft,
+    previewAlt:
       "Teacher davomatida guruh/sana, statuslar, qoralama va yakunlash tugmalari raqamlangan.",
     steps: steps(
       [
@@ -171,7 +134,7 @@ export const teacherTopics: GuideTopic[] = [
       ],
       [
         "Qoralama saqlash",
-        "Qoralama saqlashni bosing. Statuslar DBga yoziladi, dars yakunlanmaydi va Telegram notification yuborilmaydi.",
+        "Qoralama saqlashni bosing. Mavjud status yoki izohni o‘zgartirsangiz, Tuzatish sababi maydonini to‘ldiring. Statuslar saqlanadi, dars yakunlanmaydi va Telegram notification yuborilmaydi.",
       ],
       [
         "Yakunlashga tayyorlang",
@@ -189,8 +152,8 @@ export const teacherTopics: GuideTopic[] = [
     section: "Davomat",
     destination: "attendance",
     summary: "To‘liq belgilangan darsni bir marta tasdiqlab yakunlang.",
-    image: images.finalize,
-    imageAlt:
+    scene: teacherScenes.finalize,
+    previewAlt:
       "Teacher yakunlash modalida status sonlari, bildirishnoma izohi va yakunlash tasdig‘i raqamlangan.",
     steps: steps(
       [
@@ -216,8 +179,8 @@ export const teacherTopics: GuideTopic[] = [
     section: "Davomat",
     destination: "attendance",
     summary: "O‘z guruhingizdagi xatoni muddat tugamasdan tuzating.",
-    image: images.correction,
-    imageAlt:
+    scene: teacherScenes.correction,
+    previewAlt:
       "Teacher yakunlangan darsida tahrir muddati, status va tuzatishni saqlash raqamlangan.",
     steps: steps(
       [
@@ -226,11 +189,11 @@ export const teacherTopics: GuideTopic[] = [
       ],
       [
         "Status/izohni to‘g‘rilang",
-        "Ayni guruh va sanada kerakli o‘quvchi statusi yoki izohini tuzating. Guruh sizga biriktirilgan bo‘lishi kerak.",
+        "Ayni guruh va sanada kerakli o‘quvchi statusi yoki izohini tuzating va Tuzatish sababi maydonini to‘ldiring. Guruh sizga biriktirilgan bo‘lishi kerak.",
       ],
       [
         "Tuzatishni saqlang",
-        "Tuzatishni saqlash bosing. Dars yakunlangan holatda qoladi, eski/yangi qiymat va muallif auditda saqlanadi.",
+        "Tuzatishni saqlash bosing. Dars yakunlangan holatda qoladi, eski/yangi qiymat, sabab va muallif logda saqlanadi. Logni faqat superadmin ko‘radi.",
       ],
     ),
     tips: [
@@ -244,8 +207,8 @@ export const teacherTopics: GuideTopic[] = [
     destination: "history",
     summary:
       "O‘z guruhingizning to‘liq oy jadvali va jami qatnashuvini tekshiring.",
-    image: images.history,
-    imageAlt:
+    scene: teacherScenes.history,
+    previewAlt:
       "Teacher tarixida guruh, oy tanlovi va davomat matritsasi belgilangan.",
     steps: steps(
       ["Guruhni tanlang", "Davomat tarixi menyusida o‘z guruhingizni tanlang."],
@@ -263,37 +226,12 @@ export const teacherTopics: GuideTopic[] = [
     ],
   },
   {
-    id: "teacher-audit",
-    title: "Kim o‘zgartirganini auditdan ko‘rish",
-    section: "Davomat",
-    destination: "attendance",
-    summary:
-      "Dars bo‘yicha o‘zgarishlar muallifi, vaqt va old/new qiymatni tekshiring.",
-    image: images.audit,
-    imageAlt:
-      "Teacher darsida sana, o‘zgarishlar tarixini ochish va audit jadvali raqamlangan.",
-    steps: steps(
-      [
-        "Dars sanasini oching",
-        "Davomat olishda o‘z guruhingiz va tekshiriladigan sanani tanlang. Yozish muddati tugagan darsning tarixi ham o‘qiladi.",
-      ],
-      ["O‘zgarishlar tarixini oching", "O‘zgarishlar tarixi tugmasini bosing."],
-      [
-        "Auditni solishtiring",
-        "Bajaruvchi/rol, vaqt, belgilash/yakunlash/tuzatish, oldingi/yangi status va izohni ko‘ring. Administrator sababini ham ko‘rish mumkin.",
-      ],
-    ),
-    tips: [
-      "Audit yozuvini o‘zgartirish/o‘chirish amali yo‘q. Import qilingan eski darslarda taxminiy muallif qaydi yaratilmaydi.",
-    ],
-  },
-  {
     id: "teacher-profile",
     title: "Shaxsiy profil va rasm",
     section: "Hisob",
     summary: "O‘z ism/telefon/login va profil rasmingizni yangilang.",
-    image: images.profile,
-    imageAlt:
+    scene: teacherScenes.profile,
+    previewAlt:
       "Teacher profil modalida rasm yuklash, login/ma’lumotlar va Saqlash belgilangan.",
     steps: steps(
       [
@@ -319,8 +257,8 @@ export const teacherTopics: GuideTopic[] = [
     section: "Hisob",
     summary:
       "Vaqtinchalik parolni almashtiring; unutilgan parolni Telegram bilan tiklang.",
-    image: images.password,
-    imageAlt:
+    scene: teacherScenes.password,
+    previewAlt:
       "Teacher parol formasida joriy parol, yangi parol va O‘zgartirish belgilangan.",
     steps: steps(
       [

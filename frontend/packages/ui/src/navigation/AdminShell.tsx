@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import type { CurrentUser } from "../api/types";
-import { hasPermission, canManageBot, PERMISSIONS } from "./permissions";
+import { hasPermission, isActiveSuperadmin, PERMISSIONS } from "./permissions";
 import { Badge } from "../components/Badge";
 import { Button } from "../components/Button";
 import { NeoAvlodLogo } from "../components/NeoAvlodLogo";
@@ -22,6 +22,7 @@ import {
   ChevronLeft,
   ChevronRight,
   BookOpenCheck,
+  ScrollText,
 } from "lucide-react";
 
 export interface NavItemConfig {
@@ -81,6 +82,7 @@ export const ADMIN_NAV_ITEMS: NavItemConfig[] = [
     superadminOnly: true,
   },
   { id: "guide", label: "Qo‘llanma", icon: BookOpenCheck },
+  { id: "logs", label: "Loglar", icon: ScrollText, superadminOnly: true },
 ];
 
 export interface AdminShellProps {
@@ -137,7 +139,7 @@ export const AdminShell: React.FC<AdminShellProps> = ({
   // Check if item is accessible for current user
   const isAccessible = (item: NavItemConfig) => {
     if (item.superadminOnly) {
-      return canManageBot(user);
+      return isActiveSuperadmin(user);
     }
     if (item.permission) {
       return hasPermission(user, item.permission);
@@ -250,7 +252,7 @@ export const AdminShell: React.FC<AdminShellProps> = ({
                 <span className={`truncate ${isCollapsed ? "lg:hidden" : ""}`}>{item.label}</span>
                 {item.superadminOnly && (
                   <span
-                    className={`ml-auto text-[10px] bg-red-950/80 text-red-300 border border-red-800 px-1.5 py-0.5 rounded-sm uppercase tracking-wide ${
+                    className={`ml-auto text-[10px] bg-red-950/80 text-red-300 border border-red-800 px-1.5 py-0.5 rounded-xs uppercase tracking-wide ${
                       isCollapsed ? "lg:hidden" : ""
                     }`}
                   >

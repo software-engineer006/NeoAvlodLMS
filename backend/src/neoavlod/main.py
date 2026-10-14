@@ -1,5 +1,6 @@
 """ASGI application factory: uvicorn neoavlod.main:create_app --factory."""
 
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -11,6 +12,7 @@ from neoavlod import __version__
 from neoavlod.api.admin_attendance import router as admin_attendance_router
 from neoavlod.api.admin_dashboard import router as admin_dashboard_router
 from neoavlod.api.admin_groups import router as admin_groups_router
+from neoavlod.api.admin_logs import router as admin_logs_router
 from neoavlod.api.admin_lookups import router as admin_lookups_router
 from neoavlod.api.admin_messages import router as admin_messages_router
 from neoavlod.api.admin_settings import router as admin_settings_router
@@ -21,6 +23,7 @@ from neoavlod.api.auth import router as auth_router
 from neoavlod.api.health import router as health_router
 from neoavlod.api.media import router as media_router
 from neoavlod.api.teacher import router as teacher_router
+from neoavlod.audit_http import AuditHTTPMiddleware
 from neoavlod.database import Database
 from neoavlod.errors import DomainError
 from neoavlod.services.otp_store import InMemoryOTPStore, OTPStore, RedisOTPStore
@@ -32,6 +35,8 @@ def create_app(
     otp_store: OTPStore | None = None,
 ) -> FastAPI:
     config = settings if settings is not None else Settings()
+    if config.service_role != "api":
+        raise ValueError("API requires its own runtime configuration")
     development = config.environment != "production"
     database = Database(config)
     store = otp_store or RedisOTPStore.from_settings(config)
@@ -59,6 +64,8 @@ def create_app(
     app.state.settings = config
     app.state.database = database
     app.state.otp_store = store
+    app.state.audit_slots = asyncio.Semaphore(2)
+    app.add_middleware(AuditHTTPMiddleware)
 
     @app.exception_handler(DomainError)
     async def domain_error(_: Request, error: DomainError) -> JSONResponse:
@@ -82,6 +89,7 @@ def create_app(
     app.include_router(admin_subjects_router)
     app.include_router(admin_groups_router)
     app.include_router(admin_lookups_router)
+    app.include_router(admin_logs_router)
     app.include_router(admin_messages_router)
     app.include_router(admin_students_router)
     app.include_router(admin_attendance_router)

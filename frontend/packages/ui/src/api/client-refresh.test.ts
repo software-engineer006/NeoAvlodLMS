@@ -14,6 +14,21 @@ afterEach(() => {
 });
 
 describe("Seven-day session recovery", () => {
+  it("downloads compressed audit with CSRF and recovers an expired session without JSON decoding", async () => {
+    const binary = new Response("compressed-fixture", { headers: { "Content-Type": "application/gzip" } });
+    const fetchMock = vi.fn().mockResolvedValueOnce(unauthorized()).mockResolvedValueOnce(unauthorized())
+      .mockResolvedValueOnce(new Response(null, { status: 204 })).mockResolvedValueOnce(binary);
+    vi.stubGlobal("fetch", fetchMock);
+    const result = await new ApiClient().get<Blob>("/api/v1/admin/logs/2026-10-14/download", { responseType: "blob" });
+    expect(result.type).toBe("application/gzip");
+    for (const index of [0, 3]) {
+      const options = fetchMock.mock.calls[index][1] as RequestInit;
+      expect(new Headers(options.headers).get("X-CSRF-Token")).toBe("session-csrf");
+      expect(new Headers(options.headers).get("Accept")).toBe("application/gzip");
+      expect(options.cache).toBe("no-store");
+      expect(options).not.toHaveProperty("responseType");
+    }
+  });
   it.each(["draft", "finalize", "correct"])("refreshes and resends the exact teacher %s payload", async (action) => {
     const fetchMock = vi.fn().mockResolvedValueOnce(unauthorized()).mockResolvedValueOnce(unauthorized())
       .mockResolvedValueOnce(new Response(null, { status: 204 })).mockResolvedValueOnce(ok());

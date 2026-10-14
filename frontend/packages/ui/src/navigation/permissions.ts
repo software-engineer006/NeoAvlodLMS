@@ -43,6 +43,9 @@ export function hasPermission(user: CurrentUser | null, permission: string): boo
 /**
  * Bot settings are strictly superadmin-only.
  */
-export function canManageBot(user: CurrentUser | null): boolean {
+export function isActiveSuperadmin(user: CurrentUser | null): boolean {
   return Boolean(user && user.status === "active" && user.role === "superadmin");
 }
+
+export const canManageBot = isActiveSuperadmin;
+export const canViewLogs = isActiveSuperadmin;

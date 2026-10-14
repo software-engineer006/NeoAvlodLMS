@@ -6,11 +6,12 @@ import httpx
 import pytest
 from factories import parent, staff, student
 from pydantic import SecretStr
+from sqlalchemy import select
 from test_learning_models import seed_group
 
 from neoavlod.database import Database
 from neoavlod.errors import DomainError
-from neoavlod.models import Role, Staff, SystemSettings
+from neoavlod.models import AuditEvent, Role, Staff, SystemSettings
 from neoavlod.models.common import Status
 from neoavlod.security.secrets import encrypt_token
 from neoavlod.services.bot_worker import (
@@ -122,6 +123,32 @@ async def test_link_telegram_account_staff_parent_student(model_database: Databa
         assert entity.id == learner.id
         assert entity.telegram_id == 333444
         assert "muvaffaqiyatli bog‘landi" in msg
+    async with model_database.session() as session:
+        logs = list(
+            (
+                await session.scalars(
+                    select(AuditEvent)
+                    .where(AuditEvent.action == "telegram.account_linked")
+                    .order_by(AuditEvent.id)
+                )
+            ).all()
+        )
+        assert len(logs) == 3 and all(e.body["source"] == "telegram" for e in logs)
+        assert logs[0].actor_id == teacher_staff.id
+        assert logs[0].body["actor"]["role"] == "teacher"
+        assert logs[1].actor_id is None and logs[2].actor_id is None
+        serialized = str([e.body for e in logs])
+        assert all(
+            str(value) not in serialized
+            for value in (
+                111222,
+                222333,
+                333444,
+                teacher_staff.auth_uuid,
+                guardian.auth_uuid,
+                learner.auth_uuid,
+            )
+        )
 
 
 async def test_link_telegram_account_rejects_invalid_payload(model_database: Database) -> None:

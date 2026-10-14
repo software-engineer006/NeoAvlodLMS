@@ -23,6 +23,7 @@ class Settings(BaseSettings):
 
     app_name: str = Field(default="NeoAvlod LMS", min_length=1, max_length=100)
     environment: Literal["development", "test", "production"] = "development"
+    service_role: Literal["api", "archive"] = "api"
     debug: bool = False
     database_url: SecretStr
     admin_origin: str = "https://admin.eduneo.uz"
@@ -31,6 +32,10 @@ class Settings(BaseSettings):
     bot_encryption_key: SecretStr | None = None
     redis_url: SecretStr | None = None
     media_dir: Path = Field(default=Path("media"))
+    audit_dir: Path = Field(default=Path("audit-logs"))
+    audit_encryption_key: SecretStr | None = None
+    audit_key_id: str = Field(default="v1", pattern=r"^[a-z0-9_-]{1,32}$")
+    audit_previous_keys: SecretStr | None = None
 
     @field_validator("redis_url")
     @classmethod
@@ -48,7 +53,7 @@ class Settings(BaseSettings):
             raise ValueError("Security secret kamida 32 belgidan iborat bo‘lsin")
         return value
 
-    @field_validator("bot_encryption_key")
+    @field_validator("bot_encryption_key", "audit_encryption_key")
     @classmethod
     def validate_encryption_key(cls, value: SecretStr | None) -> SecretStr | None:
         if value is not None:
@@ -93,10 +98,22 @@ class Settings(BaseSettings):
             not origin.startswith("https://") for origin in (self.admin_origin, self.teacher_origin)
         ):
             raise ValueError("Production portal Originlari HTTPS bo‘lishi kerak")
-        if self.environment == "production" and (
-            self.security_secret is None or self.bot_encryption_key is None
+        if (
+            self.environment == "production"
+            and (self.security_secret is None or self.bot_encryption_key is None)
+            and self.service_role == "api"
         ):
             raise ValueError("Production security va bot encryption secretlari kerak")
-        if self.environment == "production" and self.redis_url is None:
+        if (
+            self.environment == "production"
+            and self.redis_url is None
+            and self.service_role == "api"
+        ):
             raise ValueError("Production muhitida OTP uchun Redis URL kerak")
+        if (
+            self.environment == "production"
+            and self.service_role == "archive"
+            and self.audit_encryption_key is None
+        ):
+            raise ValueError("Arxiv uchun barqaror shifrlash kaliti kerak")
         return self

@@ -11,7 +11,7 @@ from neoavlod.api.attendance_schemas import (
     DraftSaveIn,
     FinalizeIn,
 )
-from neoavlod.api.deps import SessionDependency, require_permission
+from neoavlod.api.deps import SessionDependency, SuperadminDependency, require_permission
 from neoavlod.models import AttendanceStatus
 from neoavlod.security.rbac import Permission
 from neoavlod.security.sessions import Identity
@@ -140,7 +140,7 @@ async def correct(
 @router.get("/groups/{group_id}/attendance/changes", response_model=AttendanceChangesOut)
 async def changes(
     group_id: uuid.UUID,
-    actor: AttendanceReader,
+    actor: SuperadminDependency,
     session: SessionDependency,
     target_date: Annotated[date, Query(alias="date")],
     page: Annotated[int, Query(ge=1)] = 1,

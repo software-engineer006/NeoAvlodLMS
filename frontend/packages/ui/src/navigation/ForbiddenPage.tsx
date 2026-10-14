@@ -45,7 +45,7 @@ export const ForbiddenPage: React.FC<ForbiddenPageProps> = ({
           {isTeacher && (
             <a
               href="https://teacher.eduneo.uz"
-              className="inline-flex items-center justify-center gap-2 w-full px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="inline-flex items-center justify-center gap-2 w-full px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-xs transition-colors focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
             >
               <ExternalLink className="w-4 h-4" />
               O‘qituvchi portaliga o‘tish
@@ -55,7 +55,7 @@ export const ForbiddenPage: React.FC<ForbiddenPageProps> = ({
           {isAdmin && (
             <a
               href="https://admin.eduneo.uz"
-              className="inline-flex items-center justify-center gap-2 w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="inline-flex items-center justify-center gap-2 w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition-colors focus:outline-hidden focus:ring-2 focus:ring-blue-500"
             >
               <ExternalLink className="w-4 h-4" />
               Admin portaliga o‘tish

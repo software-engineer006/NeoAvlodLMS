@@ -23,6 +23,8 @@ def run_offline() -> None:
         dialect_opts={"paramstyle": "named"},
         compare_type=True,
         compare_server_default=True,
+        include_schemas=True,
+        include_name=lambda name, type_, parent: type_ != "schema" or name in (None, "audit"),
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -34,6 +36,8 @@ def run_sync(connection: Connection) -> None:
         target_metadata=Base.metadata,
         compare_type=True,
         compare_server_default=True,
+        include_schemas=True,
+        include_name=lambda name, type_, parent: type_ != "schema" or name in (None, "audit"),
     )
     with context.begin_transaction():
         context.run_migrations()

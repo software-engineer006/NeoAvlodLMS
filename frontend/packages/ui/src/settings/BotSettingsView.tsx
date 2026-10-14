@@ -356,7 +356,7 @@ export const BotSettingsView: React.FC<BotSettingsViewProps> = ({ currentUser })
                       <button
                         type="button"
                         onClick={() => setShowToken(!showToken)}
-                        className="text-slate-400 hover:text-slate-600 focus:outline-none"
+                        className="text-slate-400 hover:text-slate-600 focus:outline-hidden"
                         aria-label={showToken ? "Tokenni yashirish" : "Tokenni ko‘rsatish"}
                       >
                         {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
