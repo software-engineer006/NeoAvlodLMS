@@ -3,15 +3,12 @@ import {
   AdminShell,
   Alert,
   AuthProvider,
-  Badge,
-  Button,
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
   DashboardStatsCards,
-  ErrorState,
   ForbiddenPage,
   LoginForm,
   NeoAvlodLogo,
@@ -25,41 +22,15 @@ import {
   AdminAttendanceView,
   BotSettingsView,
   MessagesManagementView,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  apiClient,
   useAuth,
 } from "@neoavlod/ui";
 import { AdminGuideView } from "@neoavlod/ui/admin-guide";
-import { Layers } from "lucide-react";
 
 const AdminContent: React.FC<{ activeTab: string; onNavigate?: (tab: string) => void }> = ({
   activeTab,
   onNavigate,
 }) => {
-  const { user, fetchMe } = useAuth();
-  const [isLoadingHealth, setIsLoadingHealth] = useState<boolean>(false);
-  const [healthError, setHealthError] = useState<string | null>(null);
-
-  const checkHealth = async () => {
-    setIsLoadingHealth(true);
-    setHealthError(null);
-    try {
-      await apiClient.get("/api/v1/health");
-    } catch (err) {
-      setHealthError(err instanceof Error ? err.message : "API bilan bog‘lanishda xatolik yuz berdi");
-    } finally {
-      setIsLoadingHealth(false);
-    }
-  };
-
-  React.useEffect(() => {
-    checkHealth();
-  }, []);
+  const { user } = useAuth();
 
   if (activeTab === "dashboard") {
     return (
@@ -71,75 +42,6 @@ const AdminContent: React.FC<{ activeTab: string; onNavigate?: (tab: string) => 
 
         {/* Real Statistics Cards */}
         <DashboardStatsCards onNavigate={onNavigate} />
-
-        {/* Dashboard Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Boshqaruv paneli</CardTitle>
-            <CardDescription>
-              Tizim holati va joriy hisob ma’lumotlari
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex flex-wrap items-center gap-3">
-              <Button variant="secondary" onClick={checkHealth} isLoading={isLoadingHealth}>
-                Statusni yangilash
-              </Button>
-              <Button variant="outline" onClick={fetchMe}>
-                Profilni qayta yuklash
-              </Button>
-            </div>
-
-            <div className="space-y-2">
-              <h4 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-                <Layers className="w-4 h-4 text-slate-500" />
-                Joriy hisob ma’lumotlari
-              </h4>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Maydon</TableHead>
-                    <TableHead>Qiymat</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <TableRow>
-                    <TableCell className="font-medium text-slate-600">ID</TableCell>
-                    <TableCell className="font-mono text-xs">{user?.id}</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium text-slate-600">Foydalanuvchi nomi</TableCell>
-                    <TableCell className="font-semibold">{user?.username}</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium text-slate-600">Telefon</TableCell>
-                    <TableCell>{user?.phone}</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium text-slate-600">Rol</TableCell>
-                    <TableCell>
-                      <Badge variant={user?.role === "superadmin" ? "danger" : "info"}>
-                        {user?.role === "superadmin" ? "Superadmin" : "Admin"}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium text-slate-600">Telegram ID</TableCell>
-                    <TableCell>{user?.telegram_id || "Bog‘lanmagan"}</TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-
-        {healthError && (
-          <Card>
-            <CardContent>
-              <ErrorState title="API bilan bog‘lanish xatosi" message={healthError} onRetry={checkHealth} />
-            </CardContent>
-          </Card>
-        )}
       </div>
     );
   }

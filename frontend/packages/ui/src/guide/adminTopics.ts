@@ -90,7 +90,7 @@ export const adminTopics: GuideTopic[] = [
     summary: "Menyu, statistikalar va shaxsiy profil joylashuvini bilib oling.",
     image: images.dashboard,
     imageAlt:
-      "Admin panel menyusi, boshqaruv kartalari va Profilim tugmasi belgilangan.",
+      "Admin panel menyusi, asosiy statistikalar va Profilim tugmasi belgilangan.",
     destination: "dashboard",
     steps: steps(
       [
@@ -98,8 +98,8 @@ export const adminTopics: GuideTopic[] = [
         "Chap menyuda faqat hisobingizga ochiq bo‘limlar turadi. Kichik ekranda yuqoridagi menyu belgisini bosing.",
       ],
       [
-        "Panelni ko‘zdan kechiring",
-        "Dashboardda ruxsatli statistika va joriy hisob ma’lumotlari ko‘rsatiladi. Ruxsat berilmagan modulning sonlari ochilmaydi.",
+        "Statistikani ko‘ring",
+        "Dashboardda ruxsatli guruh, o‘quvchi va xodim statistikasi ko‘rsatiladi. Ruxsat berilmagan modulning sonlari ochilmaydi.",
       ],
       [
         "Profilni oching",
