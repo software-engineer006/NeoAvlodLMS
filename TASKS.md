@@ -212,11 +212,23 @@ production preservation proof and backup+restore rehearsal uploaded privately.
 Private production backup restored successfully:9staff/8oldgroups/119oldpupils/
 487attendance/25batches/4immutable attendance changes/424verified audit bodies;
 env/audit backups/checksums saved off web root, API/worker preserved.
-No production dataset change yet. Next: finish public review/scan,
-stage only scoped code/build/TASKS/plan (leave user EDUCENTER_IMPORT.md deletion
-unstaged),95-pupil/secret scan, non-force main push and monitor green exactSHA
-CI/CD; then remote exact metadata/room/legacy/auth/bot/audit preservation,
-production-loaded UI/RBAC/source/date/guide and HTTPS checks.
+Source f1adf8feeabd4291c0f32e0bc74825f110f6a948 non-force pushed;
+Actions38628196586 test116072701721 SUCCESS407backend/276frontend/mypy173/
+13agent/18deploy/disposableTLS. Deploy116075714329 failed at private source:
+nonowner importer could not traverse0700 source and macOS tar added ._ CSV
+sidecars. No dataset transaction applied by failed run; unsafe old-runtime
+rollback guard stopped old writers. Recovered tested f1 compatible runtime,
+removed only generated ._ metadata, ran successful root-owner dry-run/teacher
+mapping, stopped writers and applied exact reviewed dataset atomically.
+Production now f1 runtime healthy API/worker/archive,95profiles/7groups/
+116memberships/443drafts reported applied. Full private manifest/preservation
+proof running (first probe hit ProgrammingError, inspect private-error.log;
+likely restricted schema-version read); do not mark134 done yet.
+Permanent fix in progress: owner UID/GID import + DB-free --validate-only
+before writer shutdown, metadata/digest error leaves previous runtime running.
+Ruff/mypy173/final4source tests/19deploy pass. Next verify production proof,
+review/scan/push fix, green exactSHA CI/CD and production-loaded UI/date/guide/
+role/HTTPS checks. User EDUCENTER_IMPORT.md deletion stays unstaged.
 Private evidence .private/refresh-122; user deletion of EDUCENTER_IMPORT.md
 must remain uncommitted/unrestored, rawCSV/PII/secrets excluded from Git.
 

@@ -51,6 +51,7 @@ compose_release "$RELEASE_ID" build api
 compose_release "$RELEASE_ID" run --rm -T --no-deps \
   -v "$RELEASE_DIR/frontend:/frontend:ro" -v "$RELEASE_DIR/scripts/deploy:/deploy:ro" \
   migrations python /deploy/verify_frontend.py /frontend </dev/null
+validate_business_data "$RELEASE_ID"
 WEB_RELEASE="$WEB_ROOT/releases/$RELEASE_ID"
 [[ ! -e "$WEB_RELEASE" ]] || rm -rf "$WEB_RELEASE"
 mkdir -p "$WEB_RELEASE"

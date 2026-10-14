@@ -21,12 +21,16 @@ compose_release() {
     --project-directory "$APP_ROOT/releases/$release" --env-file "$ENV_FILE" \
     -f "$APP_ROOT/releases/$release/compose.prod.yaml" "$@"
 }
-import_business_data() {
-  local release="$1" source_dir="${EDUCENTER_REFRESH_DIR:-$APP_ROOT/private/educenter-refresh-data}"
+import_business_data() { run_business_data "$1" --apply; }
+validate_business_data() { run_business_data "$1" --validate-only; }
+run_business_data() {
+  local release="$1" operation="$2" source_dir="${EDUCENTER_REFRESH_DIR:-$APP_ROOT/private/educenter-refresh-data}"
   if [[ ! -d "$source_dir" ]]; then
     [[ -z "${EDUCENTER_REFRESH_DIR:-}" && ! -e "$APP_ROOT/.dataset-enforced" ]] || { fail 'Reviewed refresh input missing.'; return 1; }
-    import_educenter "$release"
-    import_english "$release"
+    if [[ "$operation" == --apply ]]; then
+      import_educenter "$release"
+      import_english "$release"
+    fi
     return
   fi
   [[ "$(cat "$APP_ROOT/releases/$release/backend/dataset_runtime.version" 2>/dev/null)" == 1 ]] || { fail 'Current-dataset runtime required.'; return 1; }
@@ -35,10 +39,10 @@ import_business_data() {
   digest="$(cat "$source_dir/plan.sha256")"
   [[ "$digest" =~ ^[a-f0-9]{64}$ ]] || { fail 'Reviewed refresh SHA256 invalid.'; return 1; }
   # After refresh, older runtimes would expose retained legacy rows. Fail closed on rollback.
-  touch "$APP_ROOT/.dataset-enforced"
-  compose_release "$release" run --rm -T --no-deps \
+  [[ "$operation" != --apply ]] || touch "$APP_ROOT/.dataset-enforced"
+  compose_release "$release" run --rm -T --no-deps --user "$(id -u):$(id -g)" \
     -v "$source_dir:/refresh-source:ro" migrations python -m neoavlod.dataset_refresh \
-    --source /refresh-source --expected-digest "$digest" --apply </dev/null
+    --source /refresh-source --expected-digest "$digest" "$operation" </dev/null
 }
 import_educenter() {
   local release="$1"

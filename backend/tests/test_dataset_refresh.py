@@ -254,3 +254,34 @@ async def test_refresh_suppresses_queued_attendance_and_revokes_legacy_capabilit
     sender = CapturingSender()
     assert await dispatch_pending_outbox(model_database, sender=sender) == 0
     assert sender.sent == []
+
+
+async def test_offline_preflight_validates_digest_and_rejects_macos_sidecars_without_db(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import argparse
+
+    from neoavlod import dataset_refresh
+    from neoavlod.refresh_sources import FILES
+
+    root = source_files(tmp_path / "csv")
+    plan = build_refresh_manifest(
+        root, year=2026, time_overrides={Path(FILES[-1]).stem: ("16:00", "18:00")}
+    )
+
+    def forbid_database(*args: object, **kwargs: object) -> None:
+        raise AssertionError("Source validation must precede DB/schema maintenance")
+
+    monkeypatch.setattr(dataset_refresh, "Database", forbid_database)
+    args = argparse.Namespace(
+        source=root, expected_digest=plan.digest(), validate_only=True, apply=False
+    )
+    assert (await dataset_refresh.run(args))["status"] == "source_validated"
+    args.expected_digest = "0" * 64
+    with pytest.raises(ValueError, match="digest differs"):
+        await dataset_refresh.run(args)
+    args.expected_digest = plan.digest()
+    (root / ("._" + FILES[0])).write_text("macOS metadata")
+    with pytest.raises(ValueError, match="CSV"):
+        await dataset_refresh.run(args)

@@ -99,6 +99,11 @@ Public testlar faqat sintetik odamlar va xabarlar bilan ishlaydi.
 Private deployment manbasi `$APP_ROOT/private/educenter-refresh-data/` ichida
 aynan yettita CSV va tasdiqlangan `plan.sha256` bo‘ladi. `dataset_refresh`
 CLI avval dry-run, keyin `--apply` bilan ishlaydi; digest o‘zgarsa rad etadi.
+`--validate-only` source/digestni DBga ulanmasdan tekshiradi; deployment buni
+API/worker to‘xtashidan oldin bajaradi. Import fayl egasi UID/GIDsi bilan,
+read-only source mountda ishlaydi; private papka/fayl 0700/0600 qoladi.
+Arxivga faqat yettita CSV va digestni kiriting; macOS `._` yordamchi fayllari
+qat’iy parser tomonidan ortiqcha source sifatida rad etiladi.
 Receipt takroriy deployda admin tuzatishlarini qayta yozmaydi. Eski datasetdagi
 yuborilmagan davomat/broadcast xabarlari bekor qilinadi; yangi import xabar
 navbati yoki yakunlangan dars yaratmaydi. Eski capability havolalari ishlamaydi.

@@ -43,6 +43,7 @@ if [[ "${FAIL_STEP:-}" == migration && "${NEOAVLOD_RELEASE_ID:-}" == """
             + """ && "$*" == *"run --rm -T --no-deps migrations" ]]; then exit 1; fi
 if [[ "${FAIL_STEP:-}" == import && "$*" == *neoavlod.educenter_import* ]]; then exit 1; fi
 if [[ "${FAIL_STEP:-}" == english && "$*" == *neoavlod.english_import* ]]; then exit 1; fi
+if [[ "${FAIL_STEP:-}" == refresh_preflight && "$*" == *--validate-only* ]]; then exit 1; fi
 """,
         )
         self.command(
@@ -207,12 +208,15 @@ if [[ "$*" == *release.txt* ]]; then basename "$(readlink "$WEB_ROOT/current")";
         self.deploy(B)
         calls = (self.root / "calls").read_text().splitlines()
         lines = [line for line in calls if line.startswith(B)]
-        refresh = next(i for i, line in enumerate(lines) if "neoavlod.dataset_refresh" in line)
+        preflight = next(i for i, line in enumerate(lines) if "--validate-only" in line)
+        refresh = next(i for i, line in enumerate(lines) if "neoavlod.dataset_refresh" in line and "--apply" in line)
         migrate = next(i for i, line in enumerate(lines) if line.endswith("--no-deps migrations"))
         start = next(i for i, line in enumerate(lines) if "--force-recreate" in line)
         self.assertLess(migrate, refresh)
+        self.assertLess(preflight, migrate)
         self.assertLess(refresh, start)
         self.assertIn("/refresh-source:ro", lines[refresh])
+        self.assertIn(f"--user {os.getuid()}:{os.getgid()}", lines[refresh])
         self.assertIn("--expected-digest " + "e" * 64, lines[refresh])
         self.assertFalse(any("neoavlod.educenter_import" in line or "neoavlod.english_import" in line for line in lines))
         result = self.run_script("rollback.sh")
@@ -230,6 +234,20 @@ if [[ "$*" == *release.txt* ]]; then basename "$(readlink "$WEB_ROOT/current")";
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual((self.app / "current").readlink().name, A)
         self.assertNotIn("neoavlod.dataset_refresh", (self.root / "calls").read_text())
+
+    def test_invalid_source_preflight_keeps_previous_api_and_worker_running(self) -> None:
+        self.deploy(A)
+        private = self.app / "private/educenter-refresh-data"
+        private.mkdir(parents=True)
+        (private / "plan.sha256").write_text("e" * 64)
+        (self.app / "releases" / B / "backend/dataset_runtime.version").write_text("1\n")
+        result = self.run_script("deploy.sh", B, FAIL_STEP="refresh_preflight")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual((self.app / "current").readlink().name, A)
+        lines = [line for line in (self.root / "calls").read_text().splitlines() if line.startswith(B)]
+        self.assertTrue(any("--validate-only" in line for line in lines))
+        self.assertFalse(any("stop api worker" in line or "--apply" in line for line in lines))
+        self.assertFalse((self.app / ".dataset-enforced").exists())
 
     def test_import_failure_and_unreviewed_data_restore_previous_release(self) -> None:
         self.deploy(A)

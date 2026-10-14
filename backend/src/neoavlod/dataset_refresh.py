@@ -151,9 +151,7 @@ async def refresh_dataset(
         values: dict[str, Any] = {"archived_at": now}
         if hasattr(model, "updated_at"):
             values["updated_at"] = model.updated_at
-        await session.execute(
-            update(model).where(model.archived_at.is_(None)).values(**values)
-        )
+        await session.execute(update(model).where(model.archived_at.is_(None)).values(**values))
     subjects: dict[str, Subject] = {}
     groups: dict[str, Group] = {}
     room = await session.scalar(select(Room).where(func.lower(Room.name) == "217"))
@@ -270,6 +268,14 @@ async def run(args: argparse.Namespace) -> dict[str, Any]:
     manifest = build_refresh_manifest(
         args.source, year=2026, time_overrides={Path(FILES[-1]).stem: ("16:00", "18:00")}
     )
+    if manifest.digest() != args.expected_digest:
+        raise ValueError("Reviewed dataset digest differs")
+    if args.validate_only:
+        return {
+            "status": "source_validated",
+            "digest": manifest.digest(),
+            "new": manifest.summary(),
+        }
     database = Database(Settings())
     try:
         async with database.session() as session, session.begin():
@@ -285,6 +291,7 @@ def main() -> None:
     parser.add_argument("--source", type=Path, required=True)
     parser.add_argument("--expected-digest", required=True)
     parser.add_argument("--apply", action="store_true")
+    parser.add_argument("--validate-only", action="store_true")
     args = parser.parse_args()
     try:
         print(json.dumps(asyncio.run(run(args)), ensure_ascii=False, sort_keys=True))
