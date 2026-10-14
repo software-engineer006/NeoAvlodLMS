@@ -136,6 +136,44 @@ invariantlari tekshiruvdan o‘tdi.
 
 ## Davom ettirish checkpoint
 
+2026-10-15 YAKUNIY CLEAN START:001–138 bajarildi, faol vazifa yo‘q.
+Foydalanuvchi barcha local/prod DB va loglarni hamda backup nusxalarini
+o‘chirishni aniq buyurdi; avvalgi retention/preservation talabi shu bir martalik
+infratuzilma resetida bekor qilindi. Backuplar qoldirilmadi. Actual local
+neoavlod_demo va production neoavlod DROP/recreate, schema0018; local base
+neoavlod ham toza empty0018. Har actual DBda faqat1haqiqiyCEO(superadmin)+
+4teacher,95profil/7guruh/116membership/443aniq source «k» qoralamasi/2fan/
+217xona. Raw metadata va jadval approved7CSV bilan to‘liq reconciled;
+old archived rows/history/parents/sessions/refresh/rate-limit/queues/cache/
+audit events/segments/old media0. Test superadmin yo‘q. Eski credentials,
+onboarding havolalari, audit snapshots, legacy import/recovery paketlari
+olib tashlandi. Local realbot worker o‘chiq, portallar actual fresh DBga ulangan.
+
+Serving sourcea515d74c2bb257ca32a397a662cd5df4cfdcb040;
+Actions38637323918 test116103694260 va deploy116106297618 SUCCESS:
+413backend/Ruff/mypy177,276frontend/types/lint/build/checksum,13agent/
+20deploy/disposable realTLS auto+manual rollback. ProductionHTTPS ikkala
+marker/10asset hash exactSHA, health/ready200, anonymouslogs401; native
+admin25/fullgrant21/limited6+teacher10 qo‘llanma actual bundles1440/768/360
+closedfixtures pass.31production read-only in-process checks explicit auth
+dependency override bilan (fulladmin fixture faqat xotirada, real login emas):
+teacher/fulladmin logs+download403,CEOreads200,teacher ownership correct;
+hech hisob/session/business mutation yoki real test xabari yaratilmagan.
+
+Requested defaultbot getMe bilan tekshirilib DBda shifrlangan; worker ready/
+singleton, API/archive healthy. Eski pending Telegram updates tozalangan.
+Audit owner-armed pending: faqat belgilangan CEO haqiqiy Start bilan ulanib,
+bot javobi muvaffaqiyatli yetgach atomik boshlanadi; gate/event runtimega
+immutable. Actual CEOStart ataylab bajarilmadi,audit0. Faqat CEO capability
+private handoff uchun olingan,valid/unused/7day va encrypted temporary
+credential tekshirildi; teacher havolalari olinmagan/yuborilmagan. Serverdagi
+plaintext token/profile/capability staging va destructive reset scripts,
+local plaintext staging ham o‘chirildi. Yangi7CSV private source va runtime
+security/deploy secretlari saqlangan. Private data/token/link Gitga kirmadi;
+public95-pupil/secret scan pass. Final docs-only[skip ci] commit serving
+sourcega ta’sir qilmaydi; EDUCENTER_IMPORT.md user deletion unstaged.
+Quyidagi checkpointlar va001–134 preservation dalillari tarixiy holatdir.
+
 2026-10-15 YANGI TALAB: local Docker va productiondagi barcha eski/test/business/
 auth ma’lumotlari hamda eski loglar to‘liq o‘chirilishi aniq authorized. Bu avvalgi
 audit-retention talabining bir martalik owner-operated istisnosi; ilovada delete
@@ -1451,8 +1489,8 @@ No source push/deploy yet;no external user input needed.
 - [x] 137 — Local Docker bazalarini to‘liq tozalash va yangi datasetni tekshirish.
   - Dalil: User-authorized full DROP/recreate of actual local neoavlod_demo and base neoavlod, schema0018; old DB/audit/media/cache removed and no backup retained. Actual local owner reconciliation raw95students/7groups/116memberships/443source k drafts/5freshstaff/room217/2subjects matches every profile school/phone/course MyGov/level/notes/raw provenance/date and schedule; archived rows0,parents/old sessions/refresh/rate-limit/queues/changes/batches0,audit events+segments0,CEO gate pending,requested bot verified/encrypted. Base DB staff0. Normal portals health/ready200,PG18.6; disabled demo seeding/auth bypass; local realworker false and no real messages or shared employee links.
   - Bog‘liq:136. Qabul: backup restore rehearsal, actual local va empty base DB eski rows/logs yo‘q, actual local5staff/95students/7groups/116memberships/443source drafts, eski sessions/OTP/queues/links/parents0,217room, audit0 va CEO gate pending. Local real bot polling o‘chiq; hech kimga havola/xabar yuborilmaydi. Portal normal auth bilan ishlaydi, demo bypass o‘chiq.
-- [/] 138 — Release push/deploy, production clean start va CEO havolasini topshirish.
-  - Dalil: Kutilmoqda.
+- [x] 138 — Release push/deploy, production clean start va CEO havolasini topshirish.
+  - Dalil: Serving a515d74c2bb257ca32a397a662cd5df4cfdcb040, Actions38637323918 test116103694260/deploy116106297618 SUCCESS:413backend/Ruff/mypy177,276frontend/types/lint/build/checksum,13agent/20deploy/disposable realTLS rollback. Authorized no-backup owner DROP/recreate of production after green deploy:5freshstaff(CEO+4teachers),95profiles/7groups/116memberships/443source drafts/2subjects/217room; every raw school/phone/course/MyGov/notes/date/schedule/provenance matches reviewed7CSV. Physical archived/history/parents/sessions/refresh/rate-limit/queue/audit-event/segment/cache/oldmedia counts0. Old DB/log recovery, test-superadmin/onboarding snapshots and legacy source packages removed. Requested bot verified/encrypted/ready, stale updates discarded, API/archive healthy and worker singleton.31private read-only in-process RBAC checks use explicit identity override and full-admin fixture only in memory: admin+teacher logs/download403,CEOreads200,teacher ownership correct,no accounts/session/business writes/real messages. Actual HTTPS markers/10asset hashes exactSHA/TLS health-ready200/anonymouslogs401; actual bundles native admin25/full21/limited6+teacher10 guide1440/768/360 closedfixtures pass. Valid unused CEO-only capability and encrypted temporary password verified; actual CEO Start pending,audit0,no teacher links shared. Plaintext token/profile/capability staging and one-time destructive scripts removed from server after private CEO handoff; local staging token/profile/oldproofbackups removed too. Public95-pupil/new-secret/capability scan passed; no private input committed. All acceptance satisfied; final evidence docs-only skip-ci, user doc deletion unstaged.
   - Bog‘liq:137. Qabul: private/PII/secret scan, greenCI/CD va exactSHA; writers stopped/backed up, production owner-authorized clean DB/audit/live cache/media reset,5staff va7CSV exact import, yangi verified defaultbot, no test/legacy rows/session/queue. Runtime restrictedroles/immutableaudit/ready/TLS/asset checks pass; audit0 pending actualCEOStart, onlyCEO link valid privately, teacher links not shared/no unsolicited messages. TASKS acceptance/checkpoint final.
 
 2026-10-15 135dan keyingi aniqlashtirish: foydalanuvchi private backup ham
