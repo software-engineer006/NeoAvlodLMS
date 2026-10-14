@@ -136,101 +136,50 @@ invariantlari tekshiruvdan o‘tdi.
 
 ## Davom ettirish checkpoint
 
-2026-10-15 JORIY:122–133 bajarilgan;134 faol. User approves BOTH
-DB refresh preserving staff/auth/bot/audit, one profile/multiple groups,
-Python4 16:00–18:00, four Python groups217room, all Asila k included,
-mixed phones child-only and explicit admin parent linkage. Strict V2 parser,
-public refresh plan and private0600 approved manifest verified:
-117rows/95identities/116memberships/443exact dated k drafts/12review profiles.
-Docker Ruff/mypy1 and7synthetic tests pass; no DB reset/import yet.
-123 verified full375backend/Ruff/mypy151 and final8 enrollment+migration;
-development0013 head/model match and health/ready, no business refresh yet.
-124 verified260frontend/typecheck/lint and all membership/guide responsive
-checks1440/768/360; private evidence .private/enrol-124.
-125 verified school/profile/course metadata and bounded edit API/UI/audit:
-263frontend/typecheck/lint/responsive, final12profileUI,9migration+course,
-3metadata tests; development0014 head/model/health/ready passed.
-126 verified full383backend/compile/Ruff/mypy158; rooms/grant/lookup tests,
-parallel uniqueness+assignment/deactivation invariant and frozen0015 schema
-backfill/protected downgrade passed. Development0015 head/model/health ready.
-127 verified rooms CRUD/sidebar/grants/group selector/native guide:
-268frontend/typecheck/lint, browser_rooms + admin24/full20/limited6 and
-teacher10 guides pass1440/768/360; screenshot reviewed, no real mutations.
-128 verified existing parent selection/shared child linkage/relink URL and
-two-child one-Telegram fake delivery, former guardian pending suppression:
-Ruff/mypy159, final38 backend and2family cases;270frontend/type/lint,
-responsive family/native-guide pass1440/768/360. Development reload/health ready.
-129 verified template/API/preview/version/actor audit/frozen0016:
-Ruff/mypy165, final28backend,274frontend/type/lint/final3draft;
-responsive template/admin25/full21/limited6 guide pass1440/768/360.
-Development0016 head/model ready.130 implemented professional payload,
-DD.MM.YYYY/Tashkent lesson time/immutable template snapshots and canonical
-note authors, silent admin edits cancel pending/claimed/failed; stale worker
-leases rejected, family advisory before group/outbox lock avoids row cycles.
-Full399backend/Ruff/mypy168 and274frontend/type/lint passed; full guide/dates
-all portals1440/768/360/three timezones passed. Final inherited-admin-note
-test passed (final13policy);130 done.131 active next: selected membership
-transfer with reason, preserved other courses/parent/history and clear UI.
-131 verified11backend/Ruff/mypy169 and275frontend/type/lint, responsive
-selected-secondary transfer/search/reason/read-grant/native guide pass.
-132 done: archive boundary for nine business tables, global ORM
-current-row filtering, nullable truthful CSV marker/source draft history,
-one transaction/advisory/table locks/idempotent receipt and private deployment
-selection with unsafe-old-runtime rollback guard implemented. First two
-synthetic refresh tests pass (counts/metadata/old IDs/teacher denial/rollback/
-parallel retry/manual-edit preservation); frozen0017 upgrade/model/empty
-downgrade checks pass. Old0013 migration fixture must now insert/select its
-old schema explicitly (archived_at not yet exists); fix and rerun migration,
-full backend/frontend/deploy tests before marking132 done.
-132 full406backend/mypy173,276frontend/type/lint,18deploy/13agent,
-head/model/downgrade guard and all source/guide responsive checks passed.
-133 done: actual local DB was demo-database/neoavlod_demo0012,
-6staff/118oldstudents/7groups/462attendance. Private pg_dump146KiB + env/audit
-folder backups saved in .private/refresh-133, restored to newly created
-neoavlod_refresh_rehearsal_133 and exact original staff/auth/bot/counts verified.
-Full real seven-CSV rehearsal upgraded0017, dry-run, precommit failure rollback,
-apply and already_applied created0 passed. Actual local DB now0017 with
-95current profiles/7groups/116memberships/443source k drafts and Python4
-16:00–18:00/four217room; all school/level/MyGov/notes/source dates reconciled,
-all old business IDs archived, staff/auth/bot and old history unchanged,
-new message outbox0. Fixed missing neoavlod_app grants for post0012 tables;
-actual restricted-credential migration test passed. Extra child advisory lock
-before membership/transfer/profile prevents assign-vs-transfer row cycles;
-final22 concurrency/family/policy cases passed. Full406backend and clean
-npmci/type/lint/276frontend/both builds/checksums pass before final lock
-hardening; final targeted lock/metadata tests, full responsive flows and
-disposableTLS deployment/rollback running. Local backend/admin/teacher
-restored to actual local DB, health/ready200; local realworker remains stopped.
-133 final10 transfer/membership/metadata and full new responsive flows/dates
-pass; disposable realTLS image/release backup/auto+manual rollback/key archive
-hash preservation passed. Repeated actual import created0 and exact source
-reconciliation/checksums pass; only owned rehearsal DB removed.134 active:
-production serving d88233e0b003fa2cf34208283e0c454c21a2b3da, API/archive
-healthy/single worker/12GiB free. Exact seven CSV staged privately under
-/opt/neoavlod/private/educenter-refresh-data with reviewed digest. Read-only
-production preservation proof and backup+restore rehearsal uploaded privately.
-Private production backup restored successfully:9staff/8oldgroups/119oldpupils/
-487attendance/25batches/4immutable attendance changes/424verified audit bodies;
-env/audit backups/checksums saved off web root, API/worker preserved.
-Source f1adf8feeabd4291c0f32e0bc74825f110f6a948 non-force pushed;
-Actions38628196586 test116072701721 SUCCESS407backend/276frontend/mypy173/
-13agent/18deploy/disposableTLS. Deploy116075714329 failed at private source:
-nonowner importer could not traverse0700 source and macOS tar added ._ CSV
-sidecars. No dataset transaction applied by failed run; unsafe old-runtime
-rollback guard stopped old writers. Recovered tested f1 compatible runtime,
-removed only generated ._ metadata, ran successful root-owner dry-run/teacher
-mapping, stopped writers and applied exact reviewed dataset atomically.
-Production now f1 runtime healthy API/worker/archive,95profiles/7groups/
-116memberships/443drafts reported applied. Full private manifest/preservation
-proof running (first probe hit ProgrammingError, inspect private-error.log;
-likely restricted schema-version read); do not mark134 done yet.
-Permanent fix in progress: owner UID/GID import + DB-free --validate-only
-before writer shutdown, metadata/digest error leaves previous runtime running.
-Ruff/mypy173/final4source tests/19deploy pass. Next verify production proof,
-review/scan/push fix, green exactSHA CI/CD and production-loaded UI/date/guide/
-role/HTTPS checks. User EDUCENTER_IMPORT.md deletion stays unstaged.
-Private evidence .private/refresh-122; user deletion of EDUCENTER_IMPORT.md
-must remain uncommitted/unrestored, rawCSV/PII/secrets excluded from Git.
+2026-10-15 YAKUNIY:001–134 bajarilgan; faol vazifa yo‘q. Development va
+production updated seven-CSV dataset bilan ishlaydi:95ta alohida profil,
+116ta guruhga biriktirish,7ta guruh,443ta aniq «k» manba qoralamasi;
+blank kataklardan absent taxmin qilinmagan, import yakunlamaydi/xabar yubormaydi.
+Python4 16:00–18:00; Pythonning to‘rtta guruhi217xonada. Sinf/maktab/telefon
+consensus va har kursning daraja/MyGov/izohi/raw provenance tekshirildi;
+12profil manba aniqlashtirish belgilariga ega. Telefon bolada, ota-ona admin
+tomonidan aniq tanlanadi; shared parent/Telegram bir nechta bolaga ishlaydi.
+Teacher faqat own-course context, administrator grant asosida boshqaradi;
+tanlangan membership transfer reason/old-new/actor audit bilan, boshqa kurs,
+ota-ona va eski davomatni saqlaydi. Versioned xabar shabloni preview/audit
+bilan, teacher feedback muallifi aniq; admin correction jim, eski unsent
+navbat bekor qilinadi. Loglar faqat superadmin, o‘chirish/tahrirlash yo‘q.
+
+Serving code3faa80adac8686910f263a3bd1d1ef5bc6f8fa8c; schema0017_dataset_refresh.
+Actions38630875859 test116081865340 va deploy116085581706 SUCCESS:
+408backend/Ruff/mypy173,276frontend/type/lint/both builds/checksums,
+13agent/19deploy/disposable realTLS auto+manual rollback tests pass.
+Original sourcef1adf8f test success; first deploy rejected private source
+owner/macOS ._ metadata. Fixed owner UID/GID + DB-free source/digest preflight
+before writer shutdown; generated metadata removed, strict parser retained.
+Final CI preflight source_validated, import receipt already_applied created0.
+No server source hotpatch or private source/secret/95pupil names published.
+
+Both DB private pg_dump/env/audit backups restored to owned scratch DBs and
+verified; only scratch DBs removed. Production original9staff/auth/bot/keys,
+8legacy groups/119legacy pupils/487attendance/25batches/4immutable changes
+retained under archive boundary, all424 original logical audit bodies exact.
+Final proof1459logical audit bodies, current95/7/116/443 exact, new messages0,
+worker ready. Private in-process55role checks use explicit auth dependency
+override only (no live login/business writes): teacher/full-grant admin fixture
+logs403, superadmin200, current ownership and old business IDs404. Actual
+runtime DB role stays restricted; schema head read separately by DB owner.
+
+Production HTTPS5+5 assets/both markers exactSHA, health/ready200, realworker
+singleton/API/archive healthy. Same committed HTTPS bundles passed all new
+UI/native guide/date flows1440/768/360 with closed synthetic APIs, LA/
+Kiritimati/UTC year rollover/Tashkent dates; no overflow/JS errors, mobile
+screenshots reviewed. Local realworker intentionally stays stopped.
+Final evidence .private/refresh-122 through134 and TASKS acceptance rows.
+User deletion of EDUCENTER_IMPORT.md remains unstaged/unrestored. Raw CSV,
+PII/provenance/manifest/credentials/keys/backups remain private and ignored.
+Documentation-only evidence commit uses[skip ci]; serving source stays3faa80a.
+
 
 2026-10-14 YAKUNIY:001–121 bajarilgan; faol task yo‘q. Admin/teacher barcha
 ko‘rinadigan sanalar DD.MM.YYYY, oy MM.YYYY, vaqt HH:mm:ss Asia/Tashkent;
@@ -1473,6 +1422,6 @@ No source push/deploy yet;no external user input needed.
 - [x] 133 — Development bazasini backup bilan yangilash va full acceptance.
   - Bog‘liq:132. Qabul: dev backup+audit/key preservation, real7CSV new dataset applied and exact row/group/family/metadata/room/attendance reconciliation; original staff/login/bot/audit unchanged, no real messages. Full Docker backend/frontend/migrations/agent/build/checksum and UI/RBAC/guide tests, production dry-run/rollback rehearsal va docs o‘tadi.
   - Dalil: Actual local neoavlod_demo baseline6staff/118students/7groups/462attendance backed up privately with env/audit folder.146KiB dump restored to fresh rehearsal DB; exact staff/auth/bot/counts and immutable history preserved. Real seven-CSV rehearsal0017/dry-run/precommit rollback/apply/idempotent created0 passed, then actual local import reconciled95profiles/7groups/116memberships/443exact source drafts/all school-level-MyGov-notes/schedules/four217room with new messages0; old IDs/history retained, baseline staff/auth/bot unchanged. Repeat actual import created0; rehearsal DB cleaned after evidence. Correct post0012 runtime table grants verified using actual neoavlod_app credentials; archive retains old updated_at. Full406backend/Ruff/mypy173, clean npmci/type/lint/276frontend/both builds/source-assets checksum pass; final22 concurrency/policy/family and10 transfer/membership/metadata checks pass including assign-vs-transfer shared child lock. All new UI flows+native guides1440/768/360/Tashkent three-zone dates pass; mobile PNG reviewed. Actual local backend/portals point to data DB and health/ready200, realworker stays stopped. Disposable real production Docker/TLS automatic+manual rollback/audit-key preservation pass,18deploy/13agent pass. Production remains unchanged until134.
-- [/] 134 — Production bazasini yangilash, release push/deploy va yakuniy qabuli.
+- [x] 134 — Production bazasini yangilash, release push/deploy va yakuniy qabuli.
   - Bog‘liq:133. Qabul: private production backup/audit/key/data baseline; staged exact7CSV manifest, reviewed diff/secret/PII scan/non-force push/exactSHA green CI/CD. Production authorized current dataset replacement with idempotent receipt, legacy/current isolation, all metadata/7group/217room/family reconciliation and staff/bot/audit preservation. TLS assets/API/worker/archive health, production-loaded UI/RBAC/guide and fake delivery evidence; real family test xabari yo‘q, TASKS/docs yakuniy.
-  - Dalil: Kutilmoqda.
+  - Dalil: Production private DB/env/audit backup restored to owned scratch DB before replacement; original9staff/auth/bot/keys,8oldgroups/119oldpupils/487attendance/25batches/4immutable attendance changes and424logical audit bodies retained. Exact reviewed private seven-file dataset verified95profiles/7groups/116memberships/443source drafts/all school-level-MyGov-notes/teacher schedules/four217room, no absence inference/new messages. Initial f1 private owner/macOS sidecar failure fixed without source hotpatch: strict metadata rejection retained, source owner UID/GID and DB-free preflight before writer shutdown added, old-runtime archive guard retained. Final source3faa80adac8686910f263a3bd1d1ef5bc6f8fa8c non-force pushed; Actions38630875859 test116081865340 and deploy116085581706 SUCCESS:408backend/Ruff/mypy173,276frontend/type/lint/reproducible builds/checksums,13agent/19deploy/disposableTLS rollback. CI preflight source_validated and import already_applied created0. Final remote manifest/provenance/legacy/auth/bot/audit proof passed (1459current logical bodies,424original exact), owner schema0017 and env hash unchanged, worker ready/singleton/API+archive healthy. Private in-process55read-only role checks with explicit auth dependency overrides (synthetic full-grant admin, no live login/business writes) prove admin/teacher logs403, superadmin200, ownership/current counts and old IDs404; API role remains restricted. Actual production HTTPS bundles passed all new flows/native admin25/full21/limited6/teacher10 guides/dates1440/768/360/LA-Kiritimati-UTC with closed fixtures/no real sends/no overflow or JS errors; screenshots reviewed. Final external both release markers/all10assets exactSHA/TLS health-ready200/anonymous logs401 pass. Public95-pupil/secret scan passed, raw/private inputs not committed, user EDUCENTER_IMPORT.md deletion preserved unstaged. Documentation-only final evidence commit follows[skip ci], serving source stays3faa80a.
