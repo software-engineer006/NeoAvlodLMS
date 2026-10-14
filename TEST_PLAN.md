@@ -272,3 +272,31 @@ owner-credential backend. The enforcement boundary is now persisted before
 migration starts; new failure regression and all16 Docker deploy/rollback
 unit+workflow checks passed. This is a security follow-up to9a0c8fa; production
 must deploy the final exact commit, never a superseded pipeline.
+
+114 production final receipt (2026-10-14): source
+b1a39b64cc8cedcaff9f309792438a007d4c5b44, Actions38547243448 SUCCESS
+(test115796218780/deploy115798721683):362 backend,240 frontend,145-file mypy,
+13 agent and16 deploy/rollback regressions plus actual disposable TLS integration.
+Superseded9a0c8fa passed tests; its deploy correctly refused an outdated main SHA.
+Production HTTPS both release markers and all10 asset hashes match final source;
+no public guide PNG, anonymous logs401. Actual production-loaded React UI with
+closed synthetic API: admin23/fulladmin19/limited6/teacher10, all33 scenes,
+markers/inert/search/role/zoom and log/reason/filter/CSRF gzip1440/768/360 passed;
+synthetic screenshots reviewed, no actual login or family sends.
+
+Actual VPS0012 head: API/app LOGIN role not superuser; audit update/delete/
+truncate/prune grants denied, read-only archive mount, singleton archive worker
+healthy across restart and stable private env checksum. Explicit truthful system
+verification plus existing real request events archived/read-back successfully
+(1segment/6events at acceptance snapshot).22 real-data read-only API ownership/
+role checks use a dependency override; they are not real OTP login tests.
+All stable business/credential/history/delivery/import table hashes preserved:
+6staff/7groups/118students/486attendance/24batches/0campaigns/deliveries.
+Only auth_sessions/refresh_tokens/system_settings raw hashes differ. Private
+pre-audit backup restored to guarded scratch verifies original16 sessions,
+absolute deadlines/CSRF/staff credentials and token lineage preserved; legitimate
+refresh rotation and bot heartbeat account for differences, immutable bot config
+unchanged,worker_ready and OTP180 verified. Scratch DB dropped. Python/English
+receipts read-only already_applied/created0; no credentials state mounted.
+Post-audit full DB plus encrypted files/key backup checked privately; API and
+archive healthy, real Telegram worker singleton running. Local realbot stopped.

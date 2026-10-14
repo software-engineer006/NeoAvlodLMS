@@ -53,3 +53,10 @@ emas. Dastur/DB grants/read-only mount app orqali o‘chirishni rad etadi;
 hardware WORM yoki root administratorga qarshi kafolat berilmaydi. Buning
 uchun tashqi immutable backup storage kerak. Ishonchli eski loglar mavjud
 bo‘lmagan davrga yangi xodim/time attribution uydirilmaydi.
+
+2026-10-14 production qabuli:0012 head, runtime
+b1a39b64cc8cedcaff9f309792438a007d4c5b44; CI/CD38547243448 successful.
+Restricted role, read-only API mount, encrypted read-back, archiver restart va
+stable key tekshirildi. Pre-audit va post-audit DB+encrypted-files/key private
+backuplari tekshirildi. Hozirgi audit-compatible release birinchi audit release;
+oldingi8db08f7 runtime auditdan oldingi bo‘lgani uchun rollback uchun yaroqsiz.

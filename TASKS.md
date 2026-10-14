@@ -136,18 +136,25 @@ invariantlari tekshiruvdan o‘tdi.
 
 ## Davom ettirish checkpoint
 
-2026-10-14 faol114[/]:001–113done. Full362backend/240frontend/13agent,
-33React scenes/3viewport,12archive/15deploy unit and actual disposableTLS
-production clean/repeat/auto+manual rollback acceptance passed. Stable keys
-and immutable files preserved, pre-audit rollback fail-closed verified.
-VPS6staff7groups118students486attendance24batches0messages private backup
-and all-business baseline ready;env preserved/new audit secrets and0700
-folder prepared. Source review213paths secret/98pupil scan passed.
-Next reviewed commit/non-force push, exact green CI/CD and live HTTPS/
-restricted roles/read-only archive/key/guide/old-data acceptance. No
-external user input required. Local real Telegram worker remains stopped.
+2026-10-14 YAKUNIY:001–114done, faol task yo‘q. Production source
+b1a39b64cc8cedcaff9f309792438a007d4c5b44; Actions38547243448 test va
+deploySUCCESS (362backend/240frontend/mypy145/13agent/16deploy tests).
+React qo‘llanma33scenes, super-only Loglar va all-role correction reason
+production HTTPS/10assetchecksum/3viewport closed-synthetic UI passed.
+0012head, restricted app+archiver roles, APIreadonly archive mount, encrypted
+readback/singleton restart/stable private key and pre+post-audit backup checked.
+Actual6staff7groups118pupils486attendance24batches0messages stable business/
+credential/history/import hashes preserved. Volatile auth refresh/bot heartbeat
+independently verified via restored guarded scratch;16session absolute
+deadlines/CSRF/botconfig preserved,OTP180/workerready; scratch dropped.
+22actual-data read-only API checks use identity override, no real OTP login
+or family sends. Python/English receipts already_applied created0. API/
+archive healthy, realprodworker singleton; local realbot stays stopped.
+AUDIT_OPERATIONS/GUIDES/TEST_PLAN ready. Final docs-only commit uses
+[skip ci]; actual serving source SHA stays b1a39b6. No required work remains.
+Old checkpoint paragraphs below are historical.
 
-2026-10-14 YAKUNIY:001–102 bajarilgan, faol task yo‘q. Admin dashboarddagi
+2026-10-14 TARIXIY:001–102 bajarilgan, faol task yo‘q. Admin dashboarddagi
 uchta texnik karta va Boshqaruv paneli/tugmalar/hisob jadvali olib tashlandi.
 Guide matn/PNG/capture scripti yangi statistikalar ko‘rinishiga mos. Production
 release8db08f7ccd15f27fbda5a542ad6f09627da48834, Actions38513274875 test va
@@ -1243,11 +1250,11 @@ shared scene/form/table/marker komponentlari amaldagi111 mezonidir.
 - [x] 113 — Production audit folder/DB roles/key/backup va CI/CD tayyorlash.
   - Bog‘liq:112. Qabul: persistent private audit folder, alohida role/key secrets mavjud environmentdan xavfsiz provision; archive API read-only/worker singleton va kalit restartda o‘zgarmaydi. Backup/business rollback audit schema/files/keyni saqlaydi; clean install/upgrade/second deploy/automatic+manual rollback/orphan recovery disposable production tests o‘tadi. Server oldingi actual backup/role/version/readiness read-only tasdiq; credential/raw data Git/logga chiqmaydi; professional commit review tayyor.
   - Dalil: 15Docker deploy/rollback unit+actionlint and12archive regressions passed; actual disposable production TLS stack clean install, UID1000 app/worker/archiver, restricted LOGIN roles, encrypted104event readback, API readonly/direct DELETE denial, second-release import preservation, automatic Nginx-failure/manual rollback and stable archive/key hashes passed. Private DB+archive/key backup checked; pre-audit rollback denied and compatible runtime restarted. Stable env upgrade-repeat and credential provisioning verified; heartbeat health/singleton passed. VPS previous8db08f7/readiness and private pg_dump listing/baseline6staff7groups118pupils486attendance24batches0messages verified, persistent0700folder/new stable audit env ready without rotating existing credentials. Ruff/mypy archive/provision passed;213path public secret/98pupil scan passed. AUDIT_OPERATIONS records safe selective business recovery/key rotation and owner/root boundary. Real restricted roles/migrations/startup applied by114 CI deployment.
-- [/] 114 — GitHub push, real CI/CD deploy va yakuniy production qabuli.
+- [x] 114 — GitHub push, real CI/CD deploy va yakuniy production qabuli.
   - Bog‘liq:113. Qabul: public diff/secret/PII/unrelated exclusion, reviewed professional commits/non-force push va exact-SHA green test/deploy. Production HTTPS UI/API/release markers/DOM guides/audit superadmin-only/immutable archive singleton/key readiness, old data/import receipts/credentials/history preserved read-only tekshiriladi. Real oilalarga test xabari yo‘q; zarur rollback auditni yo‘qotmaydi. TASKS/test/guide/audit operatsion qo‘llanmasi aniq dalillar bilan yakunlanadi.
-  - Dalil: Kutilmoqda.
+  - Dalil: Final sourceb1a39b64cc8cedcaff9f309792438a007d4c5b44 non-force pushed; Actions38547243448 test115796218780/deploy115798721683 SUCCESS:362backend/240frontend/mypy145/13agent/16deploy-regressions/disposableTLS. Partial first migration boundary regression fixed and superseded9a pipeline safely refused staleSHA. Production HTTPS10assets/both markers exactSHA/noPNG/anonlogs401; actual production-loaded React guides33scenes plus role/filter/detail/seconds/reason/CSRFgzip1440/768/360 closed-synthetic UI passed and visuals reviewed. Actual0012 restricted app no-superuser/noaudit UPDATE-DELETE-TRUNCATE-prune, read-only mount, encrypted1segment6events read-back and singleton archive restart/stableenv passed.22actual-data read-only API checks use identity override/no live login/sends. Stable all-business/credential/history/delivery/import digests preserved6staff7groups118pupils486attendance24batches0messages; volatile auth refresh/bot heartbeat differences independently verified against restored guarded scratch:16sessions/absolute deadlines/CSRF/token lineage/immutable bot config preserved,OTP180/workerready. Scratch dropped; Python+English receipts already_applied created0; private post-audit DB+encrypted-files/key backup checked,API/archive healthy/realworker singleton,localbot stopped. Operational/test/guide docs complete; only final evidence docs commit remains.
 
-### 112 davom ettirish uchun aniq qo‘shimcha checkpoint
+### Tarixiy112 checkpoint — yakunlangan
 
 2026-10-14:111done.112da30 parallel GET test DB pool deadlockini isbotladi;
 SessionDependency function-scope/FastAPI>=0.121 bilan tuzatildi. API snapshot
